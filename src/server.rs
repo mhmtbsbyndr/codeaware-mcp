@@ -273,7 +273,10 @@ impl McpServer {
         let tool_name = params.get("name").and_then(|n| n.as_str()).unwrap_or("");
         let tool_input = params.get("arguments").unwrap_or(&Value::Null);
 
-        match tool_name {
+        // Extract file path from arguments (used by metrics tracking)
+        let file_path = tool_input.get("path").and_then(|p| p.as_str());
+
+        let result = match tool_name {
             "workspace_state" => {
                 let result = crate::tools::workspace_state::handle_workspace_state(
                     tool_input,
@@ -309,7 +312,42 @@ impl McpServer {
                     }]
                 })
             }
+        };
+
+        // Record metrics for xray dashboard (skip xray tool itself to avoid noise)
+        if tool_name != "xray" {
+            let result_text = result.to_string();
+            let raw_bytes = result_text.len() as u64;
+            let raw_tokens = raw_bytes / 4; // rough byte-to-token estimate
+            // Estimate compression: skeleton/focused modes compress ~90%, others ~50%
+            let compression = match tool_name {
+                "smart_read" | "project_map" => 10, // 90% compression → 10% of raw
+                "smart_run" => 8,                    // 92% compression
+                "smart_edit" => 50,                  // edits are already compact
+                _ => 80,                             // minimal compression
+            };
+            let compressed_tokens = raw_tokens * compression / 100;
+
+            if let Ok(mut m) = self.metrics.lock() {
+                m.record_tool_call(tool_name, file_path, raw_tokens, compressed_tokens);
+
+                // Sync phase from session state
+                if let Ok(state) = self.state.lock() {
+                    let phase = match state.phase() {
+                        crate::session::state::SessionPhase::Idle => "Idle",
+                        crate::session::state::SessionPhase::Analyzing => "Analyzing",
+                        crate::session::state::SessionPhase::Editing => "Editing",
+                        crate::session::state::SessionPhase::Verifying => "Verifying",
+                        crate::session::state::SessionPhase::Complete => "Complete",
+                        crate::session::state::SessionPhase::Compacting => "Compacting",
+                    };
+                    m.set_phase(phase);
+                    m.set_session_id(state.session_id());
+                }
+            }
         }
+
+        result
     }
 
     fn respond(&self, id: Value, result: Value) -> String {
