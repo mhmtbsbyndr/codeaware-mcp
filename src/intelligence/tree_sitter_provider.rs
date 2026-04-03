@@ -23,6 +23,7 @@ pub struct SymbolInfo {
     pub start_line: usize, // 1-based
     pub end_line: usize,   // 1-based
     pub doc_comment: Option<String>,
+    pub visibility: Option<String>,
 }
 
 pub struct TreeSitterProvider {}
@@ -105,6 +106,7 @@ impl TreeSitterProvider {
                 }
                 "struct_item" => {
                     if let Some(name) = self.get_child_by_field(&child, "name", code) {
+                        let visibility = self.rust_visibility(&child, code);
                         symbols.push(SymbolInfo {
                             name,
                             kind: SymbolKind::Struct,
@@ -112,11 +114,13 @@ impl TreeSitterProvider {
                             start_line: child.start_position().row + 1,
                             end_line: child.end_position().row + 1,
                             doc_comment: None,
+                            visibility,
                         });
                     }
                 }
                 "enum_item" => {
                     if let Some(name) = self.get_child_by_field(&child, "name", code) {
+                        let visibility = self.rust_visibility(&child, code);
                         symbols.push(SymbolInfo {
                             name,
                             kind: SymbolKind::Enum,
@@ -124,11 +128,13 @@ impl TreeSitterProvider {
                             start_line: child.start_position().row + 1,
                             end_line: child.end_position().row + 1,
                             doc_comment: None,
+                            visibility,
                         });
                     }
                 }
                 "trait_item" => {
                     if let Some(name) = self.get_child_by_field(&child, "name", code) {
+                        let visibility = self.rust_visibility(&child, code);
                         symbols.push(SymbolInfo {
                             name,
                             kind: SymbolKind::Trait,
@@ -136,6 +142,7 @@ impl TreeSitterProvider {
                             start_line: child.start_position().row + 1,
                             end_line: child.end_position().row + 1,
                             doc_comment: None,
+                            visibility,
                         });
                     }
                 }
@@ -172,6 +179,7 @@ impl TreeSitterProvider {
         let start_byte = node.start_byte();
         let text = &code[start_byte..node.end_byte()];
         let sig = text.lines().next().unwrap_or("").to_string();
+        let visibility = self.rust_visibility(node, code);
 
         Some(SymbolInfo {
             name,
@@ -180,6 +188,7 @@ impl TreeSitterProvider {
             start_line: node.start_position().row + 1,
             end_line: node.end_position().row + 1,
             doc_comment: None,
+            visibility,
         })
     }
 
@@ -206,6 +215,7 @@ impl TreeSitterProvider {
                     if let Some(n) = actual {
                         if n.kind() == "function_definition" {
                             if let Some(name) = self.get_child_by_field(&n, "name", code) {
+                                let visibility = self.python_visibility(&name);
                                 symbols.push(SymbolInfo {
                                     name,
                                     kind: SymbolKind::Function,
@@ -213,10 +223,12 @@ impl TreeSitterProvider {
                                     start_line: n.start_position().row + 1,
                                     end_line: n.end_position().row + 1,
                                     doc_comment: None,
+                                    visibility,
                                 });
                             }
                         } else if n.kind() == "class_definition" {
                             if let Some(name) = self.get_child_by_field(&n, "name", code) {
+                                let visibility = self.python_visibility(&name);
                                 symbols.push(SymbolInfo {
                                     name,
                                     kind: SymbolKind::Class,
@@ -224,6 +236,7 @@ impl TreeSitterProvider {
                                     start_line: n.start_position().row + 1,
                                     end_line: n.end_position().row + 1,
                                     doc_comment: None,
+                                    visibility,
                                 });
                                 self.extract_python_class_methods(&n, code, symbols);
                             }
@@ -232,6 +245,7 @@ impl TreeSitterProvider {
                 }
                 "class_definition" => {
                     if let Some(name) = self.get_child_by_field(&child, "name", code) {
+                        let visibility = self.python_visibility(&name);
                         symbols.push(SymbolInfo {
                             name,
                             kind: SymbolKind::Class,
@@ -239,6 +253,7 @@ impl TreeSitterProvider {
                             start_line: child.start_position().row + 1,
                             end_line: child.end_position().row + 1,
                             doc_comment: None,
+                            visibility,
                         });
                         self.extract_python_class_methods(&child, code, symbols);
                     }
@@ -273,6 +288,7 @@ impl TreeSitterProvider {
                     };
                     if let Some(n) = actual {
                         if let Some(name) = self.get_child_by_field(&n, "name", code) {
+                            let visibility = self.python_visibility(&name);
                             symbols.push(SymbolInfo {
                                 name,
                                 kind: SymbolKind::Method,
@@ -280,6 +296,7 @@ impl TreeSitterProvider {
                                 start_line: n.start_position().row + 1,
                                 end_line: n.end_position().row + 1,
                                 doc_comment: None,
+                                visibility,
                             });
                         }
                     }
@@ -294,6 +311,7 @@ impl TreeSitterProvider {
             match child.kind() {
                 "function_declaration" | "generator_function_declaration" => {
                     if let Some(name) = self.get_child_by_field(&child, "name", code) {
+                        let visibility = self.ts_visibility(&child, code);
                         symbols.push(SymbolInfo {
                             name,
                             kind: SymbolKind::Function,
@@ -301,11 +319,13 @@ impl TreeSitterProvider {
                             start_line: child.start_position().row + 1,
                             end_line: child.end_position().row + 1,
                             doc_comment: None,
+                            visibility,
                         });
                     }
                 }
                 "class_declaration" => {
                     if let Some(name) = self.get_child_by_field(&child, "name", code) {
+                        let visibility = self.ts_visibility(&child, code);
                         symbols.push(SymbolInfo {
                             name,
                             kind: SymbolKind::Class,
@@ -313,12 +333,14 @@ impl TreeSitterProvider {
                             start_line: child.start_position().row + 1,
                             end_line: child.end_position().row + 1,
                             doc_comment: None,
+                            visibility,
                         });
                         self.extract_ts_class_methods(&child, code, symbols);
                     }
                 }
                 "interface_declaration" => {
                     if let Some(name) = self.get_child_by_field(&child, "name", code) {
+                        let visibility = self.ts_visibility(&child, code);
                         symbols.push(SymbolInfo {
                             name,
                             kind: SymbolKind::Interface,
@@ -326,11 +348,13 @@ impl TreeSitterProvider {
                             start_line: child.start_position().row + 1,
                             end_line: child.end_position().row + 1,
                             doc_comment: None,
+                            visibility,
                         });
                     }
                 }
                 "type_alias_declaration" => {
                     if let Some(name) = self.get_child_by_field(&child, "name", code) {
+                        let visibility = self.ts_visibility(&child, code);
                         symbols.push(SymbolInfo {
                             name,
                             kind: SymbolKind::TypeAlias,
@@ -338,6 +362,7 @@ impl TreeSitterProvider {
                             start_line: child.start_position().row + 1,
                             end_line: child.end_position().row + 1,
                             doc_comment: None,
+                            visibility,
                         });
                     }
                 }
@@ -360,6 +385,7 @@ impl TreeSitterProvider {
                 for item in child.children(&mut body_cursor) {
                     if item.kind() == "method_definition" {
                         if let Some(name) = self.get_child_by_field(&item, "name", code) {
+                            let visibility = self.ts_visibility(&item, code);
                             symbols.push(SymbolInfo {
                                 name,
                                 kind: SymbolKind::Method,
@@ -367,6 +393,7 @@ impl TreeSitterProvider {
                                 start_line: item.start_position().row + 1,
                                 end_line: item.end_position().row + 1,
                                 doc_comment: None,
+                                visibility,
                             });
                         }
                     }
@@ -381,6 +408,7 @@ impl TreeSitterProvider {
             match child.kind() {
                 "function_declaration" => {
                     if let Some(name) = self.get_child_by_field(&child, "name", code) {
+                        let visibility = self.go_visibility(&name);
                         symbols.push(SymbolInfo {
                             name,
                             kind: SymbolKind::Function,
@@ -388,11 +416,13 @@ impl TreeSitterProvider {
                             start_line: child.start_position().row + 1,
                             end_line: child.end_position().row + 1,
                             doc_comment: None,
+                            visibility,
                         });
                     }
                 }
                 "method_declaration" => {
                     if let Some(name) = self.get_child_by_field(&child, "name", code) {
+                        let visibility = self.go_visibility(&name);
                         symbols.push(SymbolInfo {
                             name,
                             kind: SymbolKind::Method,
@@ -400,6 +430,7 @@ impl TreeSitterProvider {
                             start_line: child.start_position().row + 1,
                             end_line: child.end_position().row + 1,
                             doc_comment: None,
+                            visibility,
                         });
                     }
                 }
@@ -416,6 +447,7 @@ impl TreeSitterProvider {
         for child in node.children(&mut cursor) {
             if child.kind() == "type_spec" {
                 if let Some(name) = self.get_child_by_field(&child, "name", code) {
+                    let visibility = self.go_visibility(&name);
                     symbols.push(SymbolInfo {
                         name,
                         kind: SymbolKind::TypeAlias,
@@ -423,6 +455,7 @@ impl TreeSitterProvider {
                         start_line: node.start_position().row + 1,
                         end_line: node.end_position().row + 1,
                         doc_comment: None,
+                        visibility,
                     });
                 }
             }
@@ -435,6 +468,7 @@ impl TreeSitterProvider {
             match child.kind() {
                 "function_definition" => {
                     if let Some(name) = self.get_child_by_field(&child, "name", code) {
+                        // Top-level PHP functions default to public
                         symbols.push(SymbolInfo {
                             name,
                             kind: SymbolKind::Function,
@@ -442,6 +476,7 @@ impl TreeSitterProvider {
                             start_line: child.start_position().row + 1,
                             end_line: child.end_position().row + 1,
                             doc_comment: None,
+                            visibility: Some("public".to_string()),
                         });
                     }
                 }
@@ -452,6 +487,7 @@ impl TreeSitterProvider {
                         } else {
                             SymbolKind::Class
                         };
+                        let visibility = self.php_visibility(&child, code);
                         symbols.push(SymbolInfo {
                             name,
                             kind,
@@ -459,6 +495,7 @@ impl TreeSitterProvider {
                             start_line: child.start_position().row + 1,
                             end_line: child.end_position().row + 1,
                             doc_comment: None,
+                            visibility,
                         });
                         self.extract_php_class_methods(&child, code, symbols);
                     }
@@ -481,6 +518,7 @@ impl TreeSitterProvider {
                 for item in child.children(&mut body_cursor) {
                     if item.kind() == "method_declaration" {
                         if let Some(name) = self.get_child_by_field(&item, "name", code) {
+                            let visibility = self.php_visibility(&item, code);
                             symbols.push(SymbolInfo {
                                 name,
                                 kind: SymbolKind::Method,
@@ -488,6 +526,7 @@ impl TreeSitterProvider {
                                 start_line: item.start_position().row + 1,
                                 end_line: item.end_position().row + 1,
                                 doc_comment: None,
+                                visibility,
                             });
                         }
                     }
@@ -502,6 +541,7 @@ impl TreeSitterProvider {
             match child.kind() {
                 "function_declaration" => {
                     if let Some(name) = self.get_child_by_field(&child, "name", code) {
+                        let visibility = self.swift_visibility(&child, code);
                         symbols.push(SymbolInfo {
                             name,
                             kind: SymbolKind::Function,
@@ -509,11 +549,13 @@ impl TreeSitterProvider {
                             start_line: child.start_position().row + 1,
                             end_line: child.end_position().row + 1,
                             doc_comment: None,
+                            visibility,
                         });
                     }
                 }
                 "class_declaration" => {
                     if let Some(name) = self.get_child_by_field(&child, "name", code) {
+                        let visibility = self.swift_visibility(&child, code);
                         symbols.push(SymbolInfo {
                             name,
                             kind: SymbolKind::Class,
@@ -521,6 +563,7 @@ impl TreeSitterProvider {
                             start_line: child.start_position().row + 1,
                             end_line: child.end_position().row + 1,
                             doc_comment: None,
+                            visibility,
                         });
                         self.extract_swift_symbols(&child, code, symbols);
                     }
@@ -528,6 +571,7 @@ impl TreeSitterProvider {
                 "struct_declaration" => {
                     if let Some(name) = self.get_child_by_field(&child, "type_name", code)
                         .or_else(|| self.get_child_by_field(&child, "name", code)) {
+                        let visibility = self.swift_visibility(&child, code);
                         symbols.push(SymbolInfo {
                             name,
                             kind: SymbolKind::Struct,
@@ -535,11 +579,13 @@ impl TreeSitterProvider {
                             start_line: child.start_position().row + 1,
                             end_line: child.end_position().row + 1,
                             doc_comment: None,
+                            visibility,
                         });
                     }
                 }
                 "protocol_declaration" => {
                     if let Some(name) = self.get_child_by_field(&child, "name", code) {
+                        let visibility = self.swift_visibility(&child, code);
                         symbols.push(SymbolInfo {
                             name,
                             kind: SymbolKind::Trait,
@@ -547,6 +593,7 @@ impl TreeSitterProvider {
                             start_line: child.start_position().row + 1,
                             end_line: child.end_position().row + 1,
                             doc_comment: None,
+                            visibility,
                         });
                     }
                 }
@@ -566,6 +613,76 @@ impl TreeSitterProvider {
     fn get_first_line(&self, node: &Node, code: &str) -> String {
         let text = &code[node.start_byte()..node.end_byte()];
         text.lines().next().unwrap_or("").to_string()
+    }
+
+    fn get_node_text<'a>(&self, node: &Node, code: &'a str) -> &'a str {
+        &code[node.start_byte()..node.end_byte()]
+    }
+
+    fn rust_visibility(&self, node: &Node, code: &str) -> Option<String> {
+        let text = self.get_node_text(node, code).trim_start();
+        if text.starts_with("pub ") || text.starts_with("pub(") {
+            Some("public".to_string())
+        } else {
+            Some("private".to_string())
+        }
+    }
+
+    fn python_visibility(&self, name: &str) -> Option<String> {
+        if name.starts_with('_') {
+            Some("private".to_string())
+        } else {
+            Some("public".to_string())
+        }
+    }
+
+    fn ts_visibility(&self, node: &Node, code: &str) -> Option<String> {
+        // Check if the node itself or its parent is an export_statement
+        if let Some(parent) = node.parent() {
+            if parent.kind() == "export_statement" {
+                return Some("public".to_string());
+            }
+        }
+        let text = self.get_node_text(node, code).trim_start();
+        if text.starts_with("export ") {
+            Some("public".to_string())
+        } else {
+            Some("private".to_string())
+        }
+    }
+
+    fn go_visibility(&self, name: &str) -> Option<String> {
+        if name.starts_with(|c: char| c.is_uppercase()) {
+            Some("public".to_string())
+        } else {
+            Some("private".to_string())
+        }
+    }
+
+    fn php_visibility(&self, node: &Node, code: &str) -> Option<String> {
+        let text = self.get_node_text(node, code).trim_start();
+        if text.starts_with("private ") {
+            Some("private".to_string())
+        } else if text.starts_with("protected ") {
+            Some("protected".to_string())
+        } else {
+            Some("public".to_string())
+        }
+    }
+
+    fn swift_visibility(&self, node: &Node, code: &str) -> Option<String> {
+        let text = self.get_node_text(node, code).trim_start();
+        if text.starts_with("public ") {
+            Some("public".to_string())
+        } else if text.starts_with("private ") {
+            Some("private".to_string())
+        } else if text.starts_with("fileprivate ") {
+            Some("fileprivate".to_string())
+        } else if text.starts_with("open ") {
+            Some("open".to_string())
+        } else {
+            Some("internal".to_string())
+        }
     }
 }
 

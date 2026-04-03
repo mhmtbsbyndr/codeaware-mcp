@@ -236,3 +236,36 @@ fn test_supported_languages_count() {
         assert!(result.is_ok(), "Language '{}' failed to parse: {:?}", lang, result);
     }
 }
+
+#[test]
+fn test_rust_pub_visibility() {
+    let code = "pub fn hello() {}\nfn private_fn() {}";
+    let provider = TreeSitterProvider::new();
+    let symbols = provider.extract_symbols(code, "rust").unwrap();
+    let pub_sym = symbols.iter().find(|s| s.name == "hello").unwrap();
+    let priv_sym = symbols.iter().find(|s| s.name == "private_fn").unwrap();
+    assert_eq!(pub_sym.visibility.as_deref(), Some("public"));
+    assert_eq!(priv_sym.visibility.as_deref(), Some("private"));
+}
+
+#[test]
+fn test_python_visibility() {
+    let code = "def public_func():\n    pass\n\ndef _private_func():\n    pass\n";
+    let provider = TreeSitterProvider::new();
+    let symbols = provider.extract_symbols(code, "python").unwrap();
+    let pub_sym = symbols.iter().find(|s| s.name == "public_func").unwrap();
+    let priv_sym = symbols.iter().find(|s| s.name == "_private_func").unwrap();
+    assert_eq!(pub_sym.visibility.as_deref(), Some("public"));
+    assert_eq!(priv_sym.visibility.as_deref(), Some("private"));
+}
+
+#[test]
+fn test_go_visibility() {
+    let code = "package main\n\nfunc PublicFunc() {}\n\nfunc privateFunc() {}\n";
+    let provider = TreeSitterProvider::new();
+    let symbols = provider.extract_symbols(code, "go").unwrap();
+    let pub_sym = symbols.iter().find(|s| s.name == "PublicFunc").unwrap();
+    let priv_sym = symbols.iter().find(|s| s.name == "privateFunc").unwrap();
+    assert_eq!(pub_sym.visibility.as_deref(), Some("public"));
+    assert_eq!(priv_sym.visibility.as_deref(), Some("private"));
+}
