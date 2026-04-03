@@ -7,3 +7,4 @@ pub mod security;
 pub mod server;
 pub mod session;
 pub mod tools;
+pub mod xray;
