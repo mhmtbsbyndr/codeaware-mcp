@@ -1,0 +1,7 @@
+{
+  "name": "codeaware",
+  "version": "1.0.0",
+  "description": "Kontextsparendes Orchestrierungs- und Kompressionssystem für Claude Code",
+  "author": "patron",
+  "license": "MIT"
+}

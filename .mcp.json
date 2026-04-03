@@ -1,0 +1,9 @@
+{
+  "mcpServers": {
+    "codeaware": {
+      "command": "cargo",
+      "args": ["run", "--manifest-path", "./Cargo.toml"],
+      "cwd": "."
+    }
+  }
+}

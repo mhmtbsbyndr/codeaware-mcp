@@ -1,0 +1,69 @@
+   Compiling my-app v0.1.0 (/Users/dev/my-app)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 3.42s
+     Running unittests src/lib.rs (target/debug/deps/my_app-abc123)
+
+running 50 tests
+test auth::tests::test_generate_and_verify_token ... ok
+test auth::tests::test_expired_token ... ok
+test auth::tests::test_role_hierarchy ... ok
+test auth::tests::test_rate_limiter ... ok
+test auth::tests::test_refresh_token ... ok
+test db::tests::test_connection_pool ... ok
+test db::tests::test_migration ... ok
+test db::tests::test_query_user ... ok
+test db::tests::test_insert_user ... ok
+test db::tests::test_delete_user ... ok
+test handlers::tests::test_login_success ... ok
+test handlers::tests::test_login_failure ... ok
+test handlers::tests::test_register ... ok
+test handlers::tests::test_get_profile ... ok
+test handlers::tests::test_update_profile ... ok
+test handlers::tests::test_delete_account ... ok
+test handlers::tests::test_list_users ... ok
+test handlers::tests::test_search_users ... ok
+test handlers::tests::test_pagination ... ok
+test handlers::tests::test_rate_limiting ... ok
+test middleware::tests::test_auth_middleware ... ok
+test middleware::tests::test_cors ... ok
+test middleware::tests::test_logging ... ok
+test middleware::tests::test_error_handler ... ok
+test middleware::tests::test_request_id ... ok
+test models::tests::test_user_creation ... ok
+test models::tests::test_user_validation ... ok
+test models::tests::test_user_serialization ... ok
+test models::tests::test_role_parsing ... ok
+test models::tests::test_email_validation ... ok
+test routes::tests::test_health_check ... ok
+test routes::tests::test_api_version ... ok
+test routes::tests::test_not_found ... ok
+test routes::tests::test_method_not_allowed ... ok
+test routes::tests::test_content_type ... ok
+test utils::tests::test_hash_password ... ok
+test utils::tests::test_verify_password ... ok
+test utils::tests::test_generate_id ... ok
+test utils::tests::test_sanitize_input ... ok
+test utils::tests::test_validate_email ... ok
+test utils::tests::test_format_date ... ok
+test utils::tests::test_parse_pagination ... ok
+test utils::tests::test_build_query ... ok
+test utils::tests::test_encode_base64 ... ok
+test utils::tests::test_decode_base64 ... ok
+test integration::test_full_auth_flow ... ok
+test integration::test_user_crud ... ok
+test integration::test_concurrent_requests ... ok
+test integration::test_error_recovery ... FAILED
+test integration::test_graceful_shutdown ... ok
+
+failures:
+
+---- integration::test_error_recovery stdout ----
+thread 'integration::test_error_recovery' panicked at src/integration_tests.rs:234:5:
+assertion failed: `(left == right)`
+  left: `Err(ConnectionReset)`,
+ right: `Ok(Response { status: 200 })`
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+
+failures:
+    integration::test_error_recovery
+
+test result: FAILED. 49 passed; 1 failed; 0 ignored; 0 measured; 0 filtered out; finished in 23.42s

@@ -1,0 +1,7 @@
+{
+  "servers": {
+    "rust": { "command": "rust-analyzer" },
+    "typescript": { "command": "typescript-language-server", "args": ["--stdio"] },
+    "python": { "command": "pylsp" }
+  }
+}

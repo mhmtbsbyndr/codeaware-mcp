@@ -1,0 +1,39 @@
+[project]
+name = "test-project"
+languages = ["rust", "typescript"]
+ignore = ["target/", "node_modules/", ".git/", "*.lock"]
+
+[intelligence]
+strategy = "auto"
+
+[compression]
+max_file_lines_full = 100
+max_command_output = 50
+max_search_results = 20
+include_callers = true
+include_tests = true
+scan_secrets = true
+
+[session]
+track_seen_files = true
+persistence = true
+persistence_path = "~/.codeaware/sessions.db"
+pattern_learning = true
+pattern_confidence_decay = 0.05
+pattern_prune_threshold = 0.2
+pattern_prune_after_days = 30
+
+[enforcement]
+tdd_warning = false
+error_loop_threshold = 3
+max_iterations_per_task = 5
+
+[languages.rust]
+test_command = "cargo test"
+build_command = "cargo build"
+lint_command = "cargo clippy"
+
+[languages.typescript]
+test_command = "npm test"
+build_command = "npx tsc --noEmit"
+lint_command = "npx eslint ."

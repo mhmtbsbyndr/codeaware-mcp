@@ -1,0 +1,41 @@
+{
+  "permissions": {
+    "allow": [
+      "codeaware__project_map",
+      "codeaware__smart_read",
+      "codeaware__smart_edit",
+      "codeaware__smart_run",
+      "codeaware__session_status",
+      "codeaware__workspace_context",
+      "codeaware__validate_config",
+      "Bash(cargo test*)",
+      "Bash(cargo build*)",
+      "Bash(cargo clippy*)",
+      "Bash(git diff*)",
+      "Bash(git log*)",
+      "Bash(git status)"
+    ],
+    "deny": [
+      "Bash(rm -rf *)",
+      "Bash(curl * | *)",
+      "Bash(sudo *)",
+      "Read(.env*)",
+      "Read(secrets/**)",
+      "Edit(*.lock)"
+    ]
+  },
+  "hooks": {
+    "PostToolUse": [{
+      "matcher": "codeaware__*",
+      "hooks": [{"type": "command", "command": "codeaware-mcp hook post-tool-use", "timeout": 5000}]
+    }],
+    "PostToolUseFailure": [{
+      "matcher": "codeaware__*",
+      "hooks": [{"type": "command", "command": "codeaware-mcp hook tool-failure"}]
+    }],
+    "PreCompact": [{"hooks": [{"type": "command", "command": "codeaware-mcp hook pre-compact"}]}],
+    "PostCompact": [{"hooks": [{"type": "command", "command": "codeaware-mcp hook post-compact"}]}],
+    "SubagentStop": [{"hooks": [{"type": "command", "command": "codeaware-mcp hook subagent-stop"}]}],
+    "Stop": [{"hooks": [{"type": "command", "command": "codeaware-mcp hook session-stop"}]}]
+  }
+}
