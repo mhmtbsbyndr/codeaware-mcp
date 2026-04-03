@@ -2,6 +2,7 @@ use serde::{Deserialize, Serialize};
 use std::path::Path;
 use thiserror::Error;
 use crate::intelligence::tree_sitter_provider::TreeSitterProvider;
+use crate::tools::prefetch::PrefetchedFile;
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Default)]
 #[serde(rename_all = "lowercase")]
@@ -55,6 +56,7 @@ pub struct SmartReadResult {
     pub relevant_tests: Vec<String>,
     pub content: Option<String>,
     pub suggested_next: Vec<String>,
+    pub prefetched: Vec<PrefetchedFile>,
 }
 
 #[derive(Debug, Error)]
@@ -177,6 +179,7 @@ pub fn smart_read(input: &SmartReadInput, _project_root: &Path) -> Result<SmartR
         relevant_tests: vec![],
         content,
         suggested_next: vec![],
+        prefetched: vec![],
     })
 }
 
