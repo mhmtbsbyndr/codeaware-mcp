@@ -5,3 +5,4 @@ pub mod smart_run;
 pub mod session_status;
 pub mod workspace_state;
 pub mod validate_config;
+pub mod confidence;
