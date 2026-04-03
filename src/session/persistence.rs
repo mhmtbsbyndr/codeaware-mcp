@@ -78,6 +78,12 @@ impl SessionDb {
         Ok(db)
     }
 
+    /// Execute a raw SQL statement (used for recovery, e.g. ROLLBACK)
+    pub fn execute_raw(&self, sql: &str) -> Result<(), PersistenceError> {
+        self.conn.execute_batch(sql)?;
+        Ok(())
+    }
+
     fn run_migrations(&self) -> Result<(), PersistenceError> {
         let schema = include_str!("../../migrations/001_initial.sql");
         self.conn.execute_batch(schema)?;
@@ -303,7 +309,8 @@ impl SessionDb {
         &self,
         opts: &SearchObservationsOpts<'_>,
     ) -> Result<Vec<ObservationRecord>, PersistenceError> {
-        let query = opts.query;
+        // Defense-in-depth: strip colons (column filters) even if caller sanitized
+        let query: String = opts.query.replace(':', " ");
         let project = opts.project;
         let observation_type = opts.observation_type;
         let limit = opts.limit;

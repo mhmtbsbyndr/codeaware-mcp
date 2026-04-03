@@ -72,13 +72,31 @@ impl McpServer {
     }
 
     pub fn handle_message(&self, message: &str) -> Option<String> {
-        let parsed: Value = serde_json::from_str(message).ok()?;
-        let method = parsed.get("method")?.as_str()?;
-        let id = parsed.get("id").cloned()?;
+        let parsed: Value = match serde_json::from_str(message) {
+            Ok(v) => v,
+            Err(_) => return Some(self.respond_error(Value::Null, -32700, "Parse error")),
+        };
+
+        let method = match parsed.get("method").and_then(|m| m.as_str()) {
+            Some(m) => m,
+            None => {
+                let id = parsed.get("id").cloned().unwrap_or(Value::Null);
+                return Some(self.respond_error(id, -32600, "Invalid Request: missing method"));
+            }
+        };
+
+        // Notifications have no id and expect no response
+        if method.starts_with("notifications/") {
+            return None;
+        }
+
+        let id = match parsed.get("id").cloned() {
+            Some(id) => id,
+            None => return Some(self.respond_error(Value::Null, -32600, "Invalid Request: missing id")),
+        };
 
         match method {
             "initialize" => Some(self.respond(id, self.handle_initialize())),
-            "notifications/initialized" => None,
             "tools/list" => Some(self.respond(id, self.handle_tools_list())),
             "tools/call" => Some(self.respond(id, self.handle_tools_call(&parsed))),
             _ => Some(self.respond_error(id, -32601, "Method not found")),
@@ -407,7 +425,10 @@ impl McpServer {
                     Ok(g) => g,
                     Err(poisoned) => {
                         eprintln!("Warning: memory database mutex poisoned, recovering");
-                        poisoned.into_inner()
+                        let guard = poisoned.into_inner();
+                        // Rollback any partial transaction from the panicked thread
+                        let _ = guard.execute_raw("ROLLBACK");
+                        guard
                     }
                 };
                 let result = match tool_name {

@@ -14,17 +14,23 @@ const VALID_CONCEPTS: &[&str] = &[
 
 const MAX_TIMELINE_DEPTH: usize = 100;
 
-/// Sanitize user input for FTS5 queries: wrap each term in double quotes
-/// to prevent FTS5 operator injection (NOT, NEAR, OR, column filters).
-fn sanitize_fts5_query(input: &str) -> String {
-    input
+/// Sanitize user input for FTS5 queries.
+/// Strips colons (column filter syntax), escapes quotes, wraps each term.
+/// Returns None if input produces no searchable terms.
+fn sanitize_fts5_query(input: &str) -> Option<String> {
+    let terms: Vec<String> = input
         .split_whitespace()
         .map(|term| {
-            let escaped = term.replace('"', "\"\"");
-            format!("\"{escaped}\"")
+            // Strip colons to prevent column:value filter syntax
+            let clean = term.replace(':', " ").replace('"', "\"\"");
+            format!("\"{clean}\"")
         })
-        .collect::<Vec<_>>()
-        .join(" ")
+        .collect();
+    if terms.is_empty() {
+        None
+    } else {
+        Some(terms.join(" "))
+    }
 }
 
 #[derive(Debug, Serialize)]
@@ -35,7 +41,7 @@ struct SaveMemoryResult {
 
 #[derive(Debug, Serialize)]
 struct SearchMemoryResult {
-    total: usize,
+    count: usize,
     observations: Vec<crate::session::persistence::ObservationRecord>,
 }
 
@@ -163,6 +169,16 @@ pub fn handle_search_memory(params: &Value, db: &SessionDb) -> Value {
 
     let project = params.get("project").and_then(|v| v.as_str());
     let obs_type = params.get("type").and_then(|v| v.as_str());
+    if let Some(t) = obs_type {
+        if !VALID_TYPES.contains(&t) {
+            let env = Envelope::<()>::error(
+                ErrorCode::EParseFailed,
+                false,
+                Some(format!("Invalid type filter '{}'. Valid: {:?}", t, VALID_TYPES)),
+            );
+            return serde_json::to_value(env).unwrap_or(json!({"ok": false}));
+        }
+    }
     let limit = params
         .get("limit")
         .and_then(|v| v.as_u64())
@@ -175,7 +191,17 @@ pub fn handle_search_memory(params: &Value, db: &SessionDb) -> Value {
     let date_start = params.get("date_start").and_then(|v| v.as_str());
     let date_end = params.get("date_end").and_then(|v| v.as_str());
 
-    let sanitized_query = sanitize_fts5_query(query);
+    let sanitized_query = match sanitize_fts5_query(query) {
+        Some(q) => q,
+        None => {
+            let env = Envelope::<()>::error(
+                ErrorCode::EParseFailed,
+                false,
+                Some("Query contains no searchable terms".to_string()),
+            );
+            return serde_json::to_value(env).unwrap_or(json!({"ok": false}));
+        }
+    };
     let opts = SearchObservationsOpts {
         query: &sanitized_query,
         project,
@@ -188,17 +214,22 @@ pub fn handle_search_memory(params: &Value, db: &SessionDb) -> Value {
     match db.search_observations(&opts) {
         Ok(observations) => {
             let result = SearchMemoryResult {
-                total: observations.len(),
+                count: observations.len(),
                 observations,
             };
             let env = Envelope::success(result, TrustLevel::Heuristic);
             serde_json::to_value(env).unwrap_or(json!({"ok": false}))
         }
-        Err(_) => {
+        Err(e) => {
+            let is_fts_error = e.to_string().contains("fts5");
             let env = Envelope::<()>::error(
-                ErrorCode::EParseFailed,
-                false,
-                Some("Search query failed. Try simpler search terms.".to_string()),
+                if is_fts_error { ErrorCode::EParseFailed } else { ErrorCode::EInternalError },
+                !is_fts_error,
+                Some(if is_fts_error {
+                    "Search query failed. Try simpler search terms.".to_string()
+                } else {
+                    "Database error during search".to_string()
+                }),
             );
             serde_json::to_value(env).unwrap_or(json!({"ok": false}))
         }

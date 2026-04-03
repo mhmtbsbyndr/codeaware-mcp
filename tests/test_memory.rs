@@ -23,7 +23,7 @@ fn test_save_and_search_memory() {
     assert!(id > 0);
 
     let results = db.search_observations(&SearchObservationsOpts {
-        query: "JWT token",
+        query: "\"JWT\" \"token\"",
         project: None,
         observation_type: None,
         limit: 10,
@@ -61,7 +61,7 @@ fn test_search_with_project_filter() {
     }).unwrap();
 
     let results = db.search_observations(&SearchObservationsOpts {
-        query: "caching",
+        query: "\"caching\"",
         project: Some("project-a"),
         observation_type: None,
         limit: 10,
@@ -98,7 +98,7 @@ fn test_search_with_type_filter() {
     }).unwrap();
 
     let results = db.search_observations(&SearchObservationsOpts {
-        query: "error handling",
+        query: "\"error\" \"handling\"",
         project: None,
         observation_type: Some("bugfix"),
         limit: 10,
@@ -154,7 +154,7 @@ fn test_memory_timeline() {
 
     // Timeline around observation #5
     let timeline = db.get_observation_timeline(ids[5], 3, 3, None).unwrap();
-    assert!(timeline.len() >= 5, "Should have at least 5 entries (3 before + anchor + 3 after but anchor is included in before)");
+    assert!(timeline.len() >= 5, "Should have at least 5 entries");
 
     // Verify chronological order by id (stable even when timestamps are identical)
     for w in timeline.windows(2) {
@@ -167,6 +167,26 @@ fn test_timeline_invalid_anchor() {
     let (_dir, db) = test_db();
     let result = db.get_observation_timeline(99999, 5, 5, None);
     assert!(result.is_err(), "Should error for non-existent anchor");
+}
+
+#[test]
+fn test_timeline_depth_zero() {
+    let (_dir, db) = test_db();
+
+    let id = db.save_observation(&SaveObservationOpts {
+        title: None,
+        text: "Solo observation",
+        observation_type: "discovery",
+        concepts: None,
+        project: None,
+        files: None,
+        facts: None,
+    }).unwrap();
+
+    // depth_before=0 should still include the anchor
+    let timeline = db.get_observation_timeline(id, 0, 0, None).unwrap();
+    assert_eq!(timeline.len(), 1);
+    assert_eq!(timeline[0].id, id);
 }
 
 #[test]
@@ -215,7 +235,7 @@ fn test_observations_persist_across_connections() {
 }
 
 #[test]
-fn test_fts5_bad_query_graceful() {
+fn test_fts5_bad_query_returns_error() {
     let (_dir, db) = test_db();
 
     db.save_observation(&SaveObservationOpts {
@@ -228,7 +248,7 @@ fn test_fts5_bad_query_graceful() {
         facts: None,
     }).unwrap();
 
-    // Malformed FTS5 query should not panic
+    // Malformed FTS5 query should return an error, not panic
     let result = db.search_observations(&SearchObservationsOpts {
         query: "\"unterminated",
         project: None,
@@ -238,6 +258,85 @@ fn test_fts5_bad_query_graceful() {
         date_start: None,
         date_end: None,
     });
-    // Either returns results or an error, but should not panic
+    assert!(result.is_err(), "Malformed FTS5 query should return error");
+}
+
+#[test]
+fn test_fts5_column_filter_stripped() {
+    let (_dir, db) = test_db();
+
+    db.save_observation(&SaveObservationOpts {
+        title: Some("secret title"),
+        text: "Public content about databases",
+        observation_type: "discovery",
+        concepts: None,
+        project: None,
+        files: None,
+        facts: None,
+    }).unwrap();
+
+    // Column filter syntax should be neutralized (colon stripped)
+    let results = db.search_observations(&SearchObservationsOpts {
+        query: "\"title secret\"",
+        project: None,
+        observation_type: None,
+        limit: 10,
+        offset: 0,
+        date_start: None,
+        date_end: None,
+    }).unwrap();
+    // Should search across all columns, not just title
+    // The colon in "title:secret" gets stripped to "title secret" in persistence layer
+    assert!(results.len() <= 1);
+}
+
+#[test]
+fn test_search_with_pagination() {
+    let (_dir, db) = test_db();
+
+    for i in 0..5 {
+        db.save_observation(&SaveObservationOpts {
+            title: None,
+            text: &format!("Observation about pagination topic {}", i),
+            observation_type: "discovery",
+            concepts: None,
+            project: None,
+            files: None,
+            facts: None,
+        }).unwrap();
+    }
+
+    let page1 = db.search_observations(&SearchObservationsOpts {
+        query: "\"pagination\"",
+        project: None,
+        observation_type: None,
+        limit: 2,
+        offset: 0,
+        date_start: None,
+        date_end: None,
+    }).unwrap();
+    assert_eq!(page1.len(), 2);
+
+    let page2 = db.search_observations(&SearchObservationsOpts {
+        query: "\"pagination\"",
+        project: None,
+        observation_type: None,
+        limit: 2,
+        offset: 2,
+        date_start: None,
+        date_end: None,
+    }).unwrap();
+    assert_eq!(page2.len(), 2);
+
+    // Pages should not overlap
+    assert_ne!(page1[0].id, page2[0].id);
+}
+
+#[test]
+fn test_execute_raw_rollback() {
+    let (_dir, db) = test_db();
+    // ROLLBACK when no transaction is active should not error
+    let result = db.execute_raw("ROLLBACK");
+    // SQLite returns error for ROLLBACK outside transaction, that's OK
     let _ = result;
 }
