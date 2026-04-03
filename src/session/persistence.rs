@@ -78,9 +78,9 @@ impl SessionDb {
         Ok(db)
     }
 
-    /// Execute a raw SQL statement (used for recovery, e.g. ROLLBACK)
-    pub fn execute_raw(&self, sql: &str) -> Result<(), PersistenceError> {
-        self.conn.execute_batch(sql)?;
+    /// Rollback any in-progress transaction (used for poisoned-mutex recovery)
+    pub fn rollback(&self) -> Result<(), PersistenceError> {
+        self.conn.execute_batch("ROLLBACK")?;
         Ok(())
     }
 

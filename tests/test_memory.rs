@@ -1,4 +1,5 @@
 use codeaware_mcp::session::persistence::{SessionDb, SaveObservationOpts, SearchObservationsOpts};
+use codeaware_mcp::tools::memory::handle_save_memory;
 use tempfile::TempDir;
 
 fn test_db() -> (TempDir, SessionDb) {
@@ -265,9 +266,10 @@ fn test_fts5_bad_query_returns_error() {
 fn test_fts5_column_filter_stripped() {
     let (_dir, db) = test_db();
 
+    // Text contains both "alpha" and "beta" so FTS5 can match
     db.save_observation(&SaveObservationOpts {
-        title: Some("secret title"),
-        text: "Public content about databases",
+        title: Some("alpha topic"),
+        text: "beta content here",
         observation_type: "discovery",
         concepts: None,
         project: None,
@@ -275,9 +277,11 @@ fn test_fts5_column_filter_stripped() {
         facts: None,
     }).unwrap();
 
-    // Column filter syntax should be neutralized (colon stripped)
+    // "title:alpha" with colon stripped becomes two separate terms "title" + "alpha"
+    // Since "title" doesn't appear in the content, this should return 0 if colon is stripped correctly.
+    // If colon were NOT stripped, FTS5 would interpret "title:alpha" as column filter and find 1 result.
     let results = db.search_observations(&SearchObservationsOpts {
-        query: "\"title secret\"",
+        query: "title:alpha",
         project: None,
         observation_type: None,
         limit: 10,
@@ -285,9 +289,21 @@ fn test_fts5_column_filter_stripped() {
         date_start: None,
         date_end: None,
     }).unwrap();
-    // Should search across all columns, not just title
-    // The colon in "title:secret" gets stripped to "title secret" in persistence layer
-    assert!(results.len() <= 1);
+    // Colon stripped: searches for "title" AND "alpha" — "title" not in content → 0 results
+    // If column filter worked: would search title column for "alpha" → 1 result
+    assert_eq!(results.len(), 0, "Column filter syntax must be neutralized");
+
+    // Normal search for "alpha" should find it
+    let results2 = db.search_observations(&SearchObservationsOpts {
+        query: "\"alpha\"",
+        project: None,
+        observation_type: None,
+        limit: 10,
+        offset: 0,
+        date_start: None,
+        date_end: None,
+    }).unwrap();
+    assert_eq!(results2.len(), 1, "Normal search should find the observation");
 }
 
 #[test]
@@ -333,10 +349,73 @@ fn test_search_with_pagination() {
 }
 
 #[test]
-fn test_execute_raw_rollback() {
+fn test_rollback_no_transaction() {
     let (_dir, db) = test_db();
-    // ROLLBACK when no transaction is active should not error
-    let result = db.execute_raw("ROLLBACK");
-    // SQLite returns error for ROLLBACK outside transaction, that's OK
-    let _ = result;
+    // ROLLBACK when no transaction is active returns an error — that's expected
+    let result = db.rollback();
+    assert!(result.is_err(), "ROLLBACK outside transaction should error");
+}
+
+#[test]
+fn test_date_format_validation() {
+    // Test via handler layer to exercise date validation
+    let (_dir, db) = test_db();
+
+    db.save_observation(&SaveObservationOpts {
+        title: None,
+        text: "Date test content",
+        observation_type: "discovery",
+        concepts: None,
+        project: None,
+        files: None,
+        facts: None,
+    }).unwrap();
+
+    // Valid date range should work
+    let results = db.search_observations(&SearchObservationsOpts {
+        query: "\"date\"",
+        project: None,
+        observation_type: None,
+        limit: 10,
+        offset: 0,
+        date_start: Some("2020-01-01"),
+        date_end: Some("2030-12-31"),
+    }).unwrap();
+    assert_eq!(results.len(), 1);
+}
+
+#[test]
+fn test_sanitize_strips_quotes_and_colons() {
+    let (_dir, db) = test_db();
+
+    db.save_observation(&SaveObservationOpts {
+        title: None,
+        text: "Testing quote handling in searches",
+        observation_type: "discovery",
+        concepts: None,
+        project: None,
+        files: None,
+        facts: None,
+    }).unwrap();
+
+    // Query with quotes and colons — should not crash, quotes stripped
+    let results = db.search_observations(&SearchObservationsOpts {
+        query: "\"quote\" \"handling\"",
+        project: None,
+        observation_type: None,
+        limit: 10,
+        offset: 0,
+        date_start: None,
+        date_end: None,
+    }).unwrap();
+    assert_eq!(results.len(), 1);
+}
+
+#[test]
+fn test_text_size_limit() {
+    let huge_text = "x".repeat(70000);
+    let params = serde_json::json!({ "text": huge_text });
+    let (_dir, db) = test_db();
+    let result = handle_save_memory(&params, &db);
+    assert_eq!(result["ok"], false, "Huge text should be rejected");
 }

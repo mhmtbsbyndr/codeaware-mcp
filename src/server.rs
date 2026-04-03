@@ -427,7 +427,9 @@ impl McpServer {
                         eprintln!("Warning: memory database mutex poisoned, recovering");
                         let guard = poisoned.into_inner();
                         // Rollback any partial transaction from the panicked thread
-                        let _ = guard.execute_raw("ROLLBACK");
+                        if let Err(e) = guard.rollback() {
+                            eprintln!("Warning: ROLLBACK after mutex recovery: {e}");
+                        }
                         guard
                     }
                 };

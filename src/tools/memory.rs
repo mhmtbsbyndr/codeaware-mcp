@@ -13,17 +13,25 @@ const VALID_CONCEPTS: &[&str] = &[
 ];
 
 const MAX_TIMELINE_DEPTH: usize = 100;
+const MAX_TEXT_SIZE: usize = 65536; // 64KB
 
 /// Sanitize user input for FTS5 queries.
-/// Strips colons (column filter syntax), escapes quotes, wraps each term.
+/// Strips colons (column filters) and double quotes (no escape in FTS5 phrases).
+/// Wraps each remaining term in double quotes as a literal phrase.
 /// Returns None if input produces no searchable terms.
 fn sanitize_fts5_query(input: &str) -> Option<String> {
     let terms: Vec<String> = input
         .split_whitespace()
-        .map(|term| {
-            // Strip colons to prevent column:value filter syntax
-            let clean = term.replace(':', " ").replace('"', "\"\"");
-            format!("\"{clean}\"")
+        .filter_map(|term| {
+            // Strip colons (column filter syntax) and quotes (no FTS5 escape)
+            let clean: String = term.chars()
+                .filter(|c| *c != ':' && *c != '"')
+                .collect();
+            if clean.is_empty() {
+                None
+            } else {
+                Some(format!("\"{clean}\""))
+            }
         })
         .collect();
     if terms.is_empty() {
@@ -64,6 +72,14 @@ pub fn handle_save_memory(params: &Value, db: &SessionDb) -> Value {
             return serde_json::to_value(env).unwrap_or(json!({"ok": false}));
         }
     };
+    if text.len() > MAX_TEXT_SIZE {
+        let env = Envelope::<()>::error(
+            ErrorCode::EParseFailed,
+            false,
+            Some(format!("'text' exceeds maximum size of {} bytes", MAX_TEXT_SIZE)),
+        );
+        return serde_json::to_value(env).unwrap_or(json!({"ok": false}));
+    }
 
     let title = params.get("title").and_then(|v| v.as_str());
 
@@ -190,6 +206,19 @@ pub fn handle_search_memory(params: &Value, db: &SessionDb) -> Value {
         .unwrap_or(0) as usize;
     let date_start = params.get("date_start").and_then(|v| v.as_str());
     let date_end = params.get("date_end").and_then(|v| v.as_str());
+    // Validate date format (must start with YYYY- for lexicographic comparison)
+    for (name, val) in [("date_start", date_start), ("date_end", date_end)] {
+        if let Some(d) = val {
+            if d.len() < 10 || d.as_bytes().get(4) != Some(&b'-') || d.as_bytes().get(7) != Some(&b'-') {
+                let env = Envelope::<()>::error(
+                    ErrorCode::EParseFailed,
+                    false,
+                    Some(format!("'{}' must be ISO 8601 format (YYYY-MM-DD...)", name)),
+                );
+                return serde_json::to_value(env).unwrap_or(json!({"ok": false}));
+            }
+        }
+    }
 
     let sanitized_query = match sanitize_fts5_query(query) {
         Some(q) => q,
