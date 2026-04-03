@@ -31,6 +31,17 @@ A Rust MCP server that acts as a **compression and orchestration layer** between
 - [Install](#install)
 - [Platform Support](#platform-support)
 - [Tests](#tests)
+- [How to Use](#how-to-use)
+  - [Quick Start](#quick-start)
+  - [Workflow: Exploring a New Codebase](#workflow-exploring-a-new-codebase)
+  - [Workflow: Fixing a Bug (TDD Cycle)](#workflow-fixing-a-bug-tdd-cycle)
+  - [Workflow: Safe Edits with Impact Analysis](#workflow-safe-edits-with-impact-analysis)
+  - [Workflow: Surviving Compaction](#workflow-surviving-compaction)
+  - [Workflow: Using Workspace State](#workflow-using-workspace-state)
+  - [Workflow: Code Review with Subagent](#workflow-code-review-with-subagent)
+  - [Using Skills](#using-skills)
+  - [Raw JSON-RPC Examples](#raw-json-rpc-examples)
+  - [Tips and Gotchas](#tips-and-gotchas)
 
 ---
 
@@ -966,6 +977,459 @@ cargo clippy      # 0 warnings
 ```
 
 Test coverage: MCP envelope, all 7 tools, path traversal, secret scanner (all 14 patterns), tree-sitter symbol extraction (all 7 languages), FTS5 round-trip, workspace state slots, config validation findings, acceptance matrix T01–T17 + N01–N12.
+
+---
+
+## How to Use
+
+### Quick Start
+
+After [installing](#install) and adding `.mcp.json` to your project:
+
+**Step 1: Add CLAUDE.md instructions**
+
+Create or update `CLAUDE.md` in your project root so Claude knows codeaware-mcp exists:
+
+```markdown
+<important if="reading or editing files">
+Prefer smart_read for files > 50 LOC, smart_run for tests/builds/linting,
+smart_edit when impact analysis is needed.
+Standard Read/Bash stays allowed for small files and simple commands.
+</important>
+
+<important if="starting a task">
+Start with /analyze or project_map for unfamiliar code areas.
+</important>
+```
+
+**Step 2: Start Claude Code in your project**
+
+```bash
+cd my-project
+claude
+```
+
+Claude sees the `.mcp.json`, connects to codeaware-mcp over stdio, and the 7 tools appear in its tool list alongside the built-in ones.
+
+**Step 3: Try it out**
+
+Ask Claude to explore your project:
+```
+> Give me an overview of this project
+```
+
+Claude calls `project_map` and gets a compressed structural overview — not hundreds of lines from `find` and `cat`.
+
+---
+
+### Workflow: Exploring a New Codebase
+
+When you (or Claude) start working in an unfamiliar project, the typical flow is:
+
+```
+You:    "What does this project do?"
+
+Claude: [calls project_map(path=".", depth=3, include_symbols=true)]
+        → Gets: 23 files, 4821 LOC, entry points, module tree, dependency graph
+        → Costs: ~200 tokens instead of ~15,000 from reading every file
+
+Claude: "This is a Rust web server with 4 modules: auth, api, models, middleware.
+         The main entry point is src/main.rs, and the core logic is in src/auth.rs (487 LOC).
+         Want me to look at anything specific?"
+
+You:    "How does authentication work?"
+
+Claude: [calls smart_read(path="src/auth.rs", mode="skeleton")]
+        → Gets: symbols=[AuthManager, login, verify_token, refresh],
+                imports=[jsonwebtoken, chrono],
+                callers=[{middleware.rs:45, auth_middleware}],
+                relevant_tests=[tests/auth_test.rs]
+        → Costs: ~150 tokens instead of ~2,000 for the full 487-line file
+
+Claude: "Auth uses JWT tokens. AuthManager has 4 methods: login, verify_token,
+         refresh, and logout. verify_token is called from the auth_middleware.
+         Want me to look at a specific function?"
+
+You:    "Show me verify_token"
+
+Claude: [calls smart_read(path="src/auth.rs", mode="focused", focus="verify_token")]
+        → Gets: only lines 85-101, the function body + its signature
+        → Costs: ~80 tokens instead of ~2,000
+```
+
+**Total tokens for understanding the project:** ~430 tokens
+**Without codeaware-mcp:** ~19,000 tokens (project_map equivalent + two full file reads)
+
+---
+
+### Workflow: Fixing a Bug (TDD Cycle)
+
+The most common Claude workflow — find a bug, write a test, fix it, verify.
+
+```
+You:    "verify_token doesn't handle expired tokens correctly"
+
+Claude: [calls smart_read(path="src/auth.rs", mode="focused", focus="verify_token")]
+        → Gets: the function body, callers, relevant tests
+        → Claude sees the function and knows tests/auth_test.rs covers it
+
+Claude: [calls smart_read(path="tests/auth_test.rs", mode="skeleton")]
+        → Gets: symbol list of existing tests, but not their source
+        → Claude sees test_verify_token exists, but no test_expired_token
+
+Claude: "There's no test for expired tokens. Let me add one first."
+        [writes test_expired_token using native Edit on the test file]
+        [calls smart_run(command="cargo test test_expired_token")]
+        → Gets: { status: "fail", failures: [{ test: "test_expired_token",
+                  message: "assertion failed: expected Err(TokenExpired), got Ok(...)" }] }
+        → Costs: ~50 tokens instead of ~300 from raw cargo output
+
+Claude: "Test fails as expected. Now fixing verify_token."
+        [calls smart_edit(
+           path="src/auth.rs",
+           strategy="symbol",
+           symbol="verify_token",
+           new_content="... fixed implementation ...",
+           expected_hash="a1b2c3..."
+        )]
+        → Gets: {
+            applied: true,
+            impact: {
+              callers_affected: [{middleware.rs:45, auth_middleware}],
+              tests_affected: ["auth_test.rs::test_verify_token", "auth_test.rs::test_expired_token"]
+            },
+            syntax_check: "ok",
+            semantic_risk: { level: "low" }
+          }
+        → Claude sees: edit applied, 1 caller affected, syntax OK, low risk
+
+Claude: [calls smart_run(command="cargo test")]
+        → Gets: { status: "pass", passed: 49, failed: 0, summary: "49 passed in 0.8s" }
+        → Costs: ~30 tokens instead of ~300
+
+Claude: "Fixed. verify_token now checks token expiry before validating claims.
+         All 49 tests pass including the new test_expired_token."
+```
+
+**Key advantage:** The `smart_edit` response told Claude exactly which callers are affected and which tests to run — without Claude having to grep the codebase. The `smart_run` response gave only the test summary, not 300 lines of cargo output.
+
+---
+
+### Workflow: Safe Edits with Impact Analysis
+
+When editing a function that's called from many places:
+
+```
+You:    "Rename handle_request to process_request"
+
+Claude: [calls smart_read(path="src/server.rs", mode="focused", focus="handle_request")]
+        → Gets: function body + callers from 4 files + 3 test files
+
+Claude: [calls smart_edit(
+           path="src/server.rs",
+           strategy="text",
+           edits=[{ old: "fn handle_request(", new: "fn process_request(" }],
+           expected_hash="a1b2c3...",
+           dry_run=true
+        )]
+        → Gets: {
+            applied: false,          ← dry_run, not actually applied
+            dry_run: true,
+            impact: {
+              callers_affected: [
+                { file: "src/router.rs",   line: 34, symbol: "route_incoming" },
+                { file: "src/main.rs",     line: 12, symbol: "main" },
+                { file: "src/fallback.rs", line: 8,  symbol: "default_handler" },
+                { file: "src/proxy.rs",    line: 45, symbol: "forward_request" }
+              ],
+              tests_affected: ["tests/test_server.rs", "tests/test_router.rs", "tests/test_proxy.rs"]
+            },
+            edit_validity: { level: "structural", confidence: 0.85 }
+          }
+
+Claude: "This rename affects 4 callers in 4 files and 3 test files.
+         Want me to proceed and update all call sites?"
+
+You:    "Yes, go ahead"
+
+Claude: [applies the edit without dry_run]
+        [updates all 4 caller files]
+        [calls smart_run(command="cargo test")]
+        → Gets: { passed: 52, failed: 0 }
+```
+
+**Key advantage:** The `dry_run: true` preview showed all affected files before any change was made. Claude could present the impact to you and get confirmation — instead of making the rename and finding out about broken callers from compile errors.
+
+---
+
+### Workflow: Surviving Compaction
+
+What happens when the context window fills up:
+
+```
+[Claude has been working for a while — 40+ tool calls, ~800k tokens consumed]
+
+Claude Code: "Context is 95% full. Running auto-compact."
+
+[BEHIND THE SCENES:]
+1. PreCompact hook fires → codeaware-mcp writes session snapshot to SQLite:
+   { seen_files: ["src/auth.rs", "src/middleware.rs", "tests/auth_test.rs"],
+     edits_made: [{ path: "src/auth.rs", summary: "Fixed token expiry check" }],
+     error_signatures: [{ hash: "a1b2", count: 3, fix: "Check expiry before claims" }],
+     workspace_state: { active_task: "Fix auth bug", verification: "48/49 pass" } }
+
+2. Claude Code compresses the conversation
+
+3. PostCompact hook fires → codeaware-mcp loads snapshot,
+   marks all seen-files as "pre-compact" (hashes still valid)
+
+[AFTER COMPACTION:]
+Claude: [calls session_status()]
+        → Gets: {
+            session_id: "abc123",
+            files_read: [
+              { path: "src/auth.rs", mode: "focused", stale: false },
+              { path: "src/middleware.rs", mode: "skeleton", stale: false },
+              { path: "tests/auth_test.rs", mode: "full", stale: false }
+            ],
+            edits_made: [
+              { path: "src/auth.rs", summary: "Fixed token expiry check" }
+            ],
+            last_test: { result: "48/49 passed", failing_files: ["tests/edge_cases.rs"] },
+            error_loops: [],
+            persistence: {
+              cross_session_hints: ["auth.rs and middleware.rs are read together in 90% of sessions"]
+            }
+          }
+
+Claude: "I can see I was fixing an auth bug. I edited src/auth.rs (token expiry),
+         48/49 tests pass, with 1 remaining failure in tests/edge_cases.rs.
+         Let me continue fixing that."
+```
+
+**Without codeaware-mcp:** After compaction, Claude has a vague summary of "we were working on auth" and needs to re-read every file from scratch. With codeaware-mcp, it gets a precise, structured recovery of exactly where it was.
+
+---
+
+### Workflow: Using Workspace State
+
+`workspace_state` carries structured context across tool calls. Five typed slots:
+
+```
+[Claude starts working on a bug]
+
+Claude: [calls workspace_state(
+           action="write",
+           slot="active_task",
+           value={ "description": "Fix timeout in retry logic", "files": ["src/retry.rs", "src/http.rs"] }
+        )]
+
+[... 15 tool calls later ...]
+
+Claude: [calls workspace_state(
+           action="write",
+           slot="error_signatures",
+           value={ "errors": [
+             { "hash": "x1y2", "message": "connection reset", "count": 3,
+               "fix": "Increase retry delay from 100ms to 500ms" }
+           ]}
+        )]
+
+[... Claude encounters the same error a 4th time ...]
+
+Claude: [calls workspace_state(action="read", slot="error_signatures")]
+        → Gets: { errors: [{ hash: "x1y2", count: 3,
+                   fix: "Increase retry delay from 100ms to 500ms" }] }
+        → full: false (not the first read — only changed fields returned)
+
+Claude: "I've seen this error 3 times before. The suggested fix is to increase
+         the retry delay. Let me apply that."
+```
+
+**Slot interactions:**
+
+| After this... | ...this slot updates |
+|---|---|
+| `smart_read` completes | `recent_targets.files` updated automatically |
+| `smart_run` fails | `error_signatures.errors` updated with failure hash |
+| `smart_run` passes | `verification_state.status` → "pass" |
+| Multiple files read together | `co_access_candidates.pairs` learns the pattern |
+
+After 10+ sessions on the same project, `co_access_candidates` knows which files are edited together. On the next `smart_read`, `suggested_next` can recommend the co-accessed file — Claude reads it proactively without being asked.
+
+---
+
+### Workflow: Code Review with Subagent
+
+The `/review` skill runs a code review in an isolated subagent context. The main conversation context stays clean:
+
+```
+You:    "/review"
+
+[BEHIND THE SCENES:]
+1. The review skill (SKILL.md) fires
+2. Spawns code-reviewer agent (Sonnet model, read-only)
+3. Agent gets preloaded skills: smart-read, smart-edit, smart-run, gotchas
+4. Agent has its own initialPrompt that auto-starts the review
+5. Agent calls project_map → smart_read on changed files → smart_run("cargo clippy")
+6. Agent produces review findings
+7. Only the final result comes back to the main context
+
+You see:  "Code review complete:
+          - src/auth.rs: verify_token doesn't handle clock skew (medium severity)
+          - src/retry.rs: retry loop has no backoff jitter (low severity)
+          - tests/: 3 test functions are duplicated across files
+          No security issues found."
+```
+
+The agent made ~20 tool calls in its isolated context. Only the summary entered your main context — saving thousands of tokens.
+
+**Available skills from CLAUDE.md:**
+
+| Skill | What it does |
+|-------|-------------|
+| `/analyze` | Maps project, identifies entry points, suggests areas to look at |
+| `/fix` | Bug-fix workflow: reads relevant code, writes test, fixes, verifies |
+| `/review` | Read-only code review in isolated context |
+| `/project-map` | Generates structural overview (calls `project_map` tool) |
+
+---
+
+### Using Skills
+
+Skills are markdown files in `.claude/skills/` with YAML frontmatter. They instruct Claude on how to use codeaware-mcp tools for specific workflows.
+
+**Example: `/analyze` skill invocation**
+
+```
+You:    "/analyze"
+
+Claude: [reads .claude/skills/analyze/SKILL.md]
+        → Skill instructs: "Call project_map first, then smart_read on entry points"
+
+Claude: [calls project_map(path=".", include_symbols=true)]
+Claude: [calls smart_read on the top 3 files by access_frequency]
+Claude: "Project analysis:
+         - Rust web API, 23 files, 4821 LOC
+         - Entry: src/main.rs → src/server.rs → src/router.rs
+         - Hot paths: src/auth.rs (read 90% of sessions), src/models.rs (80%)
+         - 3 modules with no test coverage: retry, fallback, proxy"
+```
+
+**Preloaded skills** (available to agents without explicit invocation):
+
+The `smart-read`, `smart-edit`, `smart-run`, and `gotchas` skills are preloaded in all codeaware-mcp agents. They contain routing guidance:
+
+```markdown
+# smart-read skill (preloaded)
+When reading files:
+- Files > 50 LOC → use smart_read (skeleton or focused)
+- Files < 50 LOC → native Read is fine
+- Already-read files → smart_read auto-detects and returns diff
+- Config files (TOML, YAML, JSON) → always native Read
+```
+
+The `gotchas` skill contains known pitfalls:
+- Don't use skeleton mode for config files (every line matters)
+- Always pass `expected_hash` to `smart_edit` (prevents race conditions)
+- Don't compress `echo`, `ls`, `pwd` output (too short)
+- Use subagents for tasks > 5 steps (keeps main context clean)
+
+---
+
+### Raw JSON-RPC Examples
+
+For MCP developers integrating codeaware-mcp into other platforms.
+
+**Initialize:**
+```json
+→ {"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2024-11-05","capabilities":{},"clientInfo":{"name":"my-client","version":"1.0"}}}
+← {"jsonrpc":"2.0","id":1,"result":{"protocolVersion":"2024-11-05","capabilities":{"tools":{}},"serverInfo":{"name":"codeaware","version":"1.0.0"}}}
+```
+
+**List tools:**
+```json
+→ {"jsonrpc":"2.0","id":2,"method":"tools/list","params":{}}
+← {"jsonrpc":"2.0","id":2,"result":{"tools":[{"name":"project_map","description":"...","inputSchema":{...}},{"name":"smart_read",...},...]}}
+```
+
+**Call smart_read:**
+```json
+→ {"jsonrpc":"2.0","id":3,"method":"tools/call","params":{"name":"smart_read","arguments":{"path":"src/main.rs","mode":"skeleton"}}}
+← {"jsonrpc":"2.0","id":3,"result":{"content":[{"type":"text","text":"{\"ok\":true,\"trust\":\"tree-sitter\",\"data\":{\"path\":\"src/main.rs\",\"mode_used\":\"skeleton\",\"symbols\":[...],\"loc\":47,...}}"}]}}
+```
+
+**Call smart_run:**
+```json
+→ {"jsonrpc":"2.0","id":4,"method":"tools/call","params":{"name":"smart_run","arguments":{"command":"cargo test","scan_secrets":true}}}
+← {"jsonrpc":"2.0","id":4,"result":{"content":[{"type":"text","text":"{\"ok\":true,\"data\":{\"command\":\"cargo test\",\"command_type\":\"test_runner\",\"exit_code\":0,\"summary\":\"175 passed, 0 failed\",\"compression_ratio\":0.92,...}}"}]}}
+```
+
+**Call workspace_state:**
+```json
+→ {"jsonrpc":"2.0","id":5,"method":"tools/call","params":{"name":"workspace_state","arguments":{"action":"write","slot":"active_task","value":{"description":"Fix auth bug"}}}}
+← {"jsonrpc":"2.0","id":5,"result":{"content":[{"type":"text","text":"{\"ok\":true,\"data\":{\"slot\":\"active_task\",\"action\":\"write\",\"written\":true}}"}]}}
+
+→ {"jsonrpc":"2.0","id":6,"method":"tools/call","params":{"name":"workspace_state","arguments":{"action":"read","slot":"active_task"}}}
+← {"jsonrpc":"2.0","id":6,"result":{"content":[{"type":"text","text":"{\"ok\":true,\"data\":{\"slot\":\"active_task\",\"full\":true,\"value\":{\"description\":\"Fix auth bug\"}}}"}]}}
+```
+
+**Handle errors:**
+```json
+→ {"jsonrpc":"2.0","id":7,"method":"tools/call","params":{"name":"smart_read","arguments":{"path":"../../etc/passwd"}}}
+← {"jsonrpc":"2.0","id":7,"result":{"content":[{"type":"text","text":"{\"ok\":false,\"error_code\":\"E_PATH_TRAVERSAL\",\"retryable\":false,\"fallback_suggestion\":null,\"data\":null}"}]}}
+```
+
+**Hook invocation (shell):**
+```bash
+echo '{"tool":"smart_read","result":{"path":"src/main.rs"}}' | codeaware-mcp hook PostToolUse
+```
+
+---
+
+### Tips and Gotchas
+
+**Do:**
+
+- Start unfamiliar codebases with `project_map` — it's cheaper than reading files one by one
+- Use `smart_read` with `focus` when you know the function name — focused mode extracts only that function
+- Always pass `expected_hash` to `smart_edit` — it prevents silent overwrites from concurrent changes
+- Use `smart_run` for all test/build/lint commands — the compression ratio is typically 90%+
+- Check `session_status` after `/compact` or when resuming with `--continue` — it shows what Claude already knows
+- Use subagents (via skills like `/fix`, `/review`) for tasks > 5 steps — they keep your main context clean
+- Trust the `suggested_next` field — it tells Claude what to read next based on the dependency graph
+
+**Don't:**
+
+- Don't use `smart_read` on config files (TOML, YAML, JSON, .env) — every line matters, use native `Read`
+- Don't use `smart_run` on trivial commands like `ls`, `pwd`, `echo` — no output to compress
+- Don't set `mode="skeleton"` on files < 50 LOC — full read is cheaper than the skeleton overhead
+- Don't ignore `stale: true` in `smart_read` responses — the file changed since you last read it
+- Don't skip the `dry_run` on high-impact edits — preview the affected callers first
+- Don't read the same unchanged file twice — `smart_read` auto-detects and returns "not stale"
+- Don't use `smart_edit` without a prior `smart_read` — you need the hash for concurrency protection
+
+**Error recovery patterns:**
+
+| Error | What to do |
+|-------|-----------|
+| `E_HASH_MISMATCH` | File changed externally. Run `smart_read` again, get new hash, retry edit. |
+| `E_AMBIGUOUS_MATCH` | `old` text appears multiple times. Switch to `strategy=lines` with explicit line range. |
+| `E_SYNTAX_INVALID` | Edit would break syntax. Fix the code in `new` content and retry. File is unchanged. |
+| `E_STALE_READ` | File changed since read. `smart_read` auto-refreshes. Just retry. |
+| `E_PARSE_FAILED` | tree-sitter can't parse this file. Responses fall back to regex. Callers may be incomplete. |
+| `E_SECRET_BLOCKED` | Output contained a secret. It's been redacted. Check for leaked credentials. |
+
+**Token savings by task type (observed benchmarks):**
+
+| Task | Without codeaware-mcp | With codeaware-mcp | Savings |
+|------|----------------------|--------------------|---------:|
+| Explore unfamiliar project (10 files) | ~20,000 tokens | ~1,500 tokens | **92%** |
+| Fix a bug (read → test → edit → verify) | ~8,000 tokens | ~800 tokens | **90%** |
+| Run test suite (200-line output) | ~1,500 tokens | ~120 tokens | **92%** |
+| Build with 3 errors (150-line output) | ~1,200 tokens | ~80 tokens | **93%** |
+| Re-read an unchanged file | ~2,000 tokens | ~20 tokens | **99%** |
+| Session recovery after /compact | ~10,000 tokens | ~500 tokens | **95%** |
 
 ---
 
