@@ -1,7 +1,7 @@
 {
   "name": "codeaware",
-  "version": "1.0.0",
-  "description": "Kontextsparendes Orchestrierungs- und Kompressionssystem für Claude Code",
-  "author": "patron",
+  "version": "1.2.0",
+  "description": "Context-efficient orchestration and compression layer for Claude Code",
+  "author": "mhmtbsbyndr",
   "license": "MIT"
 }

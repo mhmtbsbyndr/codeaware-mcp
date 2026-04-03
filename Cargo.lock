@@ -164,6 +164,7 @@ dependencies = [
  "blake3",
  "chrono",
  "ignore",
+ "libc",
  "lsp-types",
  "predicates",
  "regex",

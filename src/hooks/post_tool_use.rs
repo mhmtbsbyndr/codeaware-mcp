@@ -52,8 +52,11 @@ pub fn handle_post_tool_use_with_metrics(
         }
     }
 
-    // Also write to shared file
-    shared::append_tool_call(tool_name, file_path, estimated_tokens, compressed_estimate);
+    // Only write to shared file if no in-memory MetricsState (CLI hook path)
+    // Avoids double-counting: server.rs records in-memory, merge_shared adds file-based
+    if metrics.is_none() {
+        shared::append_tool_call(tool_name, file_path, estimated_tokens, compressed_estimate);
+    }
 
     Ok(serde_json::json!({
         "decision": "approve",

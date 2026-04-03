@@ -20,7 +20,7 @@ fn main() {
         }
     }
 
-    eprintln!("CodeAware MCP Server v1.2.0 starting (stdio)...");
+    eprintln!("CodeAware MCP Server v{} starting (stdio)...", env!("CARGO_PKG_VERSION"));
     run_stdio_server();
 }
 

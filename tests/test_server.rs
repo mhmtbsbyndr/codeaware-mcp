@@ -12,7 +12,7 @@ fn test_initialize_response() {
     let response = server.handle_message(&request.to_string()).unwrap();
     let parsed: serde_json::Value = serde_json::from_str(&response).unwrap();
     assert_eq!(parsed["result"]["serverInfo"]["name"], "codeaware");
-    assert_eq!(parsed["result"]["serverInfo"]["version"], "0.1.0");
+    assert_eq!(parsed["result"]["serverInfo"]["version"], env!("CARGO_PKG_VERSION"));
 }
 
 #[test]

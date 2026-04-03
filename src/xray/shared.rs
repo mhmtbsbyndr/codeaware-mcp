@@ -1,11 +1,13 @@
 //! Shared metrics file for communication between hook processes and xray server.
 //! Hooks write to /tmp/codeaware-xray.json, xray server merges on each SSE tick.
+//! Uses flock for safe concurrent access from multiple hook processes.
 
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::path::PathBuf;
 
 const METRICS_FILE: &str = "/tmp/codeaware-xray.json";
+const LOCK_FILE: &str = "/tmp/codeaware-xray.lock";
 
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
 pub struct SharedMetrics {
@@ -28,36 +30,75 @@ fn metrics_path() -> PathBuf {
     PathBuf::from(METRICS_FILE)
 }
 
-/// Append a tool call to the shared metrics file (called from hooks).
-pub fn append_tool_call(tool_name: &str, file_path: Option<&str>, raw_tokens: u64, compressed_tokens: u64) {
-    let mut metrics = read_shared().unwrap_or_default();
-    metrics.tool_calls += 1;
-    metrics.raw_tokens_total += raw_tokens;
-    metrics.compressed_tokens_total += compressed_tokens;
-    if let Some(f) = file_path {
-        *metrics.file_tokens.entry(f.to_string()).or_insert(0) += raw_tokens;
+/// Acquire an exclusive file lock for safe read-modify-write.
+fn with_lock<F, R>(f: F) -> Option<R>
+where
+    F: FnOnce() -> R,
+{
+    use std::fs::OpenOptions;
+    use std::os::unix::io::AsRawFd;
+
+    let lock_file = OpenOptions::new()
+        .create(true)
+        .write(true)
+        .truncate(false)
+        .open(LOCK_FILE)
+        .ok()?;
+
+    // Acquire exclusive lock (blocking)
+    let fd = lock_file.as_raw_fd();
+    let ret = unsafe { libc::flock(fd, libc::LOCK_EX) };
+    if ret != 0 {
+        return None;
     }
-    metrics.timeline.push(SharedTimelineEvent {
-        timestamp: chrono::Utc::now().to_rfc3339(),
-        tool: tool_name.to_string(),
-        file: file_path.map(|s| s.to_string()),
-        raw_tokens,
-    });
-    // Keep timeline bounded
-    if metrics.timeline.len() > 100 {
-        metrics.timeline = metrics.timeline.split_off(metrics.timeline.len() - 100);
-    }
-    write_shared(&metrics);
+
+    let result = f();
+
+    // Release lock
+    unsafe { libc::flock(fd, libc::LOCK_UN) };
+    // lock_file dropped here, also releases
+
+    Some(result)
 }
 
-/// Read shared metrics from file.
+/// Append a tool call to the shared metrics file (called from hooks).
+/// Protected by flock to prevent lost updates from concurrent hooks.
+pub fn append_tool_call(tool_name: &str, file_path: Option<&str>, raw_tokens: u64, compressed_tokens: u64) {
+    with_lock(|| {
+        let mut metrics = read_shared_unlocked().unwrap_or_default();
+        metrics.tool_calls += 1;
+        metrics.raw_tokens_total += raw_tokens;
+        metrics.compressed_tokens_total += compressed_tokens;
+        if let Some(f) = file_path {
+            *metrics.file_tokens.entry(f.to_string()).or_insert(0) += raw_tokens;
+        }
+        metrics.timeline.push(SharedTimelineEvent {
+            timestamp: chrono::Utc::now().to_rfc3339(),
+            tool: tool_name.to_string(),
+            file: file_path.map(|s| s.to_string()),
+            raw_tokens,
+        });
+        // Keep timeline bounded
+        if metrics.timeline.len() > 100 {
+            metrics.timeline = metrics.timeline.split_off(metrics.timeline.len() - 100);
+        }
+        write_shared_unlocked(&metrics);
+    });
+}
+
+/// Read shared metrics from file (public, no lock needed for reads).
 pub fn read_shared() -> Option<SharedMetrics> {
+    read_shared_unlocked()
+}
+
+/// Internal read without lock.
+fn read_shared_unlocked() -> Option<SharedMetrics> {
     let data = std::fs::read_to_string(metrics_path()).ok()?;
     serde_json::from_str(&data).ok()
 }
 
 /// Write shared metrics to file (atomic via temp + rename).
-fn write_shared(metrics: &SharedMetrics) {
+fn write_shared_unlocked(metrics: &SharedMetrics) {
     let json = match serde_json::to_string(metrics) {
         Ok(j) => j,
         Err(_) => return,
