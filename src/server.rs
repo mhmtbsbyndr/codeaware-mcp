@@ -10,7 +10,7 @@ pub struct McpServer {
     state: Arc<Mutex<SessionState>>,
     metrics: Arc<Mutex<MetricsState>>,
     xray_server: Mutex<Option<XrayServer>>,
-    db: Arc<Mutex<SessionDb>>,
+    db: Option<Arc<Mutex<SessionDb>>>,
 }
 
 impl Default for McpServer {
@@ -35,7 +35,7 @@ impl McpServer {
             state: Arc::new(Mutex::new(SessionState::new("."))),
             metrics,
             xray_server: Mutex::new(xray),
-            db: Arc::new(Mutex::new(db)),
+            db,
         }
     }
 
@@ -53,16 +53,22 @@ impl McpServer {
             state,
             metrics,
             xray_server: Mutex::new(xray),
-            db: Arc::new(Mutex::new(db)),
+            db,
         }
     }
 
-    fn open_db() -> SessionDb {
+    fn open_db() -> Option<Arc<Mutex<SessionDb>>> {
         let home = std::env::var("HOME").unwrap_or_else(|_| ".".to_string());
         let db_path = std::path::PathBuf::from(home)
             .join(".codeaware")
             .join("session.db");
-        SessionDb::open(&db_path).expect("Failed to open session database")
+        match SessionDb::open(&db_path) {
+            Ok(db) => Some(Arc::new(Mutex::new(db))),
+            Err(e) => {
+                eprintln!("Warning: memory database unavailable: {e}");
+                None
+            }
+        }
     }
 
     pub fn handle_message(&self, message: &str) -> Option<String> {
@@ -386,15 +392,22 @@ impl McpServer {
                 }
             }
             "save_memory" | "search_memory" | "memory_timeline" => {
-                let db_guard = match self.db.lock() {
-                    Ok(g) => g,
-                    Err(_) => {
+                let db_arc = match &self.db {
+                    Some(db) => db,
+                    None => {
                         let envelope = Envelope::<()>::error(
-                            ErrorCode::ESqliteLocked,
-                            true,
-                            Some("Database lock unavailable".to_string()),
+                            ErrorCode::EInternalError,
+                            false,
+                            Some("Memory database unavailable".to_string()),
                         );
                         return json!({"content": [{"type": "text", "text": serde_json::to_string(&envelope).unwrap_or_default()}]});
+                    }
+                };
+                let db_guard = match db_arc.lock() {
+                    Ok(g) => g,
+                    Err(poisoned) => {
+                        eprintln!("Warning: memory database mutex poisoned, recovering");
+                        poisoned.into_inner()
                     }
                 };
                 let result = match tool_name {

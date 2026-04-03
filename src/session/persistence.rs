@@ -72,7 +72,7 @@ impl SessionDb {
             std::fs::create_dir_all(parent).ok();
         }
         let conn = Connection::open(path)?;
-        conn.execute_batch("PRAGMA journal_mode=WAL; PRAGMA busy_timeout=100;")?;
+        conn.execute_batch("PRAGMA journal_mode=WAL; PRAGMA busy_timeout=5000;")?;
         let db = Self { conn };
         db.run_migrations()?;
         Ok(db)
@@ -333,8 +333,8 @@ impl SessionDb {
         let where_clause = conditions.join(" AND ");
         let sql = format!(
             "SELECT c.id, c.title, c.text, c.observation_type, c.concepts, c.project, c.files, c.facts, c.created_at, c.updated_at
-             FROM observations c
-             INNER JOIN observations_fts f ON c.id = f.rowid
+             FROM observations_fts f
+             INNER JOIN observations c ON c.id = f.rowid
              WHERE {where_clause}
              ORDER BY rank
              LIMIT ?{param_idx} OFFSET ?{}",

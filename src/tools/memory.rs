@@ -12,6 +12,21 @@ const VALID_CONCEPTS: &[&str] = &[
     "problem-solution", "gotcha", "pattern", "trade-off",
 ];
 
+const MAX_TIMELINE_DEPTH: usize = 100;
+
+/// Sanitize user input for FTS5 queries: wrap each term in double quotes
+/// to prevent FTS5 operator injection (NOT, NEAR, OR, column filters).
+fn sanitize_fts5_query(input: &str) -> String {
+    input
+        .split_whitespace()
+        .map(|term| {
+            let escaped = term.replace('"', "\"\"");
+            format!("\"{escaped}\"")
+        })
+        .collect::<Vec<_>>()
+        .join(" ")
+}
+
 #[derive(Debug, Serialize)]
 struct SaveMemoryResult {
     id: i64,
@@ -67,7 +82,8 @@ pub fn handle_save_memory(params: &Value, db: &SessionDb) -> Value {
                 .filter_map(|v| v.as_str())
                 .collect::<Vec<_>>()
                 .join(",")
-        });
+        })
+        .filter(|s| !s.is_empty());
     if let Some(ref c) = concepts {
         for concept in c.split(',') {
             if !concept.is_empty() && !VALID_CONCEPTS.contains(&concept) {
@@ -90,7 +106,8 @@ pub fn handle_save_memory(params: &Value, db: &SessionDb) -> Value {
                 .filter_map(|v| v.as_str())
                 .collect::<Vec<_>>()
                 .join(",")
-        });
+        })
+        .filter(|s| !s.is_empty());
     let facts = params
         .get("facts")
         .and_then(|v| v.as_array())
@@ -99,7 +116,8 @@ pub fn handle_save_memory(params: &Value, db: &SessionDb) -> Value {
                 .filter_map(|v| v.as_str())
                 .collect::<Vec<_>>()
                 .join(",")
-        });
+        })
+        .filter(|s| !s.is_empty());
 
     let save_opts = SaveObservationOpts {
         title,
@@ -157,8 +175,9 @@ pub fn handle_search_memory(params: &Value, db: &SessionDb) -> Value {
     let date_start = params.get("date_start").and_then(|v| v.as_str());
     let date_end = params.get("date_end").and_then(|v| v.as_str());
 
+    let sanitized_query = sanitize_fts5_query(query);
     let opts = SearchObservationsOpts {
-        query,
+        query: &sanitized_query,
         project,
         observation_type: obs_type,
         limit,
@@ -175,11 +194,11 @@ pub fn handle_search_memory(params: &Value, db: &SessionDb) -> Value {
             let env = Envelope::success(result, TrustLevel::Heuristic);
             serde_json::to_value(env).unwrap_or(json!({"ok": false}))
         }
-        Err(e) => {
+        Err(_) => {
             let env = Envelope::<()>::error(
                 ErrorCode::EParseFailed,
                 false,
-                Some(format!("Search failed (check FTS5 syntax): {}", e)),
+                Some("Search query failed. Try simpler search terms.".to_string()),
             );
             serde_json::to_value(env).unwrap_or(json!({"ok": false}))
         }
@@ -199,14 +218,16 @@ pub fn handle_memory_timeline(params: &Value, db: &SessionDb) -> Value {
         }
     };
 
-    let depth_before = params
+    let depth_before = (params
         .get("depth_before")
         .and_then(|v| v.as_u64())
-        .unwrap_or(5) as usize;
-    let depth_after = params
+        .unwrap_or(5) as usize)
+        .min(MAX_TIMELINE_DEPTH);
+    let depth_after = (params
         .get("depth_after")
         .and_then(|v| v.as_u64())
-        .unwrap_or(5) as usize;
+        .unwrap_or(5) as usize)
+        .min(MAX_TIMELINE_DEPTH);
     let project = params.get("project").and_then(|v| v.as_str());
 
     match db.get_observation_timeline(anchor_id, depth_before, depth_after, project) {

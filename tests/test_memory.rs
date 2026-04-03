@@ -156,9 +156,9 @@ fn test_memory_timeline() {
     let timeline = db.get_observation_timeline(ids[5], 3, 3, None).unwrap();
     assert!(timeline.len() >= 5, "Should have at least 5 entries (3 before + anchor + 3 after but anchor is included in before)");
 
-    // Verify chronological order
+    // Verify chronological order by id (stable even when timestamps are identical)
     for w in timeline.windows(2) {
-        assert!(w[0].created_at <= w[1].created_at, "Timeline must be chronological");
+        assert!(w[0].id < w[1].id, "Timeline must be in id order (chronological)");
     }
 }
 
