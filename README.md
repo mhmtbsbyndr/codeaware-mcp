@@ -40,6 +40,7 @@ A Rust MCP server that acts as a **compression and orchestration layer** between
   - [Workflow: Using Workspace State](#workflow-using-workspace-state)
   - [Workflow: Code Review with Subagent](#workflow-code-review-with-subagent)
   - [Using Skills](#using-skills)
+  - [Workflow: Persistent Memory](#workflow-persistent-memory)
   - [Raw JSON-RPC Examples](#raw-json-rpc-examples)
   - [Tips and Gotchas](#tips-and-gotchas)
 
@@ -127,7 +128,7 @@ codeaware-mcp is a code-focused optimization layer — it does not replace gener
 | **GitHub MCP** | Issues, PRs, reviews, repo management | **No overlap.** GitHub MCP handles API interactions. codeaware-mcp handles local code. They complement each other. |
 | **Brave Search MCP** | Web search | **No overlap.** Different domain entirely. |
 | **Playwright MCP** | Browser automation, screenshots | **No overlap.** Different domain. |
-| **Memory MCP** | Persistent key-value memory across sessions | **Partial overlap.** codeaware-mcp's `workspace_state` stores typed operational state (not free-text memories). Memory MCP is for general recall. `workspace_state` is for structured code context (error patterns, co-access pairs, verification state). |
+| **Memory MCP** / **claude-mem** | Persistent memory across sessions | **Built-in.** codeaware-mcp includes `save_memory`, `search_memory`, and `memory_timeline` tools — persistent semantic observations stored in SQLite FTS5 with BM25-ranked search. Replaces external memory plugins for code-focused workflows. `workspace_state` handles structured operational state; the memory tools handle free-text observations, decisions, and discoveries. |
 | **Sequential Thinking MCP** | Step-by-step reasoning chains | **No overlap.** codeaware-mcp focuses on tool compression, not reasoning structure. |
 | **Postgres / SQLite MCP** | Database queries | **No overlap.** codeaware-mcp uses SQLite internally for session persistence, but doesn't expose database tools. |
 | **Puppeteer MCP** | Headless browser control | **No overlap.** |
@@ -505,6 +506,134 @@ Grading: 90+ = A, 80+ = B, 70+ = C, 60+ = D, <60 = F. Score is per-category, pen
 ### `session_status` — Session summary and compaction recovery
 
 Returns current session state: state machine phase, files read/edited, error patterns seen, token estimates, and (after `/compact`) the most relevant prior context retrieved via FTS5 BM25 search.
+
+---
+
+### `save_memory` — Persistent semantic observations
+
+Save observations that survive across sessions. Replaces external memory plugins (claude-mem, Memory MCP).
+
+**Input:**
+```json
+{
+  "text": "JWT refresh tokens need expiry validation before reissuing",
+  "title": "Auth token refresh bug",
+  "type": "bugfix",
+  "concepts": ["problem-solution", "gotcha"],
+  "project": "/my/project",
+  "files": ["src/auth.rs", "src/middleware.rs"],
+  "facts": ["JWT refresh tokens need expiry validation"]
+}
+```
+
+| Field | Required | Description |
+|-------|----------|-------------|
+| `text` | yes | Observation text (max 64KB) |
+| `title` | no | Short title |
+| `type` | no | `bugfix` · `feature` · `refactor` · `change` · `discovery` · `decision` (default: `discovery`) |
+| `concepts` | no | Tags: `how-it-works` · `why-it-exists` · `what-changed` · `problem-solution` · `gotcha` · `pattern` · `trade-off` |
+| `project` | no | Project name or path |
+| `files` | no | Related file paths |
+| `facts` | no | Extracted facts |
+
+**Output:**
+```json
+{
+  "ok": true,
+  "trust": "exact",
+  "data": { "id": 42, "message": "Observation saved (id: 42)" }
+}
+```
+
+---
+
+### `search_memory` — FTS5 full-text search across observations
+
+BM25-ranked search with optional filters. All observations are indexed in SQLite FTS5.
+
+**Input:**
+```json
+{
+  "query": "JWT authentication",
+  "project": "/my/project",
+  "type": "bugfix",
+  "limit": 10,
+  "offset": 0,
+  "date_start": "2026-01-01",
+  "date_end": "2026-12-31"
+}
+```
+
+| Field | Required | Description |
+|-------|----------|-------------|
+| `query` | yes | Search terms (FTS5 syntax auto-sanitized) |
+| `project` | no | Filter by project |
+| `type` | no | Filter by observation type |
+| `limit` | no | Max results, default 10, max 50 |
+| `offset` | no | Pagination offset |
+| `date_start` | no | ISO 8601 date (YYYY-MM-DD) |
+| `date_end` | no | ISO 8601 date (YYYY-MM-DD) |
+
+**Output:**
+```json
+{
+  "ok": true,
+  "trust": "heuristic",
+  "data": {
+    "count": 3,
+    "observations": [
+      {
+        "id": 42,
+        "title": "Auth token refresh bug",
+        "text": "JWT refresh tokens need expiry validation...",
+        "observation_type": "bugfix",
+        "concepts": "problem-solution,gotcha",
+        "project": "/my/project",
+        "files": "src/auth.rs,src/middleware.rs",
+        "facts": "JWT refresh tokens need expiry validation",
+        "created_at": "2026-04-04 12:00:00",
+        "updated_at": "2026-04-04 12:00:00"
+      }
+    ]
+  }
+}
+```
+
+---
+
+### `memory_timeline` — Chronological context around an observation
+
+Retrieve observations before and after a known anchor. Use `search_memory` first to find the anchor ID.
+
+**Input:**
+```json
+{
+  "anchor_id": 42,
+  "depth_before": 5,
+  "depth_after": 5,
+  "project": "/my/project"
+}
+```
+
+| Field | Required | Description |
+|-------|----------|-------------|
+| `anchor_id` | yes | Observation ID (from search_memory) |
+| `depth_before` | no | Observations before anchor (default 5, max 100) |
+| `depth_after` | no | Observations after anchor (default 5, max 100) |
+| `project` | no | Filter by project |
+
+**Output:**
+```json
+{
+  "ok": true,
+  "trust": "exact",
+  "data": {
+    "anchor_id": 42,
+    "total": 11,
+    "observations": [ /* chronologically ordered */ ]
+  }
+}
+```
 
 ---
 
@@ -1018,7 +1147,7 @@ cargo test        # 175 tests across 30 test files, ~1s
 cargo clippy      # 0 warnings
 ```
 
-Test coverage: MCP envelope, all 7 tools, path traversal, secret scanner (all 14 patterns), tree-sitter symbol extraction (all 7 languages), FTS5 round-trip, workspace state slots, config validation findings, acceptance matrix T01–T17 + N01–N12.
+Test coverage: MCP envelope, all 11 tools, path traversal, secret scanner (all 14 patterns), tree-sitter symbol extraction (all 7 languages), FTS5 round-trip, workspace state slots, config validation findings, acceptance matrix T01–T17 + N01–N12.
 
 ---
 
@@ -1051,7 +1180,7 @@ cd my-project
 claude
 ```
 
-Claude sees the `.mcp.json`, connects to codeaware-mcp over stdio, and the 7 tools appear in its tool list alongside the built-in ones.
+Claude sees the `.mcp.json`, connects to codeaware-mcp over stdio, and the 11 tools appear in its tool list alongside the built-in ones.
 
 **Step 3: Try it out**
 
@@ -1376,6 +1505,42 @@ The `gotchas` skill contains known pitfalls:
 - Always pass `expected_hash` to `smart_edit` (prevents race conditions)
 - Don't compress `echo`, `ls`, `pwd` output (too short)
 - Use subagents for tasks > 5 steps (keeps main context clean)
+
+---
+
+### Workflow: Persistent Memory
+
+The `save_memory`, `search_memory`, and `memory_timeline` tools provide cross-session semantic memory — observations, decisions, and discoveries that survive `/compact` and session restarts.
+
+**Saving observations during work:**
+```
+Claude: [fixes a tricky auth bug]
+Claude: [calls save_memory({
+          text: "JWT refresh tokens were not validated for expiry before reissuing.
+                 The middleware checked access tokens but skipped refresh tokens.",
+          type: "bugfix",
+          concepts: ["problem-solution", "gotcha"],
+          files: ["src/auth.rs", "src/middleware.rs"],
+          facts: ["Refresh tokens need the same expiry check as access tokens"]
+        })]
+```
+
+**Recalling in a future session:**
+```
+You:    "We had a JWT bug before — what was it?"
+Claude: [calls search_memory({ query: "JWT bug" })]
+        → Returns the saved observation with full context
+```
+
+**Exploring timeline:**
+```
+Claude: [calls memory_timeline({ anchor_id: 42, depth_before: 5, depth_after: 5 })]
+        → Shows what was happening before and after that observation
+```
+
+**Key differences from workspace_state:**
+- `workspace_state` = ephemeral, structured, per-session operational state (error patterns, file targets)
+- `save_memory` = persistent, free-text, cross-session knowledge (decisions, discoveries, gotchas)
 
 ---
 
