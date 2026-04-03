@@ -1,0 +1,340 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CodeAware X-Ray Dashboard</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    background: #0d1117;
+    color: #c9d1d9;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif;
+    padding: 24px;
+    min-height: 100vh;
+  }
+  h1 {
+    color: #58a6ff;
+    font-size: 1.5rem;
+    margin-bottom: 20px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  h1 .status {
+    width: 10px; height: 10px;
+    border-radius: 50%;
+    background: #3fb950;
+    display: inline-block;
+    animation: pulse 2s infinite;
+  }
+  h1 .status.disconnected { background: #f85149; animation: none; }
+  @keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.4; }
+  }
+  .grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(340px, 1fr));
+    gap: 16px;
+  }
+  .panel {
+    background: #161b22;
+    border: 1px solid #30363d;
+    border-radius: 8px;
+    padding: 20px;
+  }
+  .panel h2 {
+    color: #8b949e;
+    font-size: 0.8rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    margin-bottom: 12px;
+  }
+  .big-number {
+    font-size: 2.4rem;
+    font-weight: 700;
+    color: #58a6ff;
+    line-height: 1.1;
+  }
+  .big-number .unit {
+    font-size: 0.9rem;
+    color: #8b949e;
+    font-weight: 400;
+  }
+  .progress-bar {
+    width: 100%;
+    height: 8px;
+    background: #21262d;
+    border-radius: 4px;
+    margin-top: 10px;
+    overflow: hidden;
+  }
+  .progress-bar .fill {
+    height: 100%;
+    background: #58a6ff;
+    border-radius: 4px;
+    transition: width 0.5s ease;
+  }
+  .progress-bar .fill.warn { background: #d29922; }
+  .progress-bar .fill.danger { background: #f85149; }
+  .sub-text {
+    font-size: 0.85rem;
+    color: #8b949e;
+    margin-top: 6px;
+  }
+  .badge {
+    display: inline-block;
+    padding: 4px 12px;
+    border-radius: 12px;
+    font-size: 0.85rem;
+    font-weight: 600;
+    background: #1f6feb33;
+    color: #58a6ff;
+    border: 1px solid #1f6feb55;
+  }
+  .stat-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: 8px;
+  }
+  .heatmap-row {
+    display: flex;
+    align-items: center;
+    margin-bottom: 6px;
+    font-size: 0.82rem;
+  }
+  .heatmap-row .filename {
+    flex: 0 0 180px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    color: #c9d1d9;
+  }
+  .heatmap-row .bar-container {
+    flex: 1;
+    height: 14px;
+    background: #21262d;
+    border-radius: 3px;
+    overflow: hidden;
+    margin: 0 8px;
+  }
+  .heatmap-row .bar-fill {
+    height: 100%;
+    background: linear-gradient(90deg, #1f6feb, #58a6ff);
+    border-radius: 3px;
+    transition: width 0.5s ease;
+  }
+  .heatmap-row .tokens {
+    flex: 0 0 70px;
+    text-align: right;
+    color: #8b949e;
+    font-size: 0.78rem;
+  }
+  .edit-entry {
+    display: flex;
+    align-items: center;
+    margin-bottom: 6px;
+    font-size: 0.82rem;
+    gap: 8px;
+  }
+  .edit-entry .score-bar {
+    width: 60px;
+    height: 10px;
+    background: #21262d;
+    border-radius: 3px;
+    overflow: hidden;
+    flex-shrink: 0;
+  }
+  .edit-entry .score-fill {
+    height: 100%;
+    border-radius: 3px;
+    transition: width 0.5s ease;
+  }
+  .score-fill.high { background: #3fb950; }
+  .score-fill.mid { background: #d29922; }
+  .score-fill.low { background: #f85149; }
+  .edit-entry .file-info {
+    flex: 1;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .edit-entry .score-val {
+    flex-shrink: 0;
+    font-weight: 600;
+    width: 32px;
+    text-align: right;
+  }
+  .error-item {
+    background: #f8514922;
+    border: 1px solid #f8514944;
+    border-radius: 6px;
+    padding: 8px 12px;
+    margin-bottom: 6px;
+    font-size: 0.82rem;
+    color: #f85149;
+  }
+  .empty-state {
+    color: #484f58;
+    font-style: italic;
+    font-size: 0.85rem;
+  }
+</style>
+</head>
+<body>
+<h1><span class="status" id="conn-status"></span> CodeAware X-Ray</h1>
+<div class="grid">
+  <div class="panel" id="panel-tokens">
+    <h2>Token Budget</h2>
+    <div class="big-number"><span id="token-count">0</span> <span class="unit">tokens</span></div>
+    <div class="progress-bar"><div class="fill" id="token-fill" style="width:0%"></div></div>
+    <div class="sub-text"><span id="token-pct">0.0</span>% of 1M context used</div>
+  </div>
+  <div class="panel" id="panel-compression">
+    <h2>Compression Savings</h2>
+    <div class="big-number"><span id="saved-tokens">0</span> <span class="unit">tokens saved</span></div>
+    <div class="progress-bar"><div class="fill" id="compression-fill" style="width:0%;background:#3fb950"></div></div>
+    <div class="sub-text"><span id="compression-pct">0.0</span>% compression ratio</div>
+  </div>
+  <div class="panel" id="panel-session">
+    <h2>Session</h2>
+    <div class="stat-row">
+      <span>Phase</span>
+      <span class="badge" id="phase-badge">Idle</span>
+    </div>
+    <div class="stat-row">
+      <span>Tool Calls</span>
+      <span id="tool-calls" style="font-weight:600;color:#58a6ff">0</span>
+    </div>
+    <div class="stat-row">
+      <span>Session ID</span>
+      <span id="session-id" style="font-size:0.78rem;color:#484f58">-</span>
+    </div>
+  </div>
+  <div class="panel" id="panel-heatmap">
+    <h2>File Token Heatmap (Top 10)</h2>
+    <div id="heatmap-list"><span class="empty-state">No file data yet</span></div>
+  </div>
+  <div class="panel" id="panel-edits">
+    <h2>Edit Confidence History</h2>
+    <div id="edit-list"><span class="empty-state">No edits recorded</span></div>
+  </div>
+  <div class="panel" id="panel-errors">
+    <h2>Error Loops</h2>
+    <div id="error-list"><span class="empty-state">No error loops detected</span></div>
+  </div>
+</div>
+<script>
+(function() {
+  var statusEl = document.getElementById('conn-status');
+  var evtSource = null;
+
+  function formatNum(n) {
+    if (n >= 1000000) return (n / 1000000).toFixed(1) + 'M';
+    if (n >= 1000) return (n / 1000).toFixed(1) + 'K';
+    return String(n);
+  }
+
+  function scoreClass(s) {
+    if (s >= 70) return 'high';
+    if (s >= 40) return 'mid';
+    return 'low';
+  }
+
+  function update(data) {
+    var raw = data.raw_tokens_total || 0;
+    var comp = data.compressed_tokens_total || 0;
+    var saved = raw > 0 ? raw - comp : 0;
+    var pct = raw / 1000000 * 100;
+    var compPct = raw > 0 ? (saved / raw * 100) : 0;
+
+    document.getElementById('token-count').textContent = formatNum(raw);
+    document.getElementById('token-pct').textContent = pct.toFixed(1);
+    var fill = document.getElementById('token-fill');
+    fill.style.width = Math.min(pct, 100) + '%';
+    fill.className = 'fill' + (pct > 80 ? ' danger' : pct > 50 ? ' warn' : '');
+
+    document.getElementById('saved-tokens').textContent = formatNum(saved);
+    document.getElementById('compression-pct').textContent = compPct.toFixed(1);
+    document.getElementById('compression-fill').style.width = Math.min(compPct, 100) + '%';
+
+    document.getElementById('phase-badge').textContent = data.phase || 'Idle';
+    document.getElementById('tool-calls').textContent = data.tool_calls || 0;
+    document.getElementById('session-id').textContent = data.session_id || '-';
+
+    // Heatmap
+    var ft = data.file_tokens || {};
+    var entries = Object.entries(ft).sort(function(a,b){ return b[1]-a[1]; }).slice(0, 10);
+    var hm = document.getElementById('heatmap-list');
+    if (entries.length === 0) {
+      hm.innerHTML = '<span class="empty-state">No file data yet</span>';
+    } else {
+      var maxVal = entries[0][1] || 1;
+      hm.innerHTML = entries.map(function(e) {
+        var w = (e[1] / maxVal * 100).toFixed(1);
+        var name = e[0].split('/').pop();
+        return '<div class="heatmap-row">' +
+          '<span class="filename" title="' + e[0] + '">' + name + '</span>' +
+          '<div class="bar-container"><div class="bar-fill" style="width:' + w + '%"></div></div>' +
+          '<span class="tokens">' + formatNum(e[1]) + '</span></div>';
+      }).join('');
+    }
+
+    // Edit scores
+    var scores = (data.edit_scores || []).slice(-10).reverse();
+    var el = document.getElementById('edit-list');
+    if (scores.length === 0) {
+      el.innerHTML = '<span class="empty-state">No edits recorded</span>';
+    } else {
+      el.innerHTML = scores.map(function(s) {
+        var cls = scoreClass(s.score);
+        var fname = s.file.split('/').pop();
+        return '<div class="edit-entry">' +
+          '<span class="score-val" style="color:' + (cls==='high'?'#3fb950':cls==='mid'?'#d29922':'#f85149') + '">' + s.score + '</span>' +
+          '<div class="score-bar"><div class="score-fill ' + cls + '" style="width:' + s.score + '%"></div></div>' +
+          '<span class="file-info" title="' + s.file + ':' + s.symbol + '">' + fname + ':' + s.symbol + '</span></div>';
+      }).join('');
+    }
+
+    // Errors
+    var errs = data.error_loops || [];
+    var errEl = document.getElementById('error-list');
+    if (errs.length === 0) {
+      errEl.innerHTML = '<span class="empty-state">No error loops detected</span>';
+    } else {
+      errEl.innerHTML = errs.map(function(e) {
+        return '<div class="error-item">' + e + '</div>';
+      }).join('');
+    }
+  }
+
+  function connectSSE() {
+    if (evtSource) { evtSource.close(); }
+    evtSource = new EventSource('/events');
+    evtSource.onopen = function() {
+      statusEl.classList.remove('disconnected');
+    };
+    evtSource.onmessage = function(ev) {
+      try { update(JSON.parse(ev.data)); } catch(e) {}
+    };
+    evtSource.onerror = function() {
+      statusEl.classList.add('disconnected');
+      evtSource.close();
+      evtSource = null;
+      setTimeout(connectSSE, 3000);
+    };
+  }
+
+  // Initial fetch
+  fetch('/api/metrics')
+    .then(function(r){ return r.json(); })
+    .then(update)
+    .catch(function(){});
+
+  connectSSE();
+})();
+</script>
+</body>
+</html>
