@@ -74,12 +74,50 @@ fn serve_html(stream: &mut TcpStream) {
     let _ = stream.write_all(response.as_bytes());
 }
 
+fn merge_shared_metrics(snapshot: &mut crate::xray::metrics::MetricsSnapshot) {
+    if let Some(shared) = crate::xray::shared::read_shared() {
+        snapshot.raw_tokens_total += shared.raw_tokens_total;
+        snapshot.compressed_tokens_total += shared.compressed_tokens_total;
+        snapshot.tool_calls += shared.tool_calls;
+        for (file, tokens) in &shared.file_tokens {
+            *snapshot.file_tokens.entry(file.clone()).or_insert(0) += tokens;
+        }
+        for ev in &shared.timeline {
+            snapshot.timeline.push(crate::xray::metrics::TimelineEvent {
+                timestamp: ev.timestamp.clone(),
+                tool: ev.tool.clone(),
+                file: ev.file.clone(),
+                raw_tokens: ev.raw_tokens,
+                compressed_tokens: 0,
+                duration_ms: 0,
+                phase: String::new(),
+            });
+        }
+        // Sort timeline by timestamp
+        snapshot.timeline.sort_by(|a, b| a.timestamp.cmp(&b.timestamp));
+    }
+}
+
+fn get_merged_snapshot(metrics: &Arc<Mutex<MetricsState>>) -> String {
+    let mut snapshot = metrics.lock().ok().map(|m| m.snapshot()).unwrap_or_else(|| {
+        crate::xray::metrics::MetricsSnapshot {
+            raw_tokens_total: 0,
+            compressed_tokens_total: 0,
+            tool_calls: 0,
+            file_tokens: std::collections::HashMap::new(),
+            edit_scores: vec![],
+            timeline: vec![],
+            phase: "Idle".to_string(),
+            session_id: String::new(),
+            error_loops: vec![],
+        }
+    });
+    merge_shared_metrics(&mut snapshot);
+    serde_json::to_string(&snapshot).unwrap_or_else(|_| "{}".to_string())
+}
+
 fn serve_metrics_json(stream: &mut TcpStream, metrics: &Arc<Mutex<MetricsState>>) {
-    let json = metrics
-        .lock()
-        .ok()
-        .and_then(|m| serde_json::to_string(&m.snapshot()).ok())
-        .unwrap_or_else(|| "{}".to_string());
+    let json = get_merged_snapshot(metrics);
     let response = format!(
         "HTTP/1.1 200 OK\r\nContent-Type: application/json\r\nContent-Length: {}\r\nConnection: close\r\n\r\n{}",
         json.len(),
@@ -94,11 +132,7 @@ fn serve_sse(stream: &mut TcpStream, metrics: &Arc<Mutex<MetricsState>>) {
         return;
     }
     loop {
-        let json = metrics
-            .lock()
-            .ok()
-            .and_then(|m| serde_json::to_string(&m.snapshot()).ok())
-            .unwrap_or_else(|| "{}".to_string());
+        let json = get_merged_snapshot(metrics);
         if stream
             .write_all(format!("data: {json}\n\n").as_bytes())
             .is_err()
