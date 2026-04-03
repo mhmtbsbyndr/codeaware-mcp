@@ -3,6 +3,7 @@ use std::path::Path;
 use thiserror::Error;
 
 use crate::tools::confidence::ConfidenceScore;
+use crate::tools::semantic_diff::SemanticChange;
 
 // ─── Public Types ────────────────────────────────────────────────────────────
 
@@ -72,6 +73,7 @@ pub struct SmartEditResult {
     pub impact: EditImpact,
     pub enforcement: EditEnforcement,
     pub confidence: Option<ConfidenceScore>,
+    pub semantic_changes: Option<Vec<SemanticChange>>,
 }
 
 // ─── Errors ──────────────────────────────────────────────────────────────────
@@ -230,6 +232,7 @@ pub fn smart_edit(
             uncommitted_edits_in_file: false,
         },
         confidence: None,
+        semantic_changes: None,
     })
 }
 
