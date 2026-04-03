@@ -2,6 +2,9 @@ use crate::xray::metrics::MetricsState;
 use crate::xray::server::XrayServer;
 use serde::Serialize;
 use std::sync::{Arc, Mutex};
+use std::sync::atomic::{AtomicBool, Ordering};
+
+static BROWSER_OPENED: AtomicBool = AtomicBool::new(false);
 
 #[derive(Debug, Serialize)]
 pub struct XrayResult {
@@ -20,7 +23,7 @@ pub fn handle_xray(
         return Ok(XrayResult {
             url: server.url(),
             port: server.port(),
-            message: "Dashboard already running".to_string(),
+            message: "Dashboard already running. Reuse existing browser tab.".to_string(),
         });
     }
 
@@ -28,17 +31,16 @@ pub fn handle_xray(
     let result = XrayResult {
         url: server.url(),
         port: server.port(),
-        message: "Dashboard started. Opening browser...".to_string(),
+        message: format!("Dashboard started at {}", server.url()),
     };
 
-    let url = server.url();
-    #[cfg(target_os = "macos")]
-    {
-        let _ = std::process::Command::new("open").arg(&url).spawn();
-    }
-    #[cfg(target_os = "linux")]
-    {
-        let _ = std::process::Command::new("xdg-open").arg(&url).spawn();
+    // Only open browser ONCE per process lifetime
+    if !BROWSER_OPENED.swap(true, Ordering::SeqCst) {
+        let url = server.url();
+        #[cfg(target_os = "macos")]
+        { let _ = std::process::Command::new("open").arg(&url).spawn(); }
+        #[cfg(target_os = "linux")]
+        { let _ = std::process::Command::new("xdg-open").arg(&url).spawn(); }
     }
 
     *guard = Some(server);
