@@ -6,6 +6,7 @@ use std::thread;
 use std::time::Duration;
 
 const DASHBOARD_HTML: &str = include_str!("dashboard.html");
+const DEFAULT_PORT: u16 = 9847;
 
 pub struct XrayServer {
     port: u16,
@@ -14,7 +15,9 @@ pub struct XrayServer {
 
 impl XrayServer {
     pub fn start(metrics: Arc<Mutex<MetricsState>>) -> Result<Self, std::io::Error> {
-        let listener = TcpListener::bind("127.0.0.1:0")?;
+        // Try fixed port first (survives reconnects), fall back to dynamic
+        let listener = TcpListener::bind(format!("127.0.0.1:{DEFAULT_PORT}"))
+            .or_else(|_| TcpListener::bind("127.0.0.1:0"))?;
         let port = listener.local_addr()?.port();
 
         let handle = thread::spawn(move || {
