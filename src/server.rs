@@ -1,9 +1,14 @@
 use serde_json::{json, Value};
 use std::sync::{Arc, Mutex};
 use crate::session::state::SessionState;
+use crate::xray::metrics::MetricsState;
+use crate::xray::server::XrayServer;
+use crate::envelope::{Envelope, ErrorCode, TrustLevel};
 
 pub struct McpServer {
     state: Arc<Mutex<SessionState>>,
+    metrics: Arc<Mutex<MetricsState>>,
+    xray_server: Mutex<Option<XrayServer>>,
 }
 
 impl Default for McpServer {
@@ -16,11 +21,17 @@ impl McpServer {
     pub fn new() -> Self {
         McpServer {
             state: Arc::new(Mutex::new(SessionState::new("."))),
+            metrics: Arc::new(Mutex::new(MetricsState::new())),
+            xray_server: Mutex::new(None),
         }
     }
 
     pub fn new_with_state(state: Arc<Mutex<SessionState>>) -> Self {
-        McpServer { state }
+        McpServer {
+            state,
+            metrics: Arc::new(Mutex::new(MetricsState::new())),
+            xray_server: Mutex::new(None),
+        }
     }
 
     pub fn handle_message(&self, message: &str) -> Option<String> {
@@ -244,6 +255,14 @@ impl McpServer {
                             }
                         }
                     }
+                },
+                {
+                    "name": "xray",
+                    "description": "Open a live browser dashboard showing token consumption, compression savings, file heatmap, edit confidence scores, and session metrics in real-time",
+                    "inputSchema": {
+                        "type": "object",
+                        "properties": {}
+                    }
                 }
             ]
         })
@@ -266,6 +285,21 @@ impl McpServer {
                         "text": result.to_string()
                     }]
                 })
+            }
+            "xray" => {
+                match crate::tools::xray::handle_xray(
+                    Arc::clone(&self.metrics),
+                    &self.xray_server,
+                ) {
+                    Ok(result) => {
+                        let envelope = Envelope::success(result, TrustLevel::Exact);
+                        json!({"content": [{"type": "text", "text": serde_json::to_string(&envelope).unwrap_or_default()}]})
+                    }
+                    Err(e) => {
+                        let envelope = Envelope::<()>::error(ErrorCode::EInternalError, false, Some(e));
+                        json!({"content": [{"type": "text", "text": serde_json::to_string(&envelope).unwrap_or_default()}]})
+                    }
+                }
             }
             _ => {
                 json!({

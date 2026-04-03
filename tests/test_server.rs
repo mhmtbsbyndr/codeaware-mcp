@@ -40,7 +40,8 @@ fn test_tools_list_returns_all_tools() {
     assert!(tool_names.contains(&"session_status"));
     assert!(tool_names.contains(&"workspace_state"));
     assert!(tool_names.contains(&"validate_config"));
-    assert_eq!(tools.len(), 7);
+    assert!(tool_names.contains(&"xray"));
+    assert_eq!(tools.len(), 8);
 }
 
 #[test]
