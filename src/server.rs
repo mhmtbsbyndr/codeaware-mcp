@@ -276,6 +276,8 @@ impl McpServer {
         // Extract file path from arguments (used by metrics tracking)
         let file_path = tool_input.get("path").and_then(|p| p.as_str());
 
+        let start_time = std::time::Instant::now();
+
         let result = match tool_name {
             "workspace_state" => {
                 let result = crate::tools::workspace_state::handle_workspace_state(
@@ -341,6 +343,14 @@ impl McpServer {
                         crate::session::state::SessionPhase::Complete => "Complete",
                         crate::session::state::SessionPhase::Compacting => "Compacting",
                     };
+                    m.record_timeline_event(
+                        tool_name,
+                        file_path,
+                        raw_tokens,
+                        compressed_tokens,
+                        start_time.elapsed().as_millis() as u64,
+                        phase,
+                    );
                     m.set_phase(phase);
                     m.set_session_id(state.session_id());
                 }

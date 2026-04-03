@@ -438,6 +438,17 @@ body {
     </div>
   </div>
 
+  <!-- Session Timeline -->
+  <div class="Box" style="margin-bottom:16px">
+    <div class="Box-header">
+      Session Timeline
+      <span class="count" id="tl-count">0 events</span>
+    </div>
+    <div class="Box-body" id="tl-body" style="max-height:300px;overflow-y:auto">
+      <div class="empty">No tool calls yet</div>
+    </div>
+  </div>
+
   <!-- Error loops detail -->
   <div class="Box" id="error-box" style="display:none">
     <div class="Box-header" style="color:var(--color-danger-fg)">
@@ -531,6 +542,29 @@ body {
           '<div class="cf-bar-wrap"><div class="cf-bar" style="width:'+s.score+'%;background:'+barColor+'"></div></div>' +
           '<span class="cf-name" title="'+s.file+'::'+s.symbol+'">'+s.file.split('/').pop()+'<span style="color:var(--color-fg-muted)">::'+s.symbol+'</span></span>' +
           '<span class="cf-verdict '+vc+'">'+vc+'</span></div>';
+      }).join('');
+    }
+
+    // Timeline
+    var tl = (d.timeline || []).slice(-20).reverse();
+    document.getElementById('tl-count').textContent = (d.timeline || []).length + ' events';
+    var tlBody = document.getElementById('tl-body');
+    if (tl.length === 0) {
+      tlBody.innerHTML = '<div class="empty">No tool calls yet</div>';
+    } else {
+      tlBody.innerHTML = tl.map(function(e) {
+        var ts = e.timestamp ? new Date(e.timestamp).toLocaleTimeString() : '';
+        var f = e.file ? e.file.split('/').slice(-2).join('/') : '';
+        var toolColor = e.tool === 'smart_read' ? 'var(--color-accent-fg)' :
+                        e.tool === 'smart_edit' ? 'var(--color-attention-fg)' :
+                        e.tool === 'smart_run' ? 'var(--color-success-fg)' : 'var(--color-done-fg)';
+        return '<div class="Box-row" style="font-size:12px;font-family:ui-monospace,SFMono-Regular,monospace">' +
+          '<span style="color:var(--color-fg-muted);width:70px;flex-shrink:0">' + ts + '</span>' +
+          '<span style="color:' + toolColor + ';width:100px;flex-shrink:0;font-weight:600">' + e.tool + '</span>' +
+          '<span style="flex:1;color:var(--color-fg-default);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">' + f + '</span>' +
+          '<span style="color:var(--color-fg-muted);width:60px;text-align:right;flex-shrink:0">' + fmt(e.raw_tokens) + 'tk</span>' +
+          '<span style="color:var(--color-fg-muted);width:50px;text-align:right;flex-shrink:0">' + e.duration_ms + 'ms</span>' +
+          '</div>';
       }).join('');
     }
 

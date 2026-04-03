@@ -2,6 +2,17 @@ use serde::Serialize;
 use std::collections::HashMap;
 
 #[derive(Debug, Clone, Serialize)]
+pub struct TimelineEvent {
+    pub timestamp: String,
+    pub tool: String,
+    pub file: Option<String>,
+    pub raw_tokens: u64,
+    pub compressed_tokens: u64,
+    pub duration_ms: u64,
+    pub phase: String,
+}
+
+#[derive(Debug, Clone, Serialize)]
 pub struct EditScoreEntry {
     pub file: String,
     pub symbol: String,
@@ -17,6 +28,7 @@ pub struct MetricsSnapshot {
     pub tool_calls: u32,
     pub file_tokens: HashMap<String, u64>,
     pub edit_scores: Vec<EditScoreEntry>,
+    pub timeline: Vec<TimelineEvent>,
     pub phase: String,
     pub session_id: String,
     pub error_loops: Vec<String>,
@@ -28,6 +40,7 @@ pub struct MetricsState {
     tool_calls: u32,
     file_tokens: HashMap<String, u64>,
     edit_scores: Vec<EditScoreEntry>,
+    timeline: Vec<TimelineEvent>,
     phase: String,
     session_id: String,
     error_loops: Vec<String>,
@@ -47,6 +60,7 @@ impl MetricsState {
             tool_calls: 0,
             file_tokens: HashMap::new(),
             edit_scores: Vec::new(),
+            timeline: Vec::new(),
             phase: "Idle".to_string(),
             session_id: String::new(),
             error_loops: Vec::new(),
@@ -80,6 +94,18 @@ impl MetricsState {
         self.session_id = id.to_string();
     }
 
+    pub fn record_timeline_event(&mut self, tool: &str, file: Option<&str>, raw_tokens: u64, compressed_tokens: u64, duration_ms: u64, phase: &str) {
+        self.timeline.push(TimelineEvent {
+            timestamp: chrono::Utc::now().to_rfc3339(),
+            tool: tool.to_string(),
+            file: file.map(|f| f.to_string()),
+            raw_tokens,
+            compressed_tokens,
+            duration_ms,
+            phase: phase.to_string(),
+        });
+    }
+
     pub fn add_error_loop(&mut self, sig: &str) {
         if !self.error_loops.contains(&sig.to_string()) {
             self.error_loops.push(sig.to_string());
@@ -93,6 +119,7 @@ impl MetricsState {
             tool_calls: self.tool_calls,
             file_tokens: self.file_tokens.clone(),
             edit_scores: self.edit_scores.clone(),
+            timeline: self.timeline.clone(),
             phase: self.phase.clone(),
             session_id: self.session_id.clone(),
             error_loops: self.error_loops.clone(),
