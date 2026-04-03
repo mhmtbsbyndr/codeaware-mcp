@@ -96,6 +96,8 @@ smart_run("cargo test")
 
 ## Comparison with Other MCP Servers
 
+### Token-Optimization MCP Servers
+
 Three existing token-optimization MCP servers were evaluated: **Context Mode**, **Token Optimizer MCP**, and **CC Token Saver**. codeaware-mcp adopts the best ideas from each and adds capabilities none of them have.
 
 | Feature | Context Mode | Token Optimizer | CC Token Saver | **codeaware-mcp** |
@@ -112,17 +114,39 @@ Three existing token-optimization MCP servers were evaluated: **Context Mode**, 
 | Skills + Agents + Hooks | partial | — | — | ✅ full |
 | Platforms supported | 5 | 3 | 1 | **5** |
 | Local LLM for summarization | — | — | required | optional |
-| Written in | — | — | — | **Rust** (single binary) |
+| Tool overhead (baseline tokens) | ~800 | ~1200 | ~400 | **~500** |
+| Written in | TypeScript | Python | Python | **Rust** (single binary) |
 
-### What codeaware-mcp does that others don't
+### General-Purpose MCP Servers
 
-**AST-based compression, not chunking.** Token Optimizer chunks files arbitrarily. codeaware-mcp uses tree-sitter to understand the code structure and delivers only what Claude needs — symbols, imports, call relationships — without the source lines.
+codeaware-mcp is a code-focused optimization layer — it does not replace general-purpose MCP servers. Here's how it compares to the broader MCP ecosystem:
 
-**Impact analysis before edits.** Before applying a `smart_edit`, the server returns the list of functions that call the changed symbol, the test files that cover it, and a syntax validity check. Claude decides whether to proceed with full context. No other MCP server does this.
+| Server | Purpose | Overlap with codeaware-mcp |
+|--------|---------|---------------------------|
+| **Filesystem MCP** | Basic file read/write/move/search | codeaware-mcp's `smart_read`/`smart_edit` **replace** these for code files with compression + intelligence. Filesystem MCP is better for binary files, bulk moves, directory operations. |
+| **GitHub MCP** | Issues, PRs, reviews, repo management | **No overlap.** GitHub MCP handles API interactions. codeaware-mcp handles local code. They complement each other. |
+| **Brave Search MCP** | Web search | **No overlap.** Different domain entirely. |
+| **Playwright MCP** | Browser automation, screenshots | **No overlap.** Different domain. |
+| **Memory MCP** | Persistent key-value memory across sessions | **Partial overlap.** codeaware-mcp's `workspace_state` stores typed operational state (not free-text memories). Memory MCP is for general recall. `workspace_state` is for structured code context (error patterns, co-access pairs, verification state). |
+| **Sequential Thinking MCP** | Step-by-step reasoning chains | **No overlap.** codeaware-mcp focuses on tool compression, not reasoning structure. |
+| **Postgres / SQLite MCP** | Database queries | **No overlap.** codeaware-mcp uses SQLite internally for session persistence, but doesn't expose database tools. |
+| **Puppeteer MCP** | Headless browser control | **No overlap.** |
+| **Sentry MCP** | Error tracking, issue management | **Complementary.** codeaware-mcp tracks error signatures locally per-session. Sentry MCP connects to production error tracking. They could feed each other. |
+| **Linear / Jira MCP** | Project management | **No overlap.** codeaware-mcp's `active_task` slot can store task references, but doesn't interact with project management APIs. |
 
-**Transactional edits with hash guard.** Every edit includes an `expected_hash` of the file's current state. If the file changed between `smart_read` and `smart_edit` (another tool ran, an external process wrote to it), the edit is rejected atomically — no silent overwrites, no data loss.
+**Key distinction:** Most MCP servers **add new capabilities** (web search, database access, browser automation). codeaware-mcp **optimizes existing capabilities** — making every file read, edit, and command execution cheaper in tokens while adding code intelligence that the built-in tools don't have.
 
-**Trust levels.** Every response includes an `intelligence_level` field: `lsp` / `tree-sitter` / `regex` / `raw`. Claude knows exactly how reliable the symbol analysis is and can calibrate its confidence accordingly.
+### What codeaware-mcp does that no other MCP server does
+
+**AST-based compression, not chunking.** Token Optimizer chunks files arbitrarily. Filesystem MCP returns raw content. codeaware-mcp uses tree-sitter to understand the code structure and delivers only what Claude needs — symbols, imports, call relationships — without the source lines.
+
+**Impact analysis before edits.** Before applying a `smart_edit`, the server returns the list of functions that call the changed symbol, the test files that cover it, and a syntax validity check. Claude decides whether to proceed with full context. No other MCP server — token-focused or general — does this.
+
+**Transactional edits with hash guard.** Every edit includes an `expected_hash` of the file's current state. If the file changed between `smart_read` and `smart_edit` (another tool ran, an external process wrote to it), the edit is rejected atomically — no silent overwrites, no data loss. Filesystem MCP and built-in tools have no concurrency protection.
+
+**Trust levels.** Every response includes an `intelligence_level` field: `lsp` / `tree-sitter` / `regex` / `raw`. Claude knows exactly how reliable the symbol analysis is and can calibrate its confidence accordingly. No other MCP server communicates the reliability of its results.
+
+**Command output classification.** codeaware-mcp doesn't just truncate command output — it classifies it (test runner / compiler / linter / git / package manager / formatter / search / generic) and applies category-specific compression. A test failure gets the assertion message and file:line. A build error gets the error and the relevant code. Generic output gets head+tail. No other server does output-aware compression.
 
 **Compaction recovery with semantic richness.** Context Mode also does compaction recovery, but with raw text. codeaware-mcp's snapshots include symbols, caller relationships, impact-analysis results, and trust levels. The restore is semantically richer.
 
@@ -768,11 +792,29 @@ The `gotchas` skill contains known pitfalls and anti-patterns when using codeawa
 
 ### Agents
 
-| Agent | Model | Tools | Purpose |
-|-------|-------|-------|---------|
-| `code-analyzer` | Haiku (fast) | Read-only | Structural analysis, dependency mapping |
+| Agent | Default model | Tools | Purpose |
+|-------|---------------|-------|---------|
+| `code-analyzer` | Haiku (fast, cheap) | Read-only | Structural analysis, dependency mapping |
 | `bug-fixer` | Sonnet | Full access | TDD-first bug fixing |
 | `code-reviewer` | Sonnet | Read-only | Code review, no modifications |
+
+**Models are configurable.** The defaults above balance cost vs capability. You can override the model in the agent frontmatter:
+
+```yaml
+# .claude/agents/bug-fixer.md
+---
+model: opus       # or: sonnet, haiku
+initialPrompt: "..."
+---
+```
+
+| Model | Best for | Trade-off |
+|-------|----------|-----------|
+| **Opus** | Complex multi-file refactors, architecture-level reviews, subtle bugs | Highest quality, highest cost, slower |
+| **Sonnet** | Most bug fixes, standard reviews, TDD cycles | Good balance of quality and speed |
+| **Haiku** | Read-only analysis, simple structural queries, dependency mapping | Fastest, cheapest, less nuanced |
+
+For critical codebases or security-sensitive reviews, upgrade `code-reviewer` to Opus. For quick structural scans of large projects, Haiku is the right choice. The default configuration optimizes for the most common case.
 
 All agents have an `initialPrompt` that auto-submits on the first turn, ensuring they start working immediately without a manual prompt.
 
