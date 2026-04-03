@@ -10,3 +10,4 @@ pub mod xray;
 pub mod semantic_diff;
 pub mod test_selector;
 pub mod prefetch;
+pub mod memory;

@@ -41,7 +41,10 @@ fn test_tools_list_returns_all_tools() {
     assert!(tool_names.contains(&"workspace_state"));
     assert!(tool_names.contains(&"validate_config"));
     assert!(tool_names.contains(&"xray"));
-    assert_eq!(tools.len(), 8);
+    assert!(tool_names.contains(&"save_memory"));
+    assert!(tool_names.contains(&"search_memory"));
+    assert!(tool_names.contains(&"memory_timeline"));
+    assert_eq!(tools.len(), 11);
 }
 
 #[test]

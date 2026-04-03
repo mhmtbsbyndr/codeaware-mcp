@@ -1,6 +1,7 @@
 use serde_json::{json, Value};
 use std::sync::{Arc, Mutex};
 use crate::session::state::SessionState;
+use crate::session::persistence::SessionDb;
 use crate::xray::metrics::MetricsState;
 use crate::xray::server::XrayServer;
 use crate::envelope::{Envelope, ErrorCode, TrustLevel};
@@ -9,6 +10,7 @@ pub struct McpServer {
     state: Arc<Mutex<SessionState>>,
     metrics: Arc<Mutex<MetricsState>>,
     xray_server: Mutex<Option<XrayServer>>,
+    db: Arc<Mutex<SessionDb>>,
 }
 
 impl Default for McpServer {
@@ -27,10 +29,13 @@ impl McpServer {
             eprintln!("XRay dashboard: {}", srv.url());
         }
 
+        let db = Self::open_db();
+
         McpServer {
             state: Arc::new(Mutex::new(SessionState::new("."))),
             metrics,
             xray_server: Mutex::new(xray),
+            db: Arc::new(Mutex::new(db)),
         }
     }
 
@@ -42,11 +47,22 @@ impl McpServer {
             eprintln!("XRay dashboard: {}", srv.url());
         }
 
+        let db = Self::open_db();
+
         McpServer {
             state,
             metrics,
             xray_server: Mutex::new(xray),
+            db: Arc::new(Mutex::new(db)),
         }
+    }
+
+    fn open_db() -> SessionDb {
+        let home = std::env::var("HOME").unwrap_or_else(|_| ".".to_string());
+        let db_path = std::path::PathBuf::from(home)
+            .join(".codeaware")
+            .join("session.db");
+        SessionDb::open(&db_path).expect("Failed to open session database")
     }
 
     pub fn handle_message(&self, message: &str) -> Option<String> {
@@ -278,6 +294,54 @@ impl McpServer {
                         "type": "object",
                         "properties": {}
                     }
+                },
+                {
+                    "name": "save_memory",
+                    "description": "Save a semantic observation to persistent memory. Memories survive across sessions and are searchable via FTS5 full-text search.",
+                    "inputSchema": {
+                        "type": "object",
+                        "required": ["text"],
+                        "properties": {
+                            "text": { "type": "string", "description": "The observation text" },
+                            "title": { "type": "string", "description": "Short title" },
+                            "type": { "type": "string", "enum": ["bugfix","feature","refactor","change","discovery","decision"], "description": "Observation type (default: discovery)" },
+                            "concepts": { "type": "array", "items": { "type": "string" }, "description": "Concept tags: how-it-works, why-it-exists, what-changed, problem-solution, gotcha, pattern, trade-off" },
+                            "project": { "type": "string", "description": "Project name or path" },
+                            "files": { "type": "array", "items": { "type": "string" }, "description": "Related file paths" },
+                            "facts": { "type": "array", "items": { "type": "string" }, "description": "Extracted facts" }
+                        }
+                    }
+                },
+                {
+                    "name": "search_memory",
+                    "description": "Search persistent memories using FTS5 full-text search with BM25 ranking. Returns observations matching the query, filterable by project, type, and date range.",
+                    "inputSchema": {
+                        "type": "object",
+                        "required": ["query"],
+                        "properties": {
+                            "query": { "type": "string", "description": "Search query (FTS5 syntax supported)" },
+                            "project": { "type": "string", "description": "Filter by project" },
+                            "type": { "type": "string", "description": "Filter by observation type" },
+                            "limit": { "type": "integer", "description": "Max results (default 10, max 50)" },
+                            "offset": { "type": "integer", "description": "Pagination offset" },
+                            "date_start": { "type": "string", "description": "ISO 8601 date filter start" },
+                            "date_end": { "type": "string", "description": "ISO 8601 date filter end" }
+                        }
+                    }
+                },
+                {
+                    "name": "memory_timeline",
+                    "description": "Retrieve observations chronologically around an anchor observation. Use search_memory first to find the anchor ID.",
+                    "inputSchema": {
+                        "type": "object",
+                        "required": ["anchor_id"],
+                        "properties": {
+                            "anchor_id": { "type": "integer", "description": "ID of the anchor observation" },
+                            "depth_before": { "type": "integer", "description": "Observations before anchor (default 5)" },
+                            "depth_after": { "type": "integer", "description": "Observations after anchor (default 5)" },
+                            "project": { "type": "string", "description": "Filter by project" }
+                        }
+                    }
                 }
             ]
         })
@@ -320,6 +384,26 @@ impl McpServer {
                         json!({"content": [{"type": "text", "text": serde_json::to_string(&envelope).unwrap_or_default()}]})
                     }
                 }
+            }
+            "save_memory" | "search_memory" | "memory_timeline" => {
+                let db_guard = match self.db.lock() {
+                    Ok(g) => g,
+                    Err(_) => {
+                        let envelope = Envelope::<()>::error(
+                            ErrorCode::ESqliteLocked,
+                            true,
+                            Some("Database lock unavailable".to_string()),
+                        );
+                        return json!({"content": [{"type": "text", "text": serde_json::to_string(&envelope).unwrap_or_default()}]});
+                    }
+                };
+                let result = match tool_name {
+                    "save_memory" => crate::tools::memory::handle_save_memory(tool_input, &db_guard),
+                    "search_memory" => crate::tools::memory::handle_search_memory(tool_input, &db_guard),
+                    "memory_timeline" => crate::tools::memory::handle_memory_timeline(tool_input, &db_guard),
+                    _ => unreachable!(),
+                };
+                json!({"content": [{"type": "text", "text": serde_json::to_string(&result).unwrap_or_default()}]})
             }
             _ => {
                 json!({
