@@ -46,6 +46,8 @@ impl SessionDb {
     fn run_migrations(&self) -> Result<(), PersistenceError> {
         let schema = include_str!("../../migrations/001_initial.sql");
         self.conn.execute_batch(schema)?;
+        let health_schema = include_str!("../../migrations/002_health_scores.sql");
+        self.conn.execute_batch(health_schema)?;
         Ok(())
     }
 
@@ -204,6 +206,83 @@ impl SessionDb {
             })?
             .collect::<Result<Vec<_>, _>>()?;
         Ok(rows)
+    }
+
+    /// Upsert a file's health factors and computed score
+    pub fn upsert_health(
+        &self,
+        project_path: &str,
+        file_path: &str,
+        factors: &crate::session::health::HealthFactors,
+    ) -> Result<(), PersistenceError> {
+        let score = crate::session::health::compute_health(factors);
+        let now = chrono::Utc::now().to_rfc3339();
+        self.conn.execute(
+            "INSERT INTO code_health (project_path, file_path, health_score, test_coverage_score, stability_score, error_score, complexity_score, doc_score, last_updated)
+             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9)
+             ON CONFLICT(project_path, file_path) DO UPDATE SET
+               health_score = ?3, test_coverage_score = ?4, stability_score = ?5,
+               error_score = ?6, complexity_score = ?7, doc_score = ?8, last_updated = ?9",
+            params![project_path, file_path, score, factors.test_coverage, factors.stability, factors.error_rate, factors.complexity, factors.documentation, now],
+        )?;
+        Ok(())
+    }
+
+    /// Get health factors for a specific file
+    pub fn get_health(
+        &self,
+        project_path: &str,
+        file_path: &str,
+    ) -> Option<crate::session::health::HealthFactors> {
+        self.conn
+            .query_row(
+                "SELECT test_coverage_score, stability_score, error_score, complexity_score, doc_score FROM code_health WHERE project_path = ?1 AND file_path = ?2",
+                params![project_path, file_path],
+                |row| {
+                    Ok(crate::session::health::HealthFactors {
+                        test_coverage: row.get::<_, u32>(0)?,
+                        stability: row.get::<_, u32>(1)?,
+                        error_rate: row.get::<_, u32>(2)?,
+                        complexity: row.get::<_, u32>(3)?,
+                        documentation: row.get::<_, u32>(4)?,
+                    })
+                },
+            )
+            .ok()
+    }
+
+    /// Get the unhealthiest files in a project, ordered by ascending health score
+    pub fn get_unhealthiest(
+        &self,
+        project_path: &str,
+        limit: usize,
+    ) -> Vec<crate::session::health::CodeHealth> {
+        let mut stmt = match self.conn.prepare(
+            "SELECT file_path, health_score, test_coverage_score, stability_score, error_score, complexity_score, doc_score, last_updated
+             FROM code_health WHERE project_path = ?1 ORDER BY health_score ASC LIMIT ?2",
+        ) {
+            Ok(s) => s,
+            Err(_) => return vec![],
+        };
+
+        stmt.query_map(params![project_path, limit as i64], |row| {
+            Ok(crate::session::health::CodeHealth {
+                file_path: row.get(0)?,
+                health_score: row.get(1)?,
+                factors: crate::session::health::HealthFactors {
+                    test_coverage: row.get(2)?,
+                    stability: row.get(3)?,
+                    error_rate: row.get(4)?,
+                    complexity: row.get(5)?,
+                    documentation: row.get(6)?,
+                },
+                trend: "stable".to_string(),
+                last_updated: row.get(7)?,
+            })
+        })
+        .ok()
+        .map(|rows| rows.flatten().collect())
+        .unwrap_or_default()
     }
 }
 
