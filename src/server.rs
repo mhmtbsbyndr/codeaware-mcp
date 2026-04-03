@@ -19,18 +19,33 @@ impl Default for McpServer {
 
 impl McpServer {
     pub fn new() -> Self {
+        let metrics = Arc::new(Mutex::new(MetricsState::new()));
+
+        // Auto-start XRay dashboard on server init
+        let xray = XrayServer::start(Arc::clone(&metrics)).ok();
+        if let Some(ref srv) = xray {
+            eprintln!("XRay dashboard: {}", srv.url());
+        }
+
         McpServer {
             state: Arc::new(Mutex::new(SessionState::new("."))),
-            metrics: Arc::new(Mutex::new(MetricsState::new())),
-            xray_server: Mutex::new(None),
+            metrics,
+            xray_server: Mutex::new(xray),
         }
     }
 
     pub fn new_with_state(state: Arc<Mutex<SessionState>>) -> Self {
+        let metrics = Arc::new(Mutex::new(MetricsState::new()));
+
+        let xray = XrayServer::start(Arc::clone(&metrics)).ok();
+        if let Some(ref srv) = xray {
+            eprintln!("XRay dashboard: {}", srv.url());
+        }
+
         McpServer {
             state,
-            metrics: Arc::new(Mutex::new(MetricsState::new())),
-            xray_server: Mutex::new(None),
+            metrics,
+            xray_server: Mutex::new(xray),
         }
     }
 

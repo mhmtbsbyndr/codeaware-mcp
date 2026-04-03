@@ -28,14 +28,19 @@ pub fn handle_xray(
     }
 
     let server = XrayServer::start(metrics).map_err(|e| format!("server start error: {e}"))?;
+    let is_reused = server.is_reused();
     let result = XrayResult {
         url: server.url(),
         port: server.port(),
-        message: format!("Dashboard started at {}", server.url()),
+        message: if is_reused {
+            format!("Dashboard already running at {}", server.url())
+        } else {
+            format!("Dashboard started at {}", server.url())
+        },
     };
 
-    // Only open browser ONCE per process lifetime
-    if !BROWSER_OPENED.swap(true, Ordering::SeqCst) {
+    // Only open browser ONCE per process lifetime, and never for reused servers
+    if !is_reused && !BROWSER_OPENED.swap(true, Ordering::SeqCst) {
         let url = server.url();
         #[cfg(target_os = "macos")]
         { let _ = std::process::Command::new("open").arg(&url).spawn(); }

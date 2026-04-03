@@ -10,29 +10,104 @@ const DEFAULT_PORT: u16 = 9847;
 
 pub struct XrayServer {
     port: u16,
-    _handle: thread::JoinHandle<()>,
+    _handle: Option<thread::JoinHandle<()>>,
+}
+
+/// Check if an existing XRay server is already responding on the default port.
+fn probe_existing_server() -> bool {
+    use std::net::TcpStream as TcpClient;
+    if let Ok(mut stream) = TcpClient::connect_timeout(
+        &format!("127.0.0.1:{DEFAULT_PORT}").parse().unwrap(),
+        Duration::from_millis(200),
+    ) {
+        let _ = stream.write_all(b"GET /api/metrics HTTP/1.1\r\nHost: 127.0.0.1\r\n\r\n");
+        let _ = stream.set_read_timeout(Some(Duration::from_millis(500)));
+        let mut buf = [0u8; 64];
+        if let Ok(n) = stream.read(&mut buf) {
+            let resp = String::from_utf8_lossy(&buf[..n]);
+            return resp.contains("200 OK");
+        }
+    }
+    false
+}
+
+/// Create a TcpListener with SO_REUSEADDR so the port is available immediately
+/// after a previous process exits.
+fn bind_with_reuseaddr(port: u16) -> Result<TcpListener, std::io::Error> {
+    use std::os::unix::io::FromRawFd;
+
+    unsafe {
+        let fd = libc::socket(libc::AF_INET, libc::SOCK_STREAM, 0);
+        if fd < 0 {
+            return Err(std::io::Error::last_os_error());
+        }
+
+        let optval: libc::c_int = 1;
+        libc::setsockopt(
+            fd,
+            libc::SOL_SOCKET,
+            libc::SO_REUSEADDR,
+            &optval as *const _ as *const libc::c_void,
+            std::mem::size_of::<libc::c_int>() as libc::socklen_t,
+        );
+
+        let addr = libc::sockaddr_in {
+            sin_len: std::mem::size_of::<libc::sockaddr_in>() as u8,
+            sin_family: libc::AF_INET as u8,
+            sin_port: port.to_be(),
+            sin_addr: libc::in_addr { s_addr: u32::from_be_bytes([127, 0, 0, 1]).to_be() },
+            sin_zero: [0; 8],
+        };
+
+        if libc::bind(fd, &addr as *const libc::sockaddr_in as *const libc::sockaddr,
+                       std::mem::size_of::<libc::sockaddr_in>() as libc::socklen_t) < 0 {
+            let err = std::io::Error::last_os_error();
+            libc::close(fd);
+            return Err(err);
+        }
+
+        if libc::listen(fd, 128) < 0 {
+            let err = std::io::Error::last_os_error();
+            libc::close(fd);
+            return Err(err);
+        }
+
+        Ok(TcpListener::from_raw_fd(fd))
+    }
 }
 
 impl XrayServer {
     pub fn start(metrics: Arc<Mutex<MetricsState>>) -> Result<Self, std::io::Error> {
-        // Try fixed port first (survives reconnects), fall back to dynamic
-        let listener = TcpListener::bind(format!("127.0.0.1:{DEFAULT_PORT}"))
+        // If there's already a server on DEFAULT_PORT, reuse it (no new tab)
+        if probe_existing_server() {
+            return Ok(XrayServer {
+                port: DEFAULT_PORT,
+                _handle: None,
+            });
+        }
+
+        // Bind with SO_REUSEADDR so port is immediately reusable after process exit
+        let listener = bind_with_reuseaddr(DEFAULT_PORT)
             .or_else(|_| TcpListener::bind("127.0.0.1:0"))?;
         let port = listener.local_addr()?.port();
 
         let handle = thread::spawn(move || {
-            for stream in listener.incoming() {
-                if let Ok(stream) = stream {
-                    let metrics = Arc::clone(&metrics);
-                    thread::spawn(move || handle_connection(stream, &metrics));
-                }
+            for stream in listener.incoming().flatten() {
+                let metrics = Arc::clone(&metrics);
+                thread::spawn(move || handle_connection(stream, &metrics));
             }
         });
 
         Ok(XrayServer {
             port,
-            _handle: handle,
+            _handle: Some(handle),
         })
+    }
+
+    /// Returns true if this instance reuses an already-running server
+    /// (no thread was spawned).
+    pub fn is_reused(&self) -> bool {
+        self._handle.is_none()
     }
 
     pub fn port(&self) -> u16 {

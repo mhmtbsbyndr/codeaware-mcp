@@ -4,6 +4,7 @@ use crate::envelope::{Envelope, ErrorCode, TrustLevel};
 
 // ── WorkspaceSlots ─────────────────────────────────────────────────────────────
 
+#[derive(Default)]
 pub struct WorkspaceSlots {
     pub slots: HashMap<String, Value>,
     pub read_count: HashMap<String, u32>,
@@ -11,10 +12,7 @@ pub struct WorkspaceSlots {
 
 impl WorkspaceSlots {
     pub fn new() -> Self {
-        Self {
-            slots: HashMap::new(),
-            read_count: HashMap::new(),
-        }
+        Self::default()
     }
 
     pub fn get(&self, name: &str) -> (Value, bool) {
