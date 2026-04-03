@@ -77,6 +77,8 @@ pub enum ErrorCode {
     EInvalidSlotValue,
     #[serde(rename = "E_INTERNAL_ERROR")]
     EInternalError,
+    #[serde(rename = "E_LOW_CONFIDENCE")]
+    ELowConfidence,
 }
 
 #[derive(Debug, Clone, Copy)]

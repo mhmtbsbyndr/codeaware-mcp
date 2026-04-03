@@ -47,6 +47,14 @@ fn default_pattern_prune_after_days() -> u32 {
     30
 }
 
+fn default_confidence_threshold() -> u32 {
+    60
+}
+
+fn default_confidence_mode() -> String {
+    "warn".to_string()
+}
+
 fn default_error_loop_threshold() -> u32 {
     3
 }
@@ -149,6 +157,10 @@ pub struct EnforcementConfig {
     pub error_loop_threshold: u32,
     #[serde(default = "default_max_iterations_per_task")]
     pub max_iterations_per_task: u32,
+    #[serde(default = "default_confidence_threshold")]
+    pub confidence_threshold: u32,
+    #[serde(default = "default_confidence_mode")]
+    pub confidence_mode: String,
 }
 
 impl Default for EnforcementConfig {
@@ -157,6 +169,8 @@ impl Default for EnforcementConfig {
             tdd_warning: false,
             error_loop_threshold: default_error_loop_threshold(),
             max_iterations_per_task: default_max_iterations_per_task(),
+            confidence_threshold: default_confidence_threshold(),
+            confidence_mode: default_confidence_mode(),
         }
     }
 }

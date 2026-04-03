@@ -2,6 +2,8 @@ use serde::{Deserialize, Serialize};
 use std::path::Path;
 use thiserror::Error;
 
+use crate::tools::confidence::ConfidenceScore;
+
 // ─── Public Types ────────────────────────────────────────────────────────────
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -69,6 +71,7 @@ pub struct SmartEditResult {
     pub syntax_check: Option<String>,
     pub impact: EditImpact,
     pub enforcement: EditEnforcement,
+    pub confidence: Option<ConfidenceScore>,
 }
 
 // ─── Errors ──────────────────────────────────────────────────────────────────
@@ -226,6 +229,7 @@ pub fn smart_edit(
             tdd_warning: false,
             uncommitted_edits_in_file: false,
         },
+        confidence: None,
     })
 }
 

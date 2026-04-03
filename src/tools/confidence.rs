@@ -1,4 +1,4 @@
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 
 /// Internal-only input for confidence computation — not serialized.
 pub struct ConfidenceInput<'a> {
@@ -13,14 +13,14 @@ pub struct ConfidenceInput<'a> {
     pub error_type_widened: bool,
 }
 
-#[derive(Debug, Clone, Serialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct FactorScore {
     pub score: u32,
     pub weight: f64,
     pub detail: String,
 }
 
-#[derive(Debug, Clone, Serialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ConfidenceFactors {
     pub test_coverage: FactorScore,
     pub caller_impact: FactorScore,
@@ -29,7 +29,7 @@ pub struct ConfidenceFactors {
     pub semantic_risk: FactorScore,
 }
 
-#[derive(Debug, Clone, Serialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ConfidenceScore {
     pub score: u32,
     pub verdict: String,
