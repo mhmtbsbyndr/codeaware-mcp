@@ -4,6 +4,7 @@ use thiserror::Error;
 
 use crate::tools::confidence::ConfidenceScore;
 use crate::tools::semantic_diff::SemanticChange;
+use crate::tools::test_selector::TestSelection;
 
 // ─── Public Types ────────────────────────────────────────────────────────────
 
@@ -74,6 +75,7 @@ pub struct SmartEditResult {
     pub enforcement: EditEnforcement,
     pub confidence: Option<ConfidenceScore>,
     pub semantic_changes: Option<Vec<SemanticChange>>,
+    pub suggested_tests: Option<TestSelection>,
 }
 
 // ─── Errors ──────────────────────────────────────────────────────────────────
@@ -233,6 +235,7 @@ pub fn smart_edit(
         },
         confidence: None,
         semantic_changes: None,
+        suggested_tests: None,
     })
 }
 

@@ -57,6 +57,7 @@ fn test_smart_edit_result_serializes_with_confidence() {
             error_type_widened: false,
         })),
         semantic_changes: None,
+        suggested_tests: None,
     };
     let json = serde_json::to_string(&result).unwrap();
     assert!(json.contains("\"confidence\""));
