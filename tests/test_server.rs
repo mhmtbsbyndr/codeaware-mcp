@@ -44,7 +44,10 @@ fn test_tools_list_returns_all_tools() {
     assert!(tool_names.contains(&"save_memory"));
     assert!(tool_names.contains(&"search_memory"));
     assert!(tool_names.contains(&"memory_timeline"));
-    assert_eq!(tools.len(), 11);
+    assert!(tool_names.contains(&"git_diff"));
+    assert!(tool_names.contains(&"git_blame"));
+    assert!(tool_names.contains(&"git_changelog"));
+    assert_eq!(tools.len(), 14);
 }
 
 #[test]

@@ -79,6 +79,10 @@ pub enum ErrorCode {
     EInternalError,
     #[serde(rename = "E_LOW_CONFIDENCE")]
     ELowConfidence,
+    #[serde(rename = "E_GIT_NOT_FOUND")]
+    EGitNotFound,
+    #[serde(rename = "E_GIT_ERROR")]
+    EGitError,
 }
 
 #[derive(Debug, Clone, Copy)]
