@@ -168,10 +168,11 @@ pub fn compute_confidence(input: &ConfidenceInput) -> ConfidenceScore {
         ("git_stability", git_stability.score),
         ("semantic_risk", semantic_risk.score),
     ];
+    // factors_list is always non-empty (5 entries above), so this is safe
     let weakest_entry = factors_list
         .iter()
         .min_by_key(|(_, s)| *s)
-        .unwrap();
+        .expect("factors_list is statically non-empty");
     let weakest = weakest_entry.0.to_string();
 
     let suggestion = match weakest.as_str() {

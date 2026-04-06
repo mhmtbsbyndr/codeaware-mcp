@@ -34,7 +34,8 @@ impl SecretScanner {
             .iter()
             .map(|(label, pattern)| SecretPattern {
                 label: label.to_string(),
-                regex: Regex::new(pattern).expect("invalid secret pattern"),
+                regex: Regex::new(pattern)
+                    .unwrap_or_else(|e| panic!("SecretScanner: invalid pattern for {label}: {e}")),
             })
             .collect();
 
@@ -78,5 +79,65 @@ impl SecretScanner {
 impl Default for SecretScanner {
     fn default() -> Self {
         Self::new()
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_pattern_count() {
+        let scanner = SecretScanner::new();
+        assert_eq!(scanner.pattern_count(), 14);
+    }
+
+    #[test]
+    fn test_clean_text_passes_through() {
+        let scanner = SecretScanner::new();
+        let (result, detected) = scanner.scan("fn main() { println!(\"hello\"); }");
+        assert!(!detected);
+        assert_eq!(result, "fn main() { println!(\"hello\"); }");
+    }
+
+    #[test]
+    fn test_api_key_detected() {
+        let scanner = SecretScanner::new();
+        let (result, detected) = scanner.scan("api_key = 'abcdefghijklmnopqrstuvwxyz'");
+        assert!(detected);
+        assert!(result.contains("[REDACTED:api_key]"));
+        assert!(!result.contains("abcdefghijklmnopqrstuvwxyz"));
+    }
+
+    #[test]
+    fn test_github_token_detected() {
+        let scanner = SecretScanner::new();
+        let (result, detected) = scanner.scan("ghp_ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmn");
+        assert!(detected);
+        assert!(result.contains("[REDACTED:github_token]"));
+    }
+
+    #[test]
+    fn test_aws_key_detected() {
+        let scanner = SecretScanner::new();
+        let (result, detected) = scanner.scan("AKIAIOSFODNN7EXAMPLE");
+        assert!(detected);
+        assert!(result.contains("[REDACTED:aws_key]"));
+    }
+
+    #[test]
+    fn test_private_key_detected() {
+        let scanner = SecretScanner::new();
+        let (result, detected) = scanner.scan("-----BEGIN RSA PRIVATE KEY-----");
+        assert!(detected);
+        assert!(result.contains("[REDACTED:private_key]"));
+    }
+
+    #[test]
+    fn test_max_scan_bytes_respected() {
+        let scanner = SecretScanner::new();
+        let large_text = "a".repeat(200 * 1024);
+        let (result, _) = scanner.scan(&large_text);
+        assert!(result.len() <= MAX_SCAN_BYTES);
     }
 }

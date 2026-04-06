@@ -5,7 +5,6 @@ use crate::session::state::SessionState;
 use crate::session::persistence::SessionDb;
 use crate::xray::metrics::MetricsState;
 use crate::xray::server::XrayServer;
-use crate::envelope::{Envelope, ErrorCode, TrustLevel};
 
 pub struct McpServer {
     state: Arc<Mutex<SessionState>>,
@@ -543,185 +542,110 @@ impl McpServer {
         let params = request.get("params").unwrap_or(&Value::Null);
         let tool_name = params.get("name").and_then(|n| n.as_str()).unwrap_or("");
         let tool_input = params.get("arguments").unwrap_or(&Value::Null);
-
-        // Extract file path from arguments (used by metrics tracking)
         let file_path = tool_input.get("path").and_then(|p| p.as_str());
 
         let start_time = std::time::Instant::now();
 
-        let result = match tool_name {
-            "workspace_state" => {
-                let result = crate::tools::workspace_state::handle_workspace_state(
-                    tool_input,
-                    &self.state,
-                );
-                json!({
-                    "content": [{
-                        "type": "text",
-                        "text": result.to_string()
-                    }]
-                })
-            }
-            "xray" => {
-                match crate::tools::xray::handle_xray(
-                    Arc::clone(&self.metrics),
-                    &self.xray_server,
-                ) {
-                    Ok(result) => {
-                        let envelope = Envelope::success(result, TrustLevel::Exact);
-                        json!({"content": [{"type": "text", "text": serde_json::to_string(&envelope).unwrap_or_default()}]})
-                    }
-                    Err(e) => {
-                        let envelope = Envelope::<()>::error(ErrorCode::EInternalError, false, Some(e));
-                        json!({"content": [{"type": "text", "text": serde_json::to_string(&envelope).unwrap_or_default()}]})
-                    }
-                }
-            }
-            "save_memory" | "search_memory" | "memory_timeline" | "summarize_memory" => {
-                let db_arc = match &self.db {
-                    Some(db) => db,
-                    None => {
-                        let envelope = Envelope::<()>::error(
-                            ErrorCode::EInternalError,
-                            false,
-                            Some("Memory database unavailable".to_string()),
-                        );
-                        return json!({"content": [{"type": "text", "text": serde_json::to_string(&envelope).unwrap_or_default()}]});
-                    }
-                };
-                let db_guard = match db_arc.lock() {
-                    Ok(g) => g,
-                    Err(poisoned) => {
-                        eprintln!("Warning: memory database mutex poisoned, recovering");
-                        let guard = poisoned.into_inner();
-                        // Rollback any partial transaction from the panicked thread
-                        if let Err(e) = guard.rollback() {
-                            eprintln!("Warning: ROLLBACK after mutex recovery: {e}");
-                        }
-                        guard
-                    }
-                };
-                let result = match tool_name {
-                    "save_memory" => crate::tools::memory::handle_save_memory(tool_input, &db_guard),
-                    "search_memory" => crate::tools::memory::handle_search_memory(tool_input, &db_guard),
-                    "memory_timeline" => crate::tools::memory::handle_memory_timeline(tool_input, &db_guard),
-                    "summarize_memory" => crate::tools::memory_summary::handle_summarize_memory(tool_input, &db_guard),
-                    _ => unreachable!(),
-                };
-                json!({"content": [{"type": "text", "text": serde_json::to_string(&result).unwrap_or_default()}]})
-            }
-            "git_diff" => {
-                crate::tools::git_intelligence::handle_git_diff(tool_input)
-            }
-            "git_blame" => {
-                crate::tools::git_intelligence::handle_git_blame(tool_input)
-            }
-            "git_changelog" => {
-                crate::tools::git_intelligence::handle_git_changelog(tool_input)
-            }
-            "smart_refactor" => {
-                crate::tools::smart_refactor::handle_smart_refactor(tool_input)
-            }
-            "test_coverage_map" => {
-                crate::tools::test_coverage_map::handle_test_coverage_map(tool_input)
-            }
-            _ => {
-                json!({
-                    "content": [{
-                        "type": "text",
-                        "text": "Tool not yet implemented"
-                    }]
-                })
-            }
-        };
+        let result = crate::tools::dispatch::dispatch_tool(
+            tool_name,
+            tool_input,
+            &self.state,
+            &self.db,
+            &self.xray_server,
+            &self.metrics,
+        );
 
-        // Record metrics for xray dashboard (skip xray tool itself to avoid noise)
         if tool_name != "xray" {
-            let result_text = result.to_string();
-            let raw_bytes = result_text.len() as u64;
-            let raw_tokens = raw_bytes / 4; // rough byte-to-token estimate
-            // Estimate compression: skeleton/focused modes compress ~90%, others ~50%
-            let compression = match tool_name {
-                "smart_read" | "project_map" => 10, // 90% compression → 10% of raw
-                "smart_run" => 8,                    // 92% compression
-                "smart_edit" => 50,                  // edits are already compact
-                _ => 80,                             // minimal compression
-            };
-            let compressed_tokens = raw_tokens * compression / 100;
-
-            let profile = profiles::get_profile();
-
-            if let Ok(mut m) = self.metrics.lock() {
-                m.record_tool_call(tool_name, file_path, raw_tokens, compressed_tokens);
-
-                // Sync phase from session state — minimal profile skips timeline events
-                if profile != Profile::Minimal {
-                    if let Ok(state) = self.state.lock() {
-                        let phase = match state.phase() {
-                            crate::session::state::SessionPhase::Idle => "Idle",
-                            crate::session::state::SessionPhase::Analyzing => "Analyzing",
-                            crate::session::state::SessionPhase::Editing => "Editing",
-                            crate::session::state::SessionPhase::Verifying => "Verifying",
-                            crate::session::state::SessionPhase::Complete => "Complete",
-                            crate::session::state::SessionPhase::Compacting => "Compacting",
-                        };
-                        m.record_timeline_event(
-                            tool_name,
-                            file_path,
-                            raw_tokens,
-                            compressed_tokens,
-                            start_time.elapsed().as_millis() as u64,
-                            phase,
-                        );
-                        m.set_phase(phase);
-                        m.set_session_id(state.session_id());
-                    }
-                }
-
-                // Fix 3: Strategic compaction hints
-                m.check_compaction_hints();
-            }
-
-            // Rich profile: log extra detail per tool call
-            if profile == Profile::Rich {
-                eprintln!(
-                    "CodeAware [rich]: {} on {} — {} raw tokens, {} compressed",
-                    tool_name,
-                    file_path.unwrap_or("-"),
-                    raw_tokens,
-                    compressed_tokens
-                );
-            }
-
-            // Auto-observe: record observation from tool call result
-            if let Some(ref db_arc) = self.db {
-                if let Ok(db_guard) = db_arc.lock() {
-                    let session_id = self.state.lock()
-                        .map(|s| s.session_id().to_string())
-                        .unwrap_or_default();
-                    crate::hooks::auto_observe::record_auto_observation(
-                        &db_guard,
-                        tool_name,
-                        file_path,
-                        &session_id,
-                        &result_text,
-                    );
-                }
-            }
-
-            // Fix 2: Governance capture — only when CODEAWARE_GOVERNANCE=1
-            if crate::hooks::governance::is_governance_enabled() {
-                if let Some(event) = crate::hooks::governance::check_governance(
-                    tool_name,
-                    file_path,
-                    &result_text,
-                ) {
-                    crate::hooks::governance::log_governance_event(&event);
-                }
-            }
+            self.record_post_tool_metrics(tool_name, file_path, &result, start_time);
         }
 
         result
+    }
+
+    /// Record metrics, auto-observe, and governance hooks after a tool call.
+    fn record_post_tool_metrics(
+        &self,
+        tool_name: &str,
+        file_path: Option<&str>,
+        result: &Value,
+        start_time: std::time::Instant,
+    ) {
+        let result_text = result.to_string();
+        let raw_bytes = result_text.len() as u64;
+        let raw_tokens = raw_bytes / 4;
+        let compression = match tool_name {
+            "smart_read" | "project_map" => 10,
+            "smart_run" => 8,
+            "smart_edit" => 50,
+            _ => 80,
+        };
+        let compressed_tokens = raw_tokens * compression / 100;
+
+        let profile = profiles::get_profile();
+
+        if let Ok(mut m) = self.metrics.lock() {
+            m.record_tool_call(tool_name, file_path, raw_tokens, compressed_tokens);
+
+            if profile != Profile::Minimal {
+                if let Ok(state) = self.state.lock() {
+                    let phase = match state.phase() {
+                        crate::session::state::SessionPhase::Idle => "Idle",
+                        crate::session::state::SessionPhase::Analyzing => "Analyzing",
+                        crate::session::state::SessionPhase::Editing => "Editing",
+                        crate::session::state::SessionPhase::Verifying => "Verifying",
+                        crate::session::state::SessionPhase::Complete => "Complete",
+                        crate::session::state::SessionPhase::Compacting => "Compacting",
+                    };
+                    m.record_timeline_event(
+                        tool_name,
+                        file_path,
+                        raw_tokens,
+                        compressed_tokens,
+                        start_time.elapsed().as_millis() as u64,
+                        phase,
+                    );
+                    m.set_phase(phase);
+                    m.set_session_id(state.session_id());
+                }
+            }
+
+            m.check_compaction_hints();
+        }
+
+        if profile == Profile::Rich {
+            eprintln!(
+                "CodeAware [rich]: {} on {} — {} raw tokens, {} compressed",
+                tool_name,
+                file_path.unwrap_or("-"),
+                raw_tokens,
+                compressed_tokens
+            );
+        }
+
+        if let Some(ref db_arc) = self.db {
+            if let Ok(db_guard) = db_arc.lock() {
+                let session_id = self.state.lock()
+                    .map(|s| s.session_id().to_string())
+                    .unwrap_or_default();
+                crate::hooks::auto_observe::record_auto_observation(
+                    &db_guard,
+                    tool_name,
+                    file_path,
+                    &session_id,
+                    &result_text,
+                );
+            }
+        }
+
+        if crate::hooks::governance::is_governance_enabled() {
+            if let Some(event) = crate::hooks::governance::check_governance(
+                tool_name,
+                file_path,
+                &result_text,
+            ) {
+                crate::hooks::governance::log_governance_event(&event);
+            }
+        }
     }
 
     fn respond(&self, id: Value, result: Value) -> String {
