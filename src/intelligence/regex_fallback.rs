@@ -11,19 +11,24 @@ pub struct RegexSymbol {
     pub line: usize,
 }
 
+/// Compile a regex pattern with a descriptive panic message on failure.
+fn re(pattern: &str) -> Regex {
+    Regex::new(pattern).unwrap_or_else(|e| panic!("RegexFallback: invalid pattern {pattern:?}: {e}"))
+}
+
 impl RegexFallback {
     pub fn new() -> Self {
         Self {
             patterns: vec![
-                (Regex::new(r"(?m)^(?:pub\s+)?(?:async\s+)?fn\s+(\w+)").unwrap(), "function"),
-                (Regex::new(r"(?m)^(?:pub\s+)?struct\s+(\w+)").unwrap(), "struct"),
-                (Regex::new(r"(?m)^(?:pub\s+)?enum\s+(\w+)").unwrap(), "enum"),
-                (Regex::new(r"(?m)^(?:pub\s+)?trait\s+(\w+)").unwrap(), "trait"),
-                (Regex::new(r"(?m)^def\s+(\w+)").unwrap(), "function"),
-                (Regex::new(r"(?m)^class\s+(\w+)").unwrap(), "class"),
-                (Regex::new(r"(?m)^(?:export\s+)?function\s+(\w+)").unwrap(), "function"),
-                (Regex::new(r"(?m)^(?:export\s+)?class\s+(\w+)").unwrap(), "class"),
-                (Regex::new(r"(?m)^(?:export\s+)?interface\s+(\w+)").unwrap(), "interface"),
+                (re(r"(?m)^(?:pub\s+)?(?:async\s+)?fn\s+(\w+)"), "function"),
+                (re(r"(?m)^(?:pub\s+)?struct\s+(\w+)"), "struct"),
+                (re(r"(?m)^(?:pub\s+)?enum\s+(\w+)"), "enum"),
+                (re(r"(?m)^(?:pub\s+)?trait\s+(\w+)"), "trait"),
+                (re(r"(?m)^def\s+(\w+)"), "function"),
+                (re(r"(?m)^class\s+(\w+)"), "class"),
+                (re(r"(?m)^(?:export\s+)?function\s+(\w+)"), "function"),
+                (re(r"(?m)^(?:export\s+)?class\s+(\w+)"), "class"),
+                (re(r"(?m)^(?:export\s+)?interface\s+(\w+)"), "interface"),
             ],
         }
     }

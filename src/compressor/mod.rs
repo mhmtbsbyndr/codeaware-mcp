@@ -75,6 +75,95 @@ pub fn classify_command(command: &str) -> &'static str {
     "generic"
 }
 
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_classify_test_runners() {
+        assert_eq!(classify_command("cargo test"), "test_runner");
+        assert_eq!(classify_command("cargo test --release"), "test_runner");
+        assert_eq!(classify_command("go test ./..."), "test_runner");
+        assert_eq!(classify_command("npm test"), "test_runner");
+        assert_eq!(classify_command("npx vitest run"), "test_runner");
+        assert_eq!(classify_command("npx jest"), "test_runner");
+        assert_eq!(classify_command("pytest -v"), "test_runner");
+        assert_eq!(classify_command("jest --watch"), "test_runner");
+        assert_eq!(classify_command("phpunit tests/"), "test_runner");
+    }
+
+    #[test]
+    fn test_classify_compilers() {
+        assert_eq!(classify_command("cargo build"), "compiler");
+        assert_eq!(classify_command("cargo build --release"), "compiler");
+        assert_eq!(classify_command("go build ."), "compiler");
+        assert_eq!(classify_command("rustc main.rs"), "compiler");
+        assert_eq!(classify_command("tsc --build"), "compiler");
+        assert_eq!(classify_command("gcc -o app main.c"), "compiler");
+        assert_eq!(classify_command("javac App.java"), "compiler");
+    }
+
+    #[test]
+    fn test_classify_linters() {
+        assert_eq!(classify_command("cargo clippy"), "linter");
+        assert_eq!(classify_command("eslint src/"), "linter");
+        assert_eq!(classify_command("ruff check ."), "linter");
+        assert_eq!(classify_command("pylint module.py"), "linter");
+    }
+
+    #[test]
+    fn test_classify_git() {
+        assert_eq!(classify_command("git status"), "git_info");
+        assert_eq!(classify_command("git diff HEAD"), "git_info");
+        assert_eq!(classify_command("git log --oneline"), "git_info");
+    }
+
+    #[test]
+    fn test_classify_package_managers() {
+        assert_eq!(classify_command("cargo add serde"), "package_mgr");
+        assert_eq!(classify_command("npm install express"), "package_mgr");
+        assert_eq!(classify_command("pip install requests"), "package_mgr");
+        assert_eq!(classify_command("go get golang.org/x/sync"), "package_mgr");
+    }
+
+    #[test]
+    fn test_classify_formatters() {
+        assert_eq!(classify_command("rustfmt src/main.rs"), "formatter");
+        assert_eq!(classify_command("prettier --write ."), "formatter");
+        assert_eq!(classify_command("black ."), "formatter");
+        assert_eq!(classify_command("gofmt -w ."), "formatter");
+    }
+
+    #[test]
+    fn test_classify_search() {
+        assert_eq!(classify_command("grep -r pattern ."), "search");
+        assert_eq!(classify_command("rg pattern"), "search");
+        assert_eq!(classify_command("find . -name '*.rs'"), "search");
+    }
+
+    #[test]
+    fn test_classify_generic_fallback() {
+        assert_eq!(classify_command("echo hello"), "generic");
+        assert_eq!(classify_command("ls -la"), "generic");
+        assert_eq!(classify_command("cat file.txt"), "generic");
+    }
+
+    #[test]
+    fn test_classify_whitespace_handling() {
+        assert_eq!(classify_command("  cargo test  "), "test_runner");
+        assert_eq!(classify_command(""), "generic");
+    }
+
+    #[test]
+    fn test_compress_output_dispatches_correctly() {
+        // Verify dispatch doesn't panic for each category
+        let output = "some test output";
+        for category in &["test_runner", "compiler", "linter", "search", "git_info", "package_mgr", "formatter", "generic"] {
+            let _ = compress_output(category, output, 50);
+        }
+    }
+}
+
 /// Dispatch to type-specific compressor.
 pub fn compress_output(command_type: &str, raw_output: &str, max_lines: usize) -> String {
     match command_type {

@@ -88,10 +88,10 @@ pub fn compute_error_signature(output: &str) -> String {
     }
 
     // Normalize: strip timestamps, line numbers, paths that may change
+    let re_ts = Regex::new(r"\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}[Z\w]*")
+        .unwrap_or_else(|e| panic!("error_signature: invalid timestamp regex: {e}"));
     let normalized: String = error_lines.iter()
         .map(|l| {
-            // Strip ISO timestamps (e.g., 2026-04-01T12:00:00Z)
-            let re_ts = Regex::new(r"\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}[Z\w]*").unwrap();
             let stripped = re_ts.replace_all(l, "<TS>");
             stripped.to_string()
         })

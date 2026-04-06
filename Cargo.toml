@@ -1,6 +1,6 @@
 [package]
 name = "codeaware-mcp"
-version = "2.1.0"
+version = "2.1.1"
 edition = "2021"
 description = "Context-efficient orchestration and compression layer for Claude Code"
 license = "MIT"

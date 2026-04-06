@@ -15,3 +15,4 @@ pub mod memory_summary;
 pub mod git_intelligence;
 pub mod smart_refactor;
 pub mod test_coverage_map;
+pub mod dispatch;

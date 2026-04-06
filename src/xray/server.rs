@@ -52,13 +52,10 @@ fn bind_with_reuseaddr(port: u16) -> Result<TcpListener, std::io::Error> {
             std::mem::size_of::<libc::c_int>() as libc::socklen_t,
         );
 
-        let addr = libc::sockaddr_in {
-            sin_len: std::mem::size_of::<libc::sockaddr_in>() as u8,
-            sin_family: libc::AF_INET as u8,
-            sin_port: port.to_be(),
-            sin_addr: libc::in_addr { s_addr: u32::from_be_bytes([127, 0, 0, 1]).to_be() },
-            sin_zero: [0; 8],
-        };
+        let mut addr: libc::sockaddr_in = std::mem::zeroed();
+        addr.sin_family = libc::AF_INET as libc::sa_family_t;
+        addr.sin_port = port.to_be();
+        addr.sin_addr = libc::in_addr { s_addr: u32::from_be_bytes([127, 0, 0, 1]).to_be() };
 
         if libc::bind(fd, &addr as *const libc::sockaddr_in as *const libc::sockaddr,
                        std::mem::size_of::<libc::sockaddr_in>() as libc::socklen_t) < 0 {
