@@ -6,7 +6,7 @@ use std::sync::{Arc, Mutex};
 
 fn start_server() -> (XrayServer, u16) {
     let metrics = Arc::new(Mutex::new(MetricsState::new()));
-    let server = XrayServer::start(metrics).expect("server should start");
+    let server = XrayServer::start(metrics, None).expect("server should start");
     let port = server.port();
     (server, port)
 }

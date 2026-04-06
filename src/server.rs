@@ -22,14 +22,13 @@ impl Default for McpServer {
 impl McpServer {
     pub fn new() -> Self {
         let metrics = Arc::new(Mutex::new(MetricsState::new()));
+        let db = Self::open_db();
 
         // Auto-start XRay dashboard on server init
-        let xray = XrayServer::start(Arc::clone(&metrics)).ok();
+        let xray = XrayServer::start(Arc::clone(&metrics), db.clone()).ok();
         if let Some(ref srv) = xray {
             eprintln!("XRay dashboard: {}", srv.url());
         }
-
-        let db = Self::open_db();
 
         // Context injection: load memories from previous sessions
         if let Some(ref db_arc) = db {
@@ -48,13 +47,12 @@ impl McpServer {
 
     pub fn new_with_state(state: Arc<Mutex<SessionState>>) -> Self {
         let metrics = Arc::new(Mutex::new(MetricsState::new()));
+        let db = Self::open_db();
 
-        let xray = XrayServer::start(Arc::clone(&metrics)).ok();
+        let xray = XrayServer::start(Arc::clone(&metrics), db.clone()).ok();
         if let Some(ref srv) = xray {
             eprintln!("XRay dashboard: {}", srv.url());
         }
-
-        let db = Self::open_db();
 
         // Context injection: load memories from previous sessions
         let project_path = state.lock().map(|s| s.project_path().to_string()).unwrap_or_else(|_| ".".to_string());

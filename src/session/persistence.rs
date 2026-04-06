@@ -115,6 +115,9 @@ impl SessionDb {
             "CREATE UNIQUE INDEX IF NOT EXISTS idx_observations_dedup ON observations(dedup_hash) WHERE dedup_hash IS NOT NULL",
         );
 
+        let summaries_schema = include_str!("../../migrations/005_summaries.sql");
+        self.conn.execute_batch(summaries_schema)?;
+
         Ok(())
     }
 
@@ -546,6 +549,61 @@ impl SessionDb {
             })?
             .collect::<Result<Vec<_>, _>>()?;
         Ok(records)
+    }
+
+    // ── Summary / Clustering methods ───────────────────────────────────
+
+    /// Get all observations for a project (used by summarize_memory).
+    pub fn get_all_observations_for_project(
+        &self,
+        project: &str,
+    ) -> Result<Vec<ObservationRecord>, PersistenceError> {
+        let mut stmt = self.conn.prepare(
+            "SELECT id, title, text, observation_type, concepts, project, files, facts, created_at, updated_at
+             FROM observations WHERE project = ?1
+             ORDER BY created_at ASC",
+        )?;
+        let records = stmt
+            .query_map(params![project], |row| {
+                Self::row_to_observation(row)
+            })?
+            .collect::<Result<Vec<_>, _>>()?;
+        Ok(records)
+    }
+
+    /// Save a cluster summary to the observation_summaries table.
+    pub fn save_summary(
+        &self,
+        project: &str,
+        topic: &str,
+        summary: &str,
+        observation_ids: &str,
+    ) -> Result<i64, PersistenceError> {
+        self.conn.execute(
+            "INSERT INTO observation_summaries (project, topic, summary, observation_ids, created_at)
+             VALUES (?1, ?2, ?3, ?4, datetime('now'))",
+            params![project, topic, summary, observation_ids],
+        )?;
+        Ok(self.conn.last_insert_rowid())
+    }
+
+    /// Delete observations by their IDs (for deduplication removal).
+    pub fn delete_observations_by_ids(&self, ids: &[i64]) -> Result<usize, PersistenceError> {
+        if ids.is_empty() {
+            return Ok(0);
+        }
+        let placeholders: Vec<String> = ids.iter().map(|_| "?".to_string()).collect();
+        let sql = format!(
+            "DELETE FROM observations WHERE id IN ({})",
+            placeholders.join(",")
+        );
+        let mut stmt = self.conn.prepare(&sql)?;
+        let param_values: Vec<Box<dyn rusqlite::ToSql>> =
+            ids.iter().map(|&id| Box::new(id) as Box<dyn rusqlite::ToSql>).collect();
+        let param_refs: Vec<&dyn rusqlite::ToSql> =
+            param_values.iter().map(|b| b.as_ref()).collect();
+        let deleted = stmt.execute(param_refs.as_slice())?;
+        Ok(deleted)
     }
 
     /// Get the unhealthiest files in a project, ordered by ascending health score
