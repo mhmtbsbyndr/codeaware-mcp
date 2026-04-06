@@ -47,7 +47,10 @@ fn test_tools_list_returns_all_tools() {
     assert!(tool_names.contains(&"git_diff"));
     assert!(tool_names.contains(&"git_blame"));
     assert!(tool_names.contains(&"git_changelog"));
-    assert_eq!(tools.len(), 14);
+    assert!(tool_names.contains(&"smart_refactor"));
+    assert!(tool_names.contains(&"summarize_memory"));
+    assert!(tool_names.contains(&"test_coverage_map"));
+    assert_eq!(tools.len(), 17);
 }
 
 #[test]

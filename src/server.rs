@@ -441,6 +441,65 @@ impl McpServer {
                             }
                         }
                     }
+                },
+                {
+                    "name": "summarize_memory",
+                    "description": "Cluster observations by shared files/concepts, deduplicate near-identical entries, and generate compact summaries using local heuristics.",
+                    "inputSchema": {
+                        "type": "object",
+                        "properties": {
+                            "project": { "type": "string", "description": "Project name or path (default: '.')" },
+                            "force": { "type": "boolean", "description": "Force re-summarization even if summaries exist (default: false)" }
+                        }
+                    }
+                },
+                {
+                    "name": "smart_refactor",
+                    "description": "Project-wide symbol rename with AST-aware matching. Respects .gitignore, skips strings/comments. Dry-run by default.",
+                    "inputSchema": {
+                        "type": "object",
+                        "required": ["old_name", "new_name"],
+                        "properties": {
+                            "operation": {
+                                "type": "string",
+                                "description": "Refactor operation (currently only 'rename')",
+                                "default": "rename"
+                            },
+                            "old_name": {
+                                "type": "string",
+                                "description": "Current symbol name to rename"
+                            },
+                            "new_name": {
+                                "type": "string",
+                                "description": "New symbol name"
+                            },
+                            "path": {
+                                "type": "string",
+                                "description": "Root path to search (default: current directory)"
+                            },
+                            "dry_run": {
+                                "type": "boolean",
+                                "description": "Preview changes without applying (default: true)"
+                            }
+                        }
+                    }
+                },
+                {
+                    "name": "test_coverage_map",
+                    "description": "Analyze which functions have tests and which don't. Uses tree-sitter symbol extraction and test file scanning to build a heuristic coverage map.",
+                    "inputSchema": {
+                        "type": "object",
+                        "properties": {
+                            "path": {
+                                "type": "string",
+                                "description": "Root path to analyze (default: current directory)"
+                            },
+                            "language": {
+                                "type": "string",
+                                "description": "Filter by programming language (e.g. rust, python, typescript)"
+                            }
+                        }
+                    }
                 }
             ]
         })
@@ -484,7 +543,7 @@ impl McpServer {
                     }
                 }
             }
-            "save_memory" | "search_memory" | "memory_timeline" => {
+            "save_memory" | "search_memory" | "memory_timeline" | "summarize_memory" => {
                 let db_arc = match &self.db {
                     Some(db) => db,
                     None => {
@@ -512,6 +571,7 @@ impl McpServer {
                     "save_memory" => crate::tools::memory::handle_save_memory(tool_input, &db_guard),
                     "search_memory" => crate::tools::memory::handle_search_memory(tool_input, &db_guard),
                     "memory_timeline" => crate::tools::memory::handle_memory_timeline(tool_input, &db_guard),
+                    "summarize_memory" => crate::tools::memory_summary::handle_summarize_memory(tool_input, &db_guard),
                     _ => unreachable!(),
                 };
                 json!({"content": [{"type": "text", "text": serde_json::to_string(&result).unwrap_or_default()}]})
@@ -524,6 +584,12 @@ impl McpServer {
             }
             "git_changelog" => {
                 crate::tools::git_intelligence::handle_git_changelog(tool_input)
+            }
+            "smart_refactor" => {
+                crate::tools::smart_refactor::handle_smart_refactor(tool_input)
+            }
+            "test_coverage_map" => {
+                crate::tools::test_coverage_map::handle_test_coverage_map(tool_input)
             }
             _ => {
                 json!({

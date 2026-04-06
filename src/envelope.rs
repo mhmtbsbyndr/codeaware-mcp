@@ -83,6 +83,8 @@ pub enum ErrorCode {
     EGitNotFound,
     #[serde(rename = "E_GIT_ERROR")]
     EGitError,
+    #[serde(rename = "E_REFACTOR_CONFLICT")]
+    ERefactorConflict,
 }
 
 #[derive(Debug, Clone, Copy)]
