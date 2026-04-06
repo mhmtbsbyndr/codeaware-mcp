@@ -79,6 +79,9 @@ pub fn detect_language(path: &str) -> Option<&str> {
         "go" => Some("go"),
         "php" => Some("php"),
         "swift" => Some("swift"),
+        "java" => Some("java"),
+        "c" | "h" => Some("c"),
+        "cpp" | "cc" | "cxx" | "hpp" | "hh" | "hxx" => Some("cpp"),
         _ => None,
     }
 }

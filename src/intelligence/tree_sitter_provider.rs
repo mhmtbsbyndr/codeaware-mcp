@@ -11,8 +11,8 @@ pub enum SymbolKind {
     TypeAlias,
     Const,
     Mod,
-    Class,       // Python/TS
-    Interface,   // TS
+    Class,       // Python/TS/Java/C++
+    Interface,   // TS/Java
 }
 
 #[derive(Debug, Clone)]
@@ -52,6 +52,9 @@ impl TreeSitterProvider {
             "go" => self.extract_go_symbols(&root, code, &mut symbols),
             "php" => self.extract_php_symbols(&root, code, &mut symbols),
             "swift" => self.extract_swift_symbols(&root, code, &mut symbols),
+            "java" => self.extract_java_symbols(&root, code, &mut symbols),
+            "c" => self.extract_c_symbols(&root, code, &mut symbols),
+            "cpp" => self.extract_cpp_symbols(&root, code, &mut symbols),
             _ => return Err(TreeSitterError::UnsupportedLanguage(language.into())),
         }
 
@@ -91,9 +94,14 @@ impl TreeSitterProvider {
             "go" => Ok(tree_sitter_go::LANGUAGE.into()),
             "php" => Ok(tree_sitter_php::LANGUAGE_PHP.into()),
             "swift" => Ok(tree_sitter_swift::LANGUAGE.into()),
+            "java" => Ok(tree_sitter_java::LANGUAGE.into()),
+            "c" => Ok(tree_sitter_c::LANGUAGE.into()),
+            "cpp" => Ok(tree_sitter_cpp::LANGUAGE.into()),
             _ => Err(TreeSitterError::UnsupportedLanguage(name.into())),
         }
     }
+
+    // ── Rust ─────────────────────────────────────────────────────────
 
     fn extract_rust_symbols(&self, node: &Node, code: &str, symbols: &mut Vec<SymbolInfo>) {
         let mut cursor = node.walk();
@@ -191,6 +199,8 @@ impl TreeSitterProvider {
             visibility,
         })
     }
+
+    // ── Python ───────────────────────────────────────────────────────
 
     fn extract_python_symbols(&self, node: &Node, code: &str, symbols: &mut Vec<SymbolInfo>) {
         let mut cursor = node.walk();
@@ -305,6 +315,8 @@ impl TreeSitterProvider {
         }
     }
 
+    // ── TypeScript / JavaScript ──────────────────────────────────────
+
     fn extract_ts_symbols(&self, node: &Node, code: &str, symbols: &mut Vec<SymbolInfo>, _is_ts: bool) {
         let mut cursor = node.walk();
         for child in node.children(&mut cursor) {
@@ -402,6 +414,8 @@ impl TreeSitterProvider {
         }
     }
 
+    // ── Go ───────────────────────────────────────────────────────────
+
     fn extract_go_symbols(&self, node: &Node, code: &str, symbols: &mut Vec<SymbolInfo>) {
         let mut cursor = node.walk();
         for child in node.children(&mut cursor) {
@@ -461,6 +475,8 @@ impl TreeSitterProvider {
             }
         }
     }
+
+    // ── PHP ──────────────────────────────────────────────────────────
 
     fn extract_php_symbols(&self, node: &Node, code: &str, symbols: &mut Vec<SymbolInfo>) {
         let mut cursor = node.walk();
@@ -535,6 +551,8 @@ impl TreeSitterProvider {
         }
     }
 
+    // ── Swift ────────────────────────────────────────────────────────
+
     fn extract_swift_symbols(&self, node: &Node, code: &str, symbols: &mut Vec<SymbolInfo>) {
         let mut cursor = node.walk();
         for child in node.children(&mut cursor) {
@@ -604,6 +622,403 @@ impl TreeSitterProvider {
             }
         }
     }
+
+    // ── Java ─────────────────────────────────────────────────────────
+
+    fn extract_java_symbols(&self, node: &Node, code: &str, symbols: &mut Vec<SymbolInfo>) {
+        let mut cursor = node.walk();
+        for child in node.children(&mut cursor) {
+            match child.kind() {
+                "class_declaration" => {
+                    if let Some(name) = self.get_child_by_field(&child, "name", code) {
+                        let visibility = self.java_visibility(&child, code);
+                        symbols.push(SymbolInfo {
+                            name,
+                            kind: SymbolKind::Class,
+                            signature: self.get_first_line(&child, code),
+                            start_line: child.start_position().row + 1,
+                            end_line: child.end_position().row + 1,
+                            doc_comment: None,
+                            visibility,
+                        });
+                        self.extract_java_class_body(&child, code, symbols);
+                    }
+                }
+                "interface_declaration" => {
+                    if let Some(name) = self.get_child_by_field(&child, "name", code) {
+                        let visibility = self.java_visibility(&child, code);
+                        symbols.push(SymbolInfo {
+                            name,
+                            kind: SymbolKind::Interface,
+                            signature: self.get_first_line(&child, code),
+                            start_line: child.start_position().row + 1,
+                            end_line: child.end_position().row + 1,
+                            doc_comment: None,
+                            visibility,
+                        });
+                    }
+                }
+                "enum_declaration" => {
+                    if let Some(name) = self.get_child_by_field(&child, "name", code) {
+                        let visibility = self.java_visibility(&child, code);
+                        symbols.push(SymbolInfo {
+                            name,
+                            kind: SymbolKind::Enum,
+                            signature: self.get_first_line(&child, code),
+                            start_line: child.start_position().row + 1,
+                            end_line: child.end_position().row + 1,
+                            doc_comment: None,
+                            visibility,
+                        });
+                    }
+                }
+                _ => {
+                    self.extract_java_symbols(&child, code, symbols);
+                }
+            }
+        }
+    }
+
+    fn extract_java_class_body(&self, class_node: &Node, code: &str, symbols: &mut Vec<SymbolInfo>) {
+        let mut cursor = class_node.walk();
+        for child in class_node.children(&mut cursor) {
+            if child.kind() == "class_body" {
+                let mut body_cursor = child.walk();
+                for item in child.children(&mut body_cursor) {
+                    match item.kind() {
+                        "method_declaration" => {
+                            if let Some(name) = self.get_child_by_field(&item, "name", code) {
+                                let visibility = self.java_visibility(&item, code);
+                                symbols.push(SymbolInfo {
+                                    name,
+                                    kind: SymbolKind::Method,
+                                    signature: self.get_first_line(&item, code),
+                                    start_line: item.start_position().row + 1,
+                                    end_line: item.end_position().row + 1,
+                                    doc_comment: None,
+                                    visibility,
+                                });
+                            }
+                        }
+                        "constructor_declaration" => {
+                            if let Some(name) = self.get_child_by_field(&item, "name", code) {
+                                let visibility = self.java_visibility(&item, code);
+                                symbols.push(SymbolInfo {
+                                    name,
+                                    kind: SymbolKind::Method,
+                                    signature: self.get_first_line(&item, code),
+                                    start_line: item.start_position().row + 1,
+                                    end_line: item.end_position().row + 1,
+                                    doc_comment: None,
+                                    visibility,
+                                });
+                            }
+                        }
+                        _ => {}
+                    }
+                }
+            }
+        }
+    }
+
+    // ── C ────────────────────────────────────────────────────────────
+
+    fn extract_c_symbols(&self, node: &Node, code: &str, symbols: &mut Vec<SymbolInfo>) {
+        let mut cursor = node.walk();
+        for child in node.children(&mut cursor) {
+            match child.kind() {
+                "function_definition" => {
+                    if let Some(name) = self.get_c_function_name(&child, code) {
+                        symbols.push(SymbolInfo {
+                            name,
+                            kind: SymbolKind::Function,
+                            signature: self.get_first_line(&child, code),
+                            start_line: child.start_position().row + 1,
+                            end_line: child.end_position().row + 1,
+                            doc_comment: None,
+                            visibility: None,
+                        });
+                    }
+                }
+                "struct_specifier" => {
+                    if let Some(name) = self.get_child_by_field(&child, "name", code) {
+                        symbols.push(SymbolInfo {
+                            name,
+                            kind: SymbolKind::Struct,
+                            signature: self.get_first_line(&child, code),
+                            start_line: child.start_position().row + 1,
+                            end_line: child.end_position().row + 1,
+                            doc_comment: None,
+                            visibility: None,
+                        });
+                    }
+                }
+                "enum_specifier" => {
+                    if let Some(name) = self.get_child_by_field(&child, "name", code) {
+                        symbols.push(SymbolInfo {
+                            name,
+                            kind: SymbolKind::Enum,
+                            signature: self.get_first_line(&child, code),
+                            start_line: child.start_position().row + 1,
+                            end_line: child.end_position().row + 1,
+                            doc_comment: None,
+                            visibility: None,
+                        });
+                    }
+                }
+                "type_definition" => {
+                    if let Some(name) = self.get_c_typedef_name(&child, code) {
+                        symbols.push(SymbolInfo {
+                            name,
+                            kind: SymbolKind::TypeAlias,
+                            signature: self.get_first_line(&child, code),
+                            start_line: child.start_position().row + 1,
+                            end_line: child.end_position().row + 1,
+                            doc_comment: None,
+                            visibility: None,
+                        });
+                    }
+                }
+                "declaration" => {
+                    // Recurse into top-level declarations that may contain struct/enum specifiers
+                    self.extract_c_symbols(&child, code, symbols);
+                }
+                _ => {
+                    self.extract_c_symbols(&child, code, symbols);
+                }
+            }
+        }
+    }
+
+    /// Extract function name from a C function_definition node.
+    fn get_c_function_name(&self, node: &Node, code: &str) -> Option<String> {
+        let declarator = node.child_by_field_name("declarator")?;
+        self.drill_to_identifier(&declarator, code)
+    }
+
+    /// Drill through declarator wrappers to find the identifier name.
+    fn drill_to_identifier(&self, node: &Node, code: &str) -> Option<String> {
+        match node.kind() {
+            "identifier" | "field_identifier" | "type_identifier" => {
+                Some(code[node.start_byte()..node.end_byte()].to_string())
+            }
+            "function_declarator" | "pointer_declarator" | "parenthesized_declarator"
+            | "array_declarator" | "reference_declarator" => {
+                if let Some(inner) = node.child_by_field_name("declarator") {
+                    return self.drill_to_identifier(&inner, code);
+                }
+                let mut cursor = node.walk();
+                for child in node.children(&mut cursor) {
+                    if let Some(name) = self.drill_to_identifier(&child, code) {
+                        return Some(name);
+                    }
+                }
+                None
+            }
+            "qualified_identifier" | "template_function" | "destructor_name" => {
+                Some(code[node.start_byte()..node.end_byte()].to_string())
+            }
+            _ => None,
+        }
+    }
+
+    /// Extract the typedef alias name.
+    fn get_c_typedef_name(&self, node: &Node, code: &str) -> Option<String> {
+        if let Some(declarator) = node.child_by_field_name("declarator") {
+            return self.drill_to_identifier(&declarator, code);
+        }
+        None
+    }
+
+    // ── C++ ──────────────────────────────────────────────────────────
+
+    fn extract_cpp_symbols(&self, node: &Node, code: &str, symbols: &mut Vec<SymbolInfo>) {
+        let mut cursor = node.walk();
+        for child in node.children(&mut cursor) {
+            match child.kind() {
+                "function_definition" => {
+                    if let Some(name) = self.get_c_function_name(&child, code) {
+                        let kind = if name.contains("::") {
+                            SymbolKind::Method
+                        } else {
+                            SymbolKind::Function
+                        };
+                        symbols.push(SymbolInfo {
+                            name,
+                            kind,
+                            signature: self.get_first_line(&child, code),
+                            start_line: child.start_position().row + 1,
+                            end_line: child.end_position().row + 1,
+                            doc_comment: None,
+                            visibility: None,
+                        });
+                    }
+                }
+                "class_specifier" => {
+                    if let Some(name) = self.get_child_by_field(&child, "name", code) {
+                        symbols.push(SymbolInfo {
+                            name,
+                            kind: SymbolKind::Class,
+                            signature: self.get_first_line(&child, code),
+                            start_line: child.start_position().row + 1,
+                            end_line: child.end_position().row + 1,
+                            doc_comment: None,
+                            visibility: None,
+                        });
+                        self.extract_cpp_class_methods(&child, code, symbols);
+                    }
+                }
+                "struct_specifier" => {
+                    if let Some(name) = self.get_child_by_field(&child, "name", code) {
+                        symbols.push(SymbolInfo {
+                            name,
+                            kind: SymbolKind::Struct,
+                            signature: self.get_first_line(&child, code),
+                            start_line: child.start_position().row + 1,
+                            end_line: child.end_position().row + 1,
+                            doc_comment: None,
+                            visibility: None,
+                        });
+                    }
+                }
+                "enum_specifier" => {
+                    if let Some(name) = self.get_child_by_field(&child, "name", code) {
+                        symbols.push(SymbolInfo {
+                            name,
+                            kind: SymbolKind::Enum,
+                            signature: self.get_first_line(&child, code),
+                            start_line: child.start_position().row + 1,
+                            end_line: child.end_position().row + 1,
+                            doc_comment: None,
+                            visibility: None,
+                        });
+                    }
+                }
+                "type_definition" => {
+                    if let Some(name) = self.get_c_typedef_name(&child, code) {
+                        symbols.push(SymbolInfo {
+                            name,
+                            kind: SymbolKind::TypeAlias,
+                            signature: self.get_first_line(&child, code),
+                            start_line: child.start_position().row + 1,
+                            end_line: child.end_position().row + 1,
+                            doc_comment: None,
+                            visibility: None,
+                        });
+                    }
+                }
+                "namespace_definition" => {
+                    if let Some(name) = self.get_child_by_field(&child, "name", code) {
+                        symbols.push(SymbolInfo {
+                            name,
+                            kind: SymbolKind::Mod,
+                            signature: self.get_first_line(&child, code),
+                            start_line: child.start_position().row + 1,
+                            end_line: child.end_position().row + 1,
+                            doc_comment: None,
+                            visibility: None,
+                        });
+                    }
+                    // Recurse into namespace body
+                    if let Some(body) = child.child_by_field_name("body") {
+                        self.extract_cpp_symbols(&body, code, symbols);
+                    }
+                }
+                "template_declaration" => {
+                    // Recurse into the inner declaration
+                    self.extract_cpp_symbols(&child, code, symbols);
+                }
+                "declaration" => {
+                    // Top-level declarations may wrap struct/class specifiers
+                    self.extract_cpp_symbols(&child, code, symbols);
+                }
+                _ => {}
+            }
+        }
+    }
+
+    fn extract_cpp_class_methods(&self, class_node: &Node, code: &str, symbols: &mut Vec<SymbolInfo>) {
+        let mut cursor = class_node.walk();
+        for child in class_node.children(&mut cursor) {
+            if child.kind() == "field_declaration_list" {
+                let mut body_cursor = child.walk();
+                for item in child.children(&mut body_cursor) {
+                    match item.kind() {
+                        "function_definition" => {
+                            if let Some(name) = self.get_c_function_name(&item, code) {
+                                let visibility = self.cpp_member_visibility(&item);
+                                symbols.push(SymbolInfo {
+                                    name,
+                                    kind: SymbolKind::Method,
+                                    signature: self.get_first_line(&item, code),
+                                    start_line: item.start_position().row + 1,
+                                    end_line: item.end_position().row + 1,
+                                    doc_comment: None,
+                                    visibility,
+                                });
+                            }
+                        }
+                        "declaration" => {
+                            if self.has_function_declarator(&item) {
+                                if let Some(name) = self.get_cpp_declaration_name(&item, code) {
+                                    let visibility = self.cpp_member_visibility(&item);
+                                    symbols.push(SymbolInfo {
+                                        name,
+                                        kind: SymbolKind::Method,
+                                        signature: self.get_first_line(&item, code),
+                                        start_line: item.start_position().row + 1,
+                                        end_line: item.end_position().row + 1,
+                                        doc_comment: None,
+                                        visibility,
+                                    });
+                                }
+                            }
+                        }
+                        _ => {}
+                    }
+                }
+            }
+        }
+    }
+
+    fn has_function_declarator(&self, node: &Node) -> bool {
+        if node.kind() == "function_declarator" {
+            return true;
+        }
+        let mut cursor = node.walk();
+        for child in node.children(&mut cursor) {
+            if self.has_function_declarator(&child) {
+                return true;
+            }
+        }
+        false
+    }
+
+    fn get_cpp_declaration_name(&self, node: &Node, code: &str) -> Option<String> {
+        if let Some(declarator) = node.child_by_field_name("declarator") {
+            return self.drill_to_identifier(&declarator, code);
+        }
+        None
+    }
+
+    fn cpp_member_visibility(&self, node: &Node) -> Option<String> {
+        let mut prev = node.prev_sibling();
+        while let Some(sib) = prev {
+            if sib.kind() == "access_specifier" {
+                let mut cursor = sib.walk();
+                for child in sib.children(&mut cursor) {
+                    let kind = child.kind();
+                    if kind == "public" || kind == "private" || kind == "protected" {
+                        return Some(kind.to_string());
+                    }
+                }
+            }
+            prev = sib.prev_sibling();
+        }
+        None
+    }
+
+    // ── Utility methods ─────────────────────────────────────────────
 
     fn get_child_by_field(&self, node: &Node, field: &str, code: &str) -> Option<String> {
         node.child_by_field_name(field)
@@ -682,6 +1097,19 @@ impl TreeSitterProvider {
             Some("open".to_string())
         } else {
             Some("internal".to_string())
+        }
+    }
+
+    fn java_visibility(&self, node: &Node, code: &str) -> Option<String> {
+        let text = self.get_node_text(node, code).trim_start();
+        if text.starts_with("public ") {
+            Some("public".to_string())
+        } else if text.starts_with("private ") {
+            Some("private".to_string())
+        } else if text.starts_with("protected ") {
+            Some("protected".to_string())
+        } else {
+            Some("package".to_string())
         }
     }
 }

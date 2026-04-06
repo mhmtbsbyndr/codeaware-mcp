@@ -9,7 +9,7 @@ pub enum IntelligenceLevel {
     Regex,
 }
 
-const TREE_SITTER_LANGUAGES: &[&str] = &["rust", "python", "typescript", "javascript", "go", "php", "swift"];
+const TREE_SITTER_LANGUAGES: &[&str] = &["rust", "python", "typescript", "javascript", "go", "php", "swift", "java", "c", "cpp"];
 
 pub fn select_intelligence(lang: &str, lsp_available: bool) -> IntelligenceLevel {
     if lsp_available {
