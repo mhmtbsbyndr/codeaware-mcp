@@ -1,8 +1,8 @@
 # codeaware-mcp
 
-A Rust MCP server that acts as a **compression and orchestration layer** between Claude Code and your filesystem. Instead of raw file content and terminal output flooding the context window, every tool call returns structured, semantically compressed results.
+An AI-powered development platform that acts as a **compression, intelligence, and memory layer** between Claude Code and your filesystem. 17 MCP tools, 10 programming languages, persistent cross-session memory, git intelligence, test coverage analysis, and a live dashboard — all in a single Rust binary.
 
-> **Target compression:** 70–95% token reduction depending on task type and file size. Observed benchmark range — actual results vary by codebase and workflow.
+> **v2.0** — 17 tools · 10 languages · persistent memory · git intelligence · smart refactoring · test coverage · live dashboard
 
 ---
 
@@ -17,6 +17,10 @@ A Rust MCP server that acts as a **compression and orchestration layer** between
   - [Error Codes](#error-codes)
   - [Trust Levels](#trust-levels)
 - [Tools](#tools)
+  - [Core Tools](#project_map--compressed-project-overview)
+  - [Memory Tools](#save_memory--persistent-semantic-observations)
+  - [Git Tools](#git_diff--structured-git-diff)
+  - [Refactoring & Coverage](#smart_refactor--project-wide-rename)
 - [Routing Policy](#routing-policy)
 - [Code Intelligence](#code-intelligence)
 - [Session State Machine](#session-state-machine)
@@ -61,13 +65,15 @@ Every token consumed is money spent and context window exhausted. On larger code
 
 ## How It Works
 
-codeaware-mcp sits in the stdio path between Claude and the filesystem. Every request goes through three layers before returning:
+codeaware-mcp sits in the stdio path between Claude and the filesystem. Every request goes through four layers before returning:
 
-**1. Intelligence layer** — tree-sitter parses the file and extracts symbols, imports, caller chains. Returns structure, not source.
+**1. Intelligence layer** — tree-sitter parses files in 10 languages (Rust, Python, TypeScript, JavaScript, Go, PHP, Swift, Java, C, C++) and extracts symbols, imports, caller chains. Returns structure, not source.
 
-**2. Compression layer** — command output is classified (test runner / compiler / linter / git / etc.) and reduced to the signal: failed tests, error lines, changed files.
+**2. Compression layer** — command output is classified (test runner / compiler / linter / git / search / etc.) and reduced to the signal: failed tests, error lines, changed files. Search results are grouped by file with deduplication.
 
-**3. Session layer** — every result is indexed in SQLite FTS5. The server tracks what it already delivered. Second read of the same file → only the diff. After `/compact` → BM25 search retrieves only the relevant prior context.
+**3. Memory layer** — persistent SQLite FTS5 database stores observations across sessions. Auto-observe records discoveries after every tool call. Context injection loads relevant memories at session start. Summaries cluster and deduplicate observations automatically.
+
+**4. Session layer** — every result is indexed for BM25 search. The server tracks what it already delivered. Second read of the same file → only the diff. After `/compact` → semantic search retrieves only the relevant prior context. `suggested_next` guides Claude to the most relevant file to read next.
 
 ```
 smart_read("src/server.rs", mode="skeleton")
@@ -637,6 +643,100 @@ Retrieve observations before and after a known anchor. Use `search_memory` first
 
 ---
 
+### `git_diff` — Structured git diff
+
+Structured diff between two refs with per-file change breakdown.
+
+**Input:** `{ "base": "HEAD~3", "head": "HEAD" }`
+
+**Output:** `{ files_changed: 5, total_additions: 120, total_deletions: 40, files: [{ path, status, additions, deletions }] }`
+
+---
+
+### `git_blame` — Structured blame context
+
+Porcelain blame parser for a file or line range.
+
+**Input:** `{ "file": "src/server.rs", "start_line": 100, "end_line": 120 }`
+
+**Output:** `{ file, lines: [{ author, date, line_number, content }] }`
+
+---
+
+### `git_changelog` — PR-ready changelog
+
+Conventional commit categorization with affected files.
+
+**Input:** `{ "base": "v1.3.0", "head": "HEAD" }`
+
+**Output:** `{ total_commits: 12, entries: [{ category: "feat", message, hash, author, files }] }`
+
+---
+
+### `smart_refactor` — Project-wide rename
+
+AST-aware symbol rename across all source files. Respects `.gitignore`, skips strings and comments.
+
+**Input:**
+```json
+{
+  "old_name": "handle_request",
+  "new_name": "process_request",
+  "dry_run": true
+}
+```
+
+**Output (dry_run=true):**
+```json
+{
+  "old_name": "handle_request",
+  "new_name": "process_request",
+  "files_affected": 4,
+  "occurrences": 12,
+  "dry_run": true,
+  "changes": [
+    { "path": "src/server.rs", "occurrences": 5, "lines": [{ "line_number": 42, "old_text": "...", "new_text": "..." }] }
+  ]
+}
+```
+
+`dry_run=true` by default — always preview before applying. Supports 18 file extensions across 10 languages.
+
+---
+
+### `test_coverage_map` — Function-level test coverage
+
+Heuristic coverage analysis: which functions have tests, which don't.
+
+**Input:** `{ "path": ".", "language": "rust" }`
+
+**Output:**
+```json
+{
+  "total_functions": 45,
+  "tested_functions": 32,
+  "coverage_percent": 71.1,
+  "files": [{ "path": "src/auth.rs", "functions": 8, "tested": 3, "test_files": ["tests/test_auth.rs"] }],
+  "untested": [{ "file": "src/auth.rs", "name": "refresh_token", "line": 87 }]
+}
+```
+
+Uses tree-sitter symbol extraction + test file scanning. Results sorted by coverage (least covered first).
+
+---
+
+### `summarize_memory` — AI-powered observation clustering
+
+Cluster observations by shared files/concepts, deduplicate near-identical entries, generate summaries.
+
+**Input:** `{ "project": "my-project" }`
+
+**Output:** `{ clusters: 3, summaries_created: 3, duplicates_removed: 5 }`
+
+Algorithm: Jaccard file similarity → sub-cluster by concepts → TF-IDF sentence scoring → 4-gram shingle dedup.
+
+---
+
 ## Routing Policy
 
 codeaware-mcp supplements Claude's native tools — it does not replace them. The routing rules:
@@ -695,7 +795,7 @@ If a native Claude Code code-intelligence plugin is already active, codeaware-mc
 
 ### Tier 2: tree-sitter (always available)
 
-Compiled grammars for: **Rust, Python, TypeScript, JavaScript, Go, PHP, Swift**
+Compiled grammars for: **Rust, Python, TypeScript, JavaScript, Go, PHP, Swift, Java, C, C++** (10 languages)
 
 Extracts: symbols, imports, function signatures, doc comments, class/struct hierarchies.
 
@@ -906,10 +1006,13 @@ Plugin-shipped agents cannot include `hooks`, `mcpServers`, or `permissionMode` 
 
 | Skill | Command | What it does |
 |-------|---------|-------------|
-| Analyze | `/analyze` | Maps project structure and current task with minimal tokens. First step for unfamiliar code areas. |
-| Fix | `/fix` | Fixes a bug: focused read of relevant files, compressed test output, TDD loop. |
-| Review | `/review` | Reviews code changes in isolated agent context. No edits. |
-| Project map | `/project-map` | Generates compressed project overview via `project_map` tool. |
+| Analyze | `/analyze` | Maps project structure and current task with minimal tokens |
+| Fix | `/fix` | TDD-first bug fixing: focused read → test → edit → verify |
+| Review | `/review` | Reviews code changes in isolated agent context |
+| Refactor | `/refactor` | Safe project-wide symbol rename with dry_run preview |
+| Git Review | `/git-review` | Structured diffs, blame context, PR-ready changelogs |
+| Coverage | `/coverage` | Test coverage analysis with risk prioritization |
+| Project map | `/project-map` | Generates compressed project overview |
 
 All skills use `effort: high` and `context: fork` — they run in an isolated subagent context, keeping the main context clean.
 
@@ -923,9 +1026,9 @@ The `gotchas` skill contains known pitfalls and anti-patterns when using codeawa
 
 | Agent | Default model | Tools | Purpose |
 |-------|---------------|-------|---------|
-| `code-analyzer` | Haiku (fast, cheap) | Read-only | Structural analysis, dependency mapping |
-| `bug-fixer` | Sonnet | Full access | TDD-first bug fixing |
-| `code-reviewer` | Sonnet | Read-only | Code review, no modifications |
+| `code-analyzer` | Haiku (fast, cheap) | Read-only + refactor + coverage + memory | Structural analysis, refactoring, coverage mapping |
+| `bug-fixer` | Sonnet | Full access + memory search | TDD-first bug fixing with memory recall |
+| `code-reviewer` | Sonnet | Read-only + git intelligence | Code review with structured diffs and blame |
 
 **Models are configurable.** The defaults above balance cost vs capability. You can override the model in the agent frontmatter:
 
@@ -1143,11 +1246,11 @@ Single static binary. SQLite bundled (no external dependency). tree-sitter gramm
 ## Tests
 
 ```bash
-cargo test        # 175 tests across 30 test files, ~1s
+cargo test        # 200+ tests across 35+ test files, ~2s
 cargo clippy      # 0 warnings
 ```
 
-Test coverage: MCP envelope, all 11 tools, path traversal, secret scanner (all 14 patterns), tree-sitter symbol extraction (all 7 languages), FTS5 round-trip, workspace state slots, config validation findings, acceptance matrix T01–T17 + N01–N12.
+Test coverage: MCP envelope, all 17 tools, path traversal, secret scanner (all 14 patterns), tree-sitter symbol extraction (all 10 languages), FTS5 round-trip, workspace state slots, config validation findings, memory persistence + search + timeline + dedup + clustering, git diff/blame/changelog, smart refactor (dry-run + apply), test coverage map, acceptance matrix T01–T17 + N01–N12.
 
 ---
 
@@ -1180,7 +1283,7 @@ cd my-project
 claude
 ```
 
-Claude sees the `.mcp.json`, connects to codeaware-mcp over stdio, and the 11 tools appear in its tool list alongside the built-in ones.
+Claude sees the `.mcp.json`, connects to codeaware-mcp over stdio, and the 17 tools appear in its tool list alongside the built-in ones.
 
 **Step 3: Try it out**
 
@@ -1604,7 +1707,11 @@ echo '{"tool":"smart_read","result":{"path":"src/main.rs"}}' | codeaware-mcp hoo
 - Use `smart_run` for all test/build/lint commands — the compression ratio is typically 90%+
 - Check `session_status` after `/compact` or when resuming with `--continue` — it shows what Claude already knows
 - Use subagents (via skills like `/fix`, `/review`) for tasks > 5 steps — they keep your main context clean
-- Trust the `suggested_next` field — it tells Claude what to read next based on the dependency graph
+- Trust the `suggested_next` field — it suggests test/source counterparts and sibling files
+- Use `search_memory` before starting a task — previous sessions may have relevant context
+- Use `/git-review` for PR preparation — structured diffs + blame + changelog in one step
+- Use `/coverage` to find untested code — prioritize writing tests for uncovered functions
+- Use `smart_refactor` with `dry_run=true` — always preview before applying renames
 
 **Don't:**
 
@@ -1615,6 +1722,7 @@ echo '{"tool":"smart_read","result":{"path":"src/main.rs"}}' | codeaware-mcp hoo
 - Don't skip the `dry_run` on high-impact edits — preview the affected callers first
 - Don't read the same unchanged file twice — `smart_read` auto-detects and returns "not stale"
 - Don't use `smart_edit` without a prior `smart_read` — you need the hash for concurrency protection
+- Don't call `smart_refactor` with `dry_run=false` on large codebases without previewing first
 
 **Error recovery patterns:**
 
@@ -1626,6 +1734,9 @@ echo '{"tool":"smart_read","result":{"path":"src/main.rs"}}' | codeaware-mcp hoo
 | `E_STALE_READ` | File changed since read. `smart_read` auto-refreshes. Just retry. |
 | `E_PARSE_FAILED` | tree-sitter can't parse this file. Responses fall back to regex. Callers may be incomplete. |
 | `E_SECRET_BLOCKED` | Output contained a secret. It's been redacted. Check for leaked credentials. |
+| `E_GIT_NOT_FOUND` | Not a git repository. Navigate to a git repo first. |
+| `E_GIT_ERROR` | Git command failed. Check the ref names (base/head) and file paths. |
+| `E_REFACTOR_CONFLICT` | Refactor would cause a conflict. Review the dry-run output and resolve. |
 
 **Token savings by task type (observed benchmarks):**
 
