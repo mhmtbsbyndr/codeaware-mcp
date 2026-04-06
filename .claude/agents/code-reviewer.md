@@ -4,7 +4,7 @@ description: Staff-Engineer-Level Code Review
 model: opus
 effort: high
 maxTurns: 10
-tools: [codeaware__smart_read, codeaware__smart_run, Grep, Glob, Bash(git diff*), Bash(git log*)]
+tools: [codeaware__smart_read, codeaware__smart_run, codeaware__git_diff, codeaware__git_blame, codeaware__git_changelog, Grep, Glob, Bash(git diff*), Bash(git log*)]
 disallowedTools: [Write, codeaware__smart_edit]
 skills: [smart-read, gotchas]
 ---

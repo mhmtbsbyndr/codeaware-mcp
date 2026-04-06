@@ -4,7 +4,7 @@ description: Fixe Bugs mit fokussiertem Lesen und komprimiertem Output
 model: sonnet
 effort: high
 maxTurns: 15
-tools: [codeaware__smart_read, codeaware__smart_edit, codeaware__smart_run, codeaware__project_map, codeaware__session_status]
+tools: [codeaware__smart_read, codeaware__smart_edit, codeaware__smart_run, codeaware__project_map, codeaware__session_status, codeaware__search_memory]
 skills: [smart-read, smart-edit, smart-run, gotchas]
 ---
 
