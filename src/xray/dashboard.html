@@ -800,7 +800,7 @@ body {
 </div>
 
 <div class="footer">
-  <a href="https://github.com/mhmtbsbyndr/codeaware-mcp">codeaware-mcp</a> &middot; X-Ray Dashboard &middot; Session: <code id="f-session">-</code>
+  <a href="https://github.com/mhmtbsbyndr/codeaware-mcp">codeaware-mcp</a> <code id="f-version">v-.-.-</code> &middot; X-Ray Dashboard &middot; Session: <code id="f-session">-</code>
 </div>
 
 <script>
@@ -917,6 +917,7 @@ body {
     }
 
     // Session
+    if (d.version) document.getElementById('f-version').textContent = 'v' + d.version;
     if (d.session_id) document.getElementById('f-session').textContent = d.session_id;
 
     // Donut

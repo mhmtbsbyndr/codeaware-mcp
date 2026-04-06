@@ -187,6 +187,7 @@ fn merge_shared_metrics(snapshot: &mut crate::xray::metrics::MetricsSnapshot) {
 fn get_merged_snapshot(metrics: &Arc<Mutex<MetricsState>>) -> String {
     let mut snapshot = metrics.lock().ok().map(|m| m.snapshot()).unwrap_or_else(|| {
         crate::xray::metrics::MetricsSnapshot {
+            version: env!("CARGO_PKG_VERSION").to_string(),
             raw_tokens_total: 0,
             compressed_tokens_total: 0,
             tool_calls: 0,

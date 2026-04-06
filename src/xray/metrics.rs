@@ -23,6 +23,7 @@ pub struct EditScoreEntry {
 
 #[derive(Debug, Clone, Serialize)]
 pub struct MetricsSnapshot {
+    pub version: String,
     pub raw_tokens_total: u64,
     pub compressed_tokens_total: u64,
     pub tool_calls: u32,
@@ -114,6 +115,7 @@ impl MetricsState {
 
     pub fn snapshot(&self) -> MetricsSnapshot {
         MetricsSnapshot {
+            version: env!("CARGO_PKG_VERSION").to_string(),
             raw_tokens_total: self.raw_tokens_total,
             compressed_tokens_total: self.compressed_tokens_total,
             tool_calls: self.tool_calls,
