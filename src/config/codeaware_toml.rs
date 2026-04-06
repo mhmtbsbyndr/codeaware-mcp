@@ -47,6 +47,10 @@ fn default_pattern_prune_after_days() -> u32 {
     30
 }
 
+fn default_max_injected_memories() -> usize {
+    10
+}
+
 fn default_confidence_threshold() -> u32 {
     60
 }
@@ -200,6 +204,27 @@ impl Default for WorkspaceConfig {
     }
 }
 
+#[derive(Debug, Deserialize)]
+#[serde(default)]
+pub struct MemoryConfig {
+    #[serde(default = "default_true")]
+    pub auto_observe: bool,
+    #[serde(default = "default_true")]
+    pub context_injection: bool,
+    #[serde(default = "default_max_injected_memories")]
+    pub max_injected_memories: usize,
+}
+
+impl Default for MemoryConfig {
+    fn default() -> Self {
+        Self {
+            auto_observe: true,
+            context_injection: true,
+            max_injected_memories: default_max_injected_memories(),
+        }
+    }
+}
+
 #[derive(Debug, Deserialize, Default)]
 #[serde(default)]
 pub struct CodeAwareConfig {
@@ -210,6 +235,7 @@ pub struct CodeAwareConfig {
     pub enforcement: EnforcementConfig,
     pub languages: HashMap<String, LanguageConfig>,
     pub workspace: WorkspaceConfig,
+    pub memory: MemoryConfig,
 }
 
 impl CodeAwareConfig {

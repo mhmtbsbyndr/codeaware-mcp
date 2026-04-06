@@ -30,6 +30,16 @@ pub struct SaveObservationOpts<'a> {
     pub facts: Option<&'a str>,
 }
 
+pub struct AutoObservationOpts<'a> {
+    pub title: &'a str,
+    pub text: &'a str,
+    pub observation_type: &'a str,
+    pub file_path: Option<&'a str>,
+    pub dedup_hash: &'a str,
+    pub source_tool: &'a str,
+    pub session_id: &'a str,
+}
+
 pub struct SearchObservationsOpts<'a> {
     pub query: &'a str,
     pub project: Option<&'a str>,
@@ -91,7 +101,35 @@ impl SessionDb {
         self.conn.execute_batch(health_schema)?;
         let observations_schema = include_str!("../../migrations/003_observations.sql");
         self.conn.execute_batch(observations_schema)?;
+        let auto_observe_schema = include_str!("../../migrations/004_auto_observe.sql");
+        self.conn.execute_batch(auto_observe_schema)?;
+
+        // Add new columns for auto-observe (idempotent — ignores "duplicate column" errors)
+        self.try_add_column("observations", "dedup_hash", "TEXT");
+        self.try_add_column("observations", "auto_generated", "INTEGER DEFAULT 0");
+        self.try_add_column("observations", "source_tool", "TEXT");
+        self.try_add_column("observations", "session_id", "TEXT");
+
+        // Create unique index on dedup_hash for INSERT OR IGNORE deduplication
+        let _ = self.conn.execute_batch(
+            "CREATE UNIQUE INDEX IF NOT EXISTS idx_observations_dedup ON observations(dedup_hash) WHERE dedup_hash IS NOT NULL",
+        );
+
         Ok(())
+    }
+
+    /// Try to add a column to a table, ignoring "duplicate column name" errors.
+    fn try_add_column(&self, table: &str, column: &str, col_type: &str) {
+        let sql = format!("ALTER TABLE {table} ADD COLUMN {column} {col_type}");
+        match self.conn.execute_batch(&sql) {
+            Ok(()) => {}
+            Err(e) => {
+                let msg = e.to_string();
+                if !msg.contains("duplicate column name") {
+                    eprintln!("Warning: ALTER TABLE {table} ADD {column}: {msg}");
+                }
+            }
+        }
     }
 
     pub fn save_session(
@@ -474,6 +512,40 @@ impl SessionDb {
             created_at: row.get(8)?,
             updated_at: row.get(9)?,
         })
+    }
+
+    // ── Auto-Observe methods ──────────────────────────────────────────
+
+    /// Insert an auto-generated observation, deduplicating on dedup_hash.
+    pub fn save_auto_observation(
+        &self,
+        opts: &AutoObservationOpts<'_>,
+    ) -> Result<i64, PersistenceError> {
+        self.conn.execute(
+            "INSERT OR IGNORE INTO observations (title, text, observation_type, files, dedup_hash, auto_generated, source_tool, session_id, created_at, updated_at)
+             VALUES (?1, ?2, ?3, ?4, ?5, 1, ?6, ?7, datetime('now'), datetime('now'))",
+            params![opts.title, opts.text, opts.observation_type, opts.file_path, opts.dedup_hash, opts.source_tool, opts.session_id],
+        )?;
+        Ok(self.conn.last_insert_rowid())
+    }
+
+    /// Get recent observations for a project, ordered by recency.
+    pub fn get_recent_observations_for_project(
+        &self,
+        project: &str,
+        limit: usize,
+    ) -> Result<Vec<ObservationRecord>, PersistenceError> {
+        let mut stmt = self.conn.prepare(
+            "SELECT id, title, text, observation_type, concepts, project, files, facts, created_at, updated_at
+             FROM observations WHERE project = ?1 OR files LIKE '%' || ?1 || '%'
+             ORDER BY created_at DESC LIMIT ?2",
+        )?;
+        let records = stmt
+            .query_map(params![project, limit as i64], |row| {
+                Self::row_to_observation(row)
+            })?
+            .collect::<Result<Vec<_>, _>>()?;
+        Ok(records)
     }
 
     /// Get the unhealthiest files in a project, ordered by ascending health score

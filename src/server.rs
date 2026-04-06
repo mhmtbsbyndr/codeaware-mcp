@@ -31,6 +31,13 @@ impl McpServer {
 
         let db = Self::open_db();
 
+        // Context injection: load memories from previous sessions
+        if let Some(ref db_arc) = db {
+            if let Ok(db_guard) = db_arc.lock() {
+                crate::hooks::context_injection::inject_context(&db_guard, ".");
+            }
+        }
+
         McpServer {
             state: Arc::new(Mutex::new(SessionState::new("."))),
             metrics,
@@ -48,6 +55,14 @@ impl McpServer {
         }
 
         let db = Self::open_db();
+
+        // Context injection: load memories from previous sessions
+        let project_path = state.lock().map(|s| s.project_path().to_string()).unwrap_or_else(|_| ".".to_string());
+        if let Some(ref db_arc) = db {
+            if let Ok(db_guard) = db_arc.lock() {
+                crate::hooks::context_injection::inject_context(&db_guard, &project_path);
+            }
+        }
 
         McpServer {
             state,
@@ -366,6 +381,66 @@ impl McpServer {
                             "project": { "type": "string", "description": "Filter by project" }
                         }
                     }
+                },
+                {
+                    "name": "git_diff",
+                    "description": "Structured git diff between two refs. Returns file changes with additions/deletions counts.",
+                    "inputSchema": {
+                        "type": "object",
+                        "properties": {
+                            "base": {
+                                "type": "string",
+                                "description": "Base ref (default: HEAD~1)"
+                            },
+                            "head": {
+                                "type": "string",
+                                "description": "Head ref (default: HEAD)"
+                            }
+                        }
+                    }
+                },
+                {
+                    "name": "git_blame",
+                    "description": "Structured git blame for a file or line range. Returns author, date, and content per line.",
+                    "inputSchema": {
+                        "type": "object",
+                        "required": ["file"],
+                        "properties": {
+                            "file": {
+                                "type": "string",
+                                "description": "File path to blame"
+                            },
+                            "start_line": {
+                                "type": "integer",
+                                "description": "Start line number"
+                            },
+                            "end_line": {
+                                "type": "integer",
+                                "description": "End line number"
+                            }
+                        }
+                    }
+                },
+                {
+                    "name": "git_changelog",
+                    "description": "Structured git changelog with conventional commit categorization. Returns commits with affected files.",
+                    "inputSchema": {
+                        "type": "object",
+                        "properties": {
+                            "base": {
+                                "type": "string",
+                                "description": "Base ref for range (e.g. v1.0.0)"
+                            },
+                            "head": {
+                                "type": "string",
+                                "description": "Head ref (default: HEAD)"
+                            },
+                            "limit": {
+                                "type": "integer",
+                                "description": "Maximum number of commits (default: 50)"
+                            }
+                        }
+                    }
                 }
             ]
         })
@@ -441,6 +516,15 @@ impl McpServer {
                 };
                 json!({"content": [{"type": "text", "text": serde_json::to_string(&result).unwrap_or_default()}]})
             }
+            "git_diff" => {
+                crate::tools::git_intelligence::handle_git_diff(tool_input)
+            }
+            "git_blame" => {
+                crate::tools::git_intelligence::handle_git_blame(tool_input)
+            }
+            "git_changelog" => {
+                crate::tools::git_intelligence::handle_git_changelog(tool_input)
+            }
             _ => {
                 json!({
                     "content": [{
@@ -488,6 +572,22 @@ impl McpServer {
                     );
                     m.set_phase(phase);
                     m.set_session_id(state.session_id());
+                }
+            }
+
+            // Auto-observe: record observation from tool call result
+            if let Some(ref db_arc) = self.db {
+                if let Ok(db_guard) = db_arc.lock() {
+                    let session_id = self.state.lock()
+                        .map(|s| s.session_id().to_string())
+                        .unwrap_or_default();
+                    crate::hooks::auto_observe::record_auto_observation(
+                        &db_guard,
+                        tool_name,
+                        file_path,
+                        &session_id,
+                        &result_text,
+                    );
                 }
             }
         }

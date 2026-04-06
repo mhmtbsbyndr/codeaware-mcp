@@ -1,4 +1,6 @@
+pub mod auto_observe;
 pub mod compact;
+pub mod context_injection;
 pub mod post_tool_use;
 pub mod session_stop;
 pub mod subagent_stop;
