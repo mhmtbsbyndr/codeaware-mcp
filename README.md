@@ -1235,24 +1235,35 @@ Claude Code
 ┌──────────────────────────────────────────────────────┐
 │  codeaware-mcp (Rust)                                │
 │                                                      │
-│  McpServer                                           │
+│  McpServer → tools/dispatch.rs (tool routing)        │
 │  ├─ tools/project_map.rs                             │
 │  ├─ tools/smart_read.rs                              │
 │  ├─ tools/smart_edit.rs                              │
 │  ├─ tools/smart_run.rs                               │
 │  ├─ tools/workspace_state.rs                         │
 │  ├─ tools/session_status.rs                          │
-│  └─ tools/validate_config.rs                         │
+│  ├─ tools/validate_config.rs                         │
+│  ├─ tools/memory.rs + memory_summary.rs              │
+│  ├─ tools/git_intelligence.rs                        │
+│  ├─ tools/smart_refactor.rs                          │
+│  └─ tools/test_coverage_map.rs                       │
 │                                                      │
 │  intelligence/                                       │
 │  ├─ lsp_client.rs        (LSP, 2s timeout)           │
-│  ├─ tree_sitter_provider.rs  (7 languages)           │
-│  └─ regex_fallback.rs    (pattern-based)             │
+│  ├─ tree_sitter_provider.rs  (10 languages)          │
+│  └─ regex_fallback.rs    (pattern-based fallback)    │
 │                                                      │
 │  security/                                           │
 │  ├─ path_resolver.rs     (traversal protection)      │
 │  ├─ secret_scanner.rs    (14 patterns, 100KB limit)  │
 │  └─ deny_list.rs         (configurable blocks)       │
+│                                                      │
+│  hooks/                                              │
+│  ├─ profiles.rs          (minimal/standard/rich)     │
+│  ├─ governance.rs        (audit trail)               │
+│  ├─ session_persistence.rs (save/restore state)      │
+│  ├─ auto_observe.rs      (memory from tool calls)    │
+│  └─ compact.rs           (compaction hints)          │
 │                                                      │
 │  session/                                            │
 │  ├─ state.rs             (state machine)             │
@@ -1274,21 +1285,22 @@ Claude Code
   ├─ file_access_patterns
   ├─ error_signatures
   ├─ session_events_content
-  └─ session_events (FTS5 virtual table)
+  ├─ session_events (FTS5 virtual table)
+  └─ observations (persistent memory)
 ```
 
-Single static binary. SQLite bundled (no external dependency). tree-sitter grammars compiled in. ~8MB binary size.
+Single static binary. SQLite bundled (no external dependency). tree-sitter grammars for 10 languages compiled in. ~8MB binary size.
 
 ---
 
 ## Tests
 
 ```bash
-cargo test        # 200+ tests across 35+ test files, ~2s
+cargo test        # 250+ tests across 45+ test files, ~2s
 cargo clippy      # 0 warnings
 ```
 
-Test coverage: MCP envelope, all 17 tools, path traversal, secret scanner (all 14 patterns), tree-sitter symbol extraction (all 10 languages), FTS5 round-trip, workspace state slots, config validation findings, memory persistence + search + timeline + dedup + clustering, git diff/blame/changelog, smart refactor (dry-run + apply), test coverage map, acceptance matrix T01–T17 + N01–N12.
+Test coverage: MCP envelope, all 17 tools, path traversal, secret scanner (all 14 patterns with redaction verification), deny list (env variants, secrets, credentials, binaries, lock files, dangerous commands), command classifier (all 8 categories), tree-sitter symbol extraction (all 10 languages), FTS5 round-trip, workspace state slots, config validation findings, memory persistence + search + timeline + dedup + clustering, git diff/blame/changelog, smart refactor (dry-run + apply), test coverage map, acceptance matrix T01–T17 + N01–N12.
 
 ---
 
