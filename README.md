@@ -1058,12 +1058,50 @@ Hooks run `codeaware-mcp hook <event>` and receive the event payload on stdin.
 
 | Event | Trigger | What codeaware-mcp does |
 |-------|---------|------------------------|
-| `PostToolUse` | After every successful tool call | Index result in FTS5, scan output for secrets, update session state |
+| `PostToolUse` | After every successful tool call | Index result in FTS5, auto-observe to memory, governance check, scan for secrets |
 | `PostToolUseFailure` | After a tool error | Record error signature, increment pattern count, suggest fix if recurring |
 | `PreCompact` | Before `/compact` or auto-compact | Write session snapshot to SQLite |
 | `PostCompact` | After compaction completes | Load snapshot, mark seen-files as pre-compact |
 | `SubagentStop` | When a subagent finishes | Merge subagent session data into parent session |
-| `Stop` | When Claude Code session ends | Persist session summary, write file access patterns |
+| `Stop` | When Claude Code session ends | Persist session summary, file access patterns, save session state |
+
+### Hook Profiles
+
+Control hook behavior at runtime via environment variables — no config file edits needed:
+
+```bash
+# Profiles: minimal (lean), standard (default), rich (verbose debug output)
+export CODEAWARE_PROFILE=minimal
+
+# Disable specific hooks by name
+export CODEAWARE_DISABLED_HOOKS=auto_observe,context_injection
+
+# Enable governance audit trail (logs symbol renames, security edits, config weakening)
+export CODEAWARE_GOVERNANCE=1
+```
+
+| Profile | Behavior |
+|---------|----------|
+| `minimal` | Skip timeline events, lean output, maximum token savings |
+| `standard` | Default — auto-observe, context injection, compaction hints |
+| `rich` | Extra stderr detail for debugging, verbose session logging |
+
+### Session Persistence
+
+Workspace state is automatically saved to `~/.codeaware/sessions/{session_id}.json` when a session ends. On the next session start, if a recent session for the same project exists, its state is loaded automatically.
+
+### Governance Capture
+
+When `CODEAWARE_GOVERNANCE=1` is set, codeaware-mcp logs governance events to stderr:
+- Symbol renames (from `smart_refactor`)
+- Security-sensitive file edits (auth, security, .env patterns)
+- Config weakening (disabling linters, removing rules, setting `false` where `true` was)
+
+### Compaction Hints
+
+The server emits a one-time `/compact` suggestion when:
+- Tool calls exceed 40
+- Raw token consumption exceeds 500K
 
 hooks.json:
 ```json
