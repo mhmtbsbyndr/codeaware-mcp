@@ -27,7 +27,7 @@ pub fn handle_xray(
         });
     }
 
-    let server = XrayServer::start(metrics).map_err(|e| format!("server start error: {e}"))?;
+    let server = XrayServer::start(metrics, None).map_err(|e| format!("server start error: {e}"))?;
     let is_reused = server.is_reused();
     let result = XrayResult {
         url: server.url(),

@@ -14,7 +14,7 @@
   --color-fg-default: #e6edf3;
   --color-fg-muted: #7d8590;
   --color-fg-subtle: #484f58;
-  --color-accent-fg: #2f81f7;
+  --color-accent-fg: #58a6ff;
   --color-accent-emphasis: #1f6feb;
   --color-success-fg: #3fb950;
   --color-success-emphasis: #238636;
@@ -25,17 +25,22 @@
   --color-done-fg: #a371f7;
   --color-neutral-emphasis: #6e7681;
   --shadow-card: 0 1px 3px rgba(0,0,0,0.12), 0 8px 24px rgba(0,0,0,0.12);
+  --font-mono: ui-monospace, SFMono-Regular, 'SF Mono', Menlo, Consolas, monospace;
+  --font-sans: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Noto Sans', Helvetica, Arial, sans-serif;
+  --radius: 6px;
+  --transition: 0.2s ease;
 }
 * { margin: 0; padding: 0; box-sizing: border-box; }
 body {
   background: var(--color-canvas-default);
   color: var(--color-fg-default);
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Noto Sans', Helvetica, Arial, sans-serif;
+  font-family: var(--font-sans);
   font-size: 14px;
   line-height: 1.5;
+  overflow-x: hidden;
 }
 
-/* Header — GitHub-style repo header */
+/* Header */
 .header {
   background: var(--color-canvas-subtle);
   border-bottom: 1px solid var(--color-border-default);
@@ -65,6 +70,7 @@ body {
   padding: 3px 10px;
   border-radius: 20px;
   border: 1px solid var(--color-border-default);
+  transition: all var(--transition);
 }
 .conn-badge.live {
   color: var(--color-success-fg);
@@ -84,7 +90,7 @@ body {
 .conn-badge.live .conn-dot { animation: pulse 2s infinite; }
 @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.4} }
 
-/* Tab nav — GitHub-style */
+/* Tab nav */
 .tab-nav {
   background: var(--color-canvas-subtle);
   border-bottom: 1px solid var(--color-border-default);
@@ -93,7 +99,7 @@ body {
   gap: 0;
 }
 .tab-item {
-  padding: 8px 16px;
+  padding: 10px 16px;
   font-size: 14px;
   color: var(--color-fg-muted);
   text-decoration: none;
@@ -101,13 +107,15 @@ body {
   cursor: pointer;
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 8px;
+  transition: color var(--transition), border-color var(--transition);
+  user-select: none;
 }
 .tab-item:hover { color: var(--color-fg-default); }
 .tab-item.active {
   color: var(--color-fg-default);
   font-weight: 600;
-  border-bottom-color: var(--color-accent-emphasis);
+  border-bottom-color: var(--color-accent-fg);
 }
 .tab-counter {
   background: var(--color-neutral-emphasis);
@@ -120,6 +128,11 @@ body {
   font-weight: 600;
 }
 
+/* Tab content panels */
+.tab-panel { display: none; }
+.tab-panel.active { display: block; animation: fadeIn 0.25s ease; }
+@keyframes fadeIn { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: translateY(0); } }
+
 /* Main content */
 .container {
   max-width: 1280px;
@@ -127,7 +140,7 @@ body {
   padding: 24px 32px;
 }
 
-/* Summary cards row — GitHub insights style */
+/* Summary cards */
 .summary-row {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
@@ -137,8 +150,13 @@ body {
 .summary-card {
   background: var(--color-canvas-subtle);
   border: 1px solid var(--color-border-default);
-  border-radius: 6px;
+  border-radius: var(--radius);
   padding: 16px;
+  transition: border-color var(--transition), box-shadow var(--transition);
+}
+.summary-card:hover {
+  border-color: var(--color-border-default);
+  box-shadow: var(--shadow-card);
 }
 .summary-card .label {
   font-size: 12px;
@@ -152,6 +170,7 @@ body {
   font-size: 32px;
   font-weight: 600;
   line-height: 1.2;
+  font-family: var(--font-mono);
 }
 .summary-card .value.blue { color: var(--color-accent-fg); }
 .summary-card .value.green { color: var(--color-success-fg); }
@@ -182,15 +201,13 @@ body {
   gap: 16px;
   margin-bottom: 16px;
 }
-.full-width {
-  grid-column: 1 / -1;
-}
+.full-width { grid-column: 1 / -1; }
 
-/* Box — GitHub-style bordered box */
+/* Box */
 .Box {
   background: var(--color-canvas-subtle);
   border: 1px solid var(--color-border-default);
-  border-radius: 6px;
+  border-radius: var(--radius);
   overflow: hidden;
 }
 .Box-header {
@@ -208,23 +225,46 @@ body {
   font-weight: 400;
   font-size: 12px;
 }
-.Box-body {
-  padding: 0;
-}
+.Box-body { padding: 0; }
 .Box-row {
   padding: 8px 16px;
   border-bottom: 1px solid var(--color-border-muted);
   display: flex;
   align-items: center;
   font-size: 13px;
+  transition: background var(--transition);
 }
 .Box-row:last-child { border-bottom: none; }
 .Box-row:hover { background: rgba(177,186,196,0.04); }
 
+/* Donut chart container */
+.donut-container {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 32px;
+  padding: 24px 16px;
+}
+.donut-legend {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.donut-legend-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+}
+.donut-legend-swatch {
+  width: 12px; height: 12px;
+  border-radius: 3px;
+}
+
 /* File heatmap rows */
 .hm-name {
   flex: 0 0 200px;
-  font-family: ui-monospace, SFMono-Regular, 'SF Mono', Menlo, monospace;
+  font-family: var(--font-mono);
   font-size: 12px;
   color: var(--color-accent-fg);
   overflow: hidden;
@@ -251,7 +291,7 @@ body {
   text-align: right;
   font-size: 12px;
   color: var(--color-fg-muted);
-  font-family: ui-monospace, SFMono-Regular, 'SF Mono', Menlo, monospace;
+  font-family: var(--font-mono);
 }
 
 /* Edit confidence rows */
@@ -260,7 +300,7 @@ body {
   font-weight: 700;
   font-size: 13px;
   text-align: right;
-  font-family: ui-monospace, SFMono-Regular, 'SF Mono', Menlo, monospace;
+  font-family: var(--font-mono);
 }
 .cf-score.safe { color: var(--color-success-fg); }
 .cf-score.review { color: var(--color-attention-fg); }
@@ -280,7 +320,7 @@ body {
 }
 .cf-name {
   flex: 1;
-  font-family: ui-monospace, SFMono-Regular, 'SF Mono', Menlo, monospace;
+  font-family: var(--font-mono);
   font-size: 12px;
   color: var(--color-fg-default);
   overflow: hidden;
@@ -313,7 +353,7 @@ body {
   flex-shrink: 0;
 }
 .error-sig {
-  font-family: ui-monospace, SFMono-Regular, 'SF Mono', Menlo, monospace;
+  font-family: var(--font-mono);
   font-size: 12px;
   color: var(--color-danger-fg);
 }
@@ -335,7 +375,228 @@ body {
 .phase-Complete { background: rgba(163,113,247,0.15); color: var(--color-done-fg); }
 .phase-Compacting { background: rgba(248,81,73,0.15); color: var(--color-danger-fg); }
 
-.empty { color: var(--color-fg-subtle); font-style: italic; padding: 16px; text-align: center; }
+.empty { color: var(--color-fg-subtle); font-style: italic; padding: 24px; text-align: center; }
+
+/* Memory Browser */
+.memory-toolbar {
+  padding: 16px;
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  flex-wrap: wrap;
+  border-bottom: 1px solid var(--color-border-muted);
+}
+.memory-search {
+  flex: 1;
+  min-width: 200px;
+  background: var(--color-canvas-default);
+  border: 1px solid var(--color-border-default);
+  border-radius: var(--radius);
+  padding: 8px 12px;
+  color: var(--color-fg-default);
+  font-size: 14px;
+  font-family: var(--font-sans);
+  outline: none;
+  transition: border-color var(--transition);
+}
+.memory-search:focus { border-color: var(--color-accent-fg); }
+.memory-search::placeholder { color: var(--color-fg-subtle); }
+.filter-pills {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+.filter-pill {
+  padding: 4px 12px;
+  border-radius: 20px;
+  font-size: 12px;
+  font-weight: 500;
+  border: 1px solid var(--color-border-default);
+  background: transparent;
+  color: var(--color-fg-muted);
+  cursor: pointer;
+  transition: all var(--transition);
+  user-select: none;
+}
+.filter-pill:hover { color: var(--color-fg-default); border-color: var(--color-fg-muted); }
+.filter-pill.active {
+  background: rgba(88,166,255,0.15);
+  color: var(--color-accent-fg);
+  border-color: var(--color-accent-fg);
+}
+
+/* Memory cards */
+.memory-list { padding: 8px 16px; }
+.memory-card {
+  background: var(--color-canvas-default);
+  border: 1px solid var(--color-border-default);
+  border-radius: var(--radius);
+  padding: 14px 16px;
+  margin-bottom: 10px;
+  transition: border-color var(--transition);
+}
+.memory-card:hover { border-color: var(--color-fg-subtle); }
+.memory-card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 6px;
+}
+.memory-card-title {
+  font-weight: 600;
+  font-size: 14px;
+  color: var(--color-fg-default);
+}
+.memory-card-badge {
+  padding: 2px 8px;
+  border-radius: 12px;
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+}
+.badge-bugfix { background: rgba(248,81,73,0.15); color: var(--color-danger-fg); }
+.badge-feature { background: rgba(63,185,80,0.15); color: var(--color-success-fg); }
+.badge-refactor { background: rgba(163,113,247,0.15); color: var(--color-done-fg); }
+.badge-change { background: rgba(210,153,34,0.15); color: var(--color-attention-fg); }
+.badge-discovery { background: rgba(88,166,255,0.15); color: var(--color-accent-fg); }
+.badge-decision { background: rgba(110,118,129,0.3); color: var(--color-fg-muted); }
+.memory-card-text {
+  font-size: 13px;
+  color: var(--color-fg-muted);
+  line-height: 1.5;
+  margin-bottom: 8px;
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+.memory-card-meta {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 12px;
+  color: var(--color-fg-subtle);
+}
+.memory-card-files {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  margin-top: 6px;
+}
+.memory-file-tag {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  background: rgba(88,166,255,0.1);
+  color: var(--color-accent-fg);
+  padding: 2px 8px;
+  border-radius: 4px;
+}
+
+/* Graph */
+.graph-container {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  position: relative;
+}
+.graph-container svg { background: var(--color-canvas-default); border-radius: var(--radius); }
+.graph-tooltip {
+  position: absolute;
+  background: var(--color-canvas-subtle);
+  border: 1px solid var(--color-border-default);
+  border-radius: var(--radius);
+  padding: 8px 12px;
+  font-size: 12px;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.15s;
+  z-index: 10;
+  font-family: var(--font-mono);
+  color: var(--color-fg-default);
+  box-shadow: var(--shadow-card);
+}
+.graph-tooltip.visible { opacity: 1; }
+
+/* Timeline (Tab 4) */
+.timeline-list {
+  max-height: 600px;
+  overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: var(--color-border-default) transparent;
+}
+.timeline-entry {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 10px 16px;
+  border-bottom: 1px solid var(--color-border-muted);
+  font-size: 12px;
+  font-family: var(--font-mono);
+  cursor: pointer;
+  transition: background var(--transition);
+}
+.timeline-entry:last-child { border-bottom: none; }
+.timeline-entry:hover { background: rgba(177,186,196,0.04); }
+.timeline-dot-col {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0;
+  flex-shrink: 0;
+  width: 14px;
+  padding-top: 4px;
+}
+.timeline-dot {
+  width: 10px; height: 10px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+.timeline-line {
+  width: 2px;
+  flex: 1;
+  min-height: 16px;
+  background: var(--color-border-muted);
+}
+.timeline-content { flex: 1; min-width: 0; }
+.timeline-top {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 2px;
+}
+.timeline-ts {
+  color: var(--color-fg-subtle);
+  flex-shrink: 0;
+  width: 70px;
+}
+.timeline-tool {
+  font-weight: 600;
+  flex-shrink: 0;
+}
+.timeline-file {
+  color: var(--color-fg-default);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  flex: 1;
+}
+.timeline-stats {
+  display: flex;
+  gap: 12px;
+  color: var(--color-fg-subtle);
+}
+.timeline-details {
+  display: none;
+  margin-top: 6px;
+  padding: 8px 10px;
+  background: var(--color-canvas-default);
+  border-radius: 4px;
+  font-size: 11px;
+  color: var(--color-fg-muted);
+}
+.timeline-entry.expanded .timeline-details { display: block; }
 
 /* Footer */
 .footer {
@@ -353,8 +614,9 @@ body {
   .summary-row { grid-template-columns: repeat(2, 1fr); }
   .two-col { grid-template-columns: 1fr; }
   .header { padding: 12px 16px; }
-  .tab-nav { padding: 0 16px; }
+  .tab-nav { padding: 0 16px; overflow-x: auto; }
   .container { padding: 16px; }
+  .donut-container { flex-direction: column; }
 }
 </style>
 </head>
@@ -371,53 +633,90 @@ body {
   </div>
 </div>
 
-<div class="tab-nav">
-  <div class="tab-item active">
+<div class="tab-nav" id="tab-nav">
+  <div class="tab-item active" data-tab="overview">
     <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor"><path d="M1.5 1.75V13.5h13.75a.75.75 0 010 1.5H.75a.75.75 0 01-.75-.75V1.75a.75.75 0 011.5 0zm14.28 2.53l-5.25 5.25a.75.75 0 01-1.06 0L7 7.06 4.28 9.78a.75.75 0 01-1.06-1.06l3.25-3.25a.75.75 0 011.06 0L10 8.06l4.72-4.72a.75.75 0 111.06 1.06v-.01z"/></svg>
     Overview
   </div>
-  <div class="tab-item">
-    <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor"><path d="M2 1.75C2 .784 2.784 0 3.75 0h6.586c.464 0 .909.184 1.237.513l2.914 2.914c.329.328.513.773.513 1.237v9.586A1.75 1.75 0 0113.25 16h-9.5A1.75 1.75 0 012 14.25zm1.75-.25a.25.25 0 00-.25.25v12.5c0 .138.112.25.25.25h9.5a.25.25 0 00.25-.25V6h-2.75A1.75 1.75 0 019 4.25V1.5zm6.75.062V4.25c0 .138.112.25.25.25h2.688l-.011-.013-2.914-2.914-.013-.011z"/></svg>
-    Files <span class="tab-counter" id="file-count">0</span>
+  <div class="tab-item" data-tab="memory">
+    <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor"><path d="M8 16A8 8 0 108 0a8 8 0 000 16zm.25-11.25v1.5a.75.75 0 01-1.5 0v-1.5a.75.75 0 011.5 0zm0 4v3.5a.75.75 0 01-1.5 0v-3.5a.75.75 0 011.5 0z"/></svg>
+    Memory <span class="tab-counter" id="memory-count">0</span>
   </div>
-  <div class="tab-item">
-    <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor"><path d="M8 9.5a1.5 1.5 0 100-3 1.5 1.5 0 000 3z"/><path d="M8 0a8 8 0 110 16A8 8 0 018 0zm0 1.5a6.5 6.5 0 100 13 6.5 6.5 0 000-13z"/></svg>
-    Edits <span class="tab-counter" id="edit-count">0</span>
+  <div class="tab-item" data-tab="graph">
+    <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor"><path d="M1.5 1.75V13.5h13.75a.75.75 0 010 1.5H.75a.75.75 0 01-.75-.75V1.75a.75.75 0 011.5 0zm5.5 6a1.5 1.5 0 11-3 0 1.5 1.5 0 013 0zm4-4a1.5 1.5 0 11-3 0 1.5 1.5 0 013 0zm2.5 5.5a1.5 1.5 0 11-3 0 1.5 1.5 0 013 0z"/></svg>
+    Graph
+  </div>
+  <div class="tab-item" data-tab="timeline">
+    <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor"><path d="M8 0a8 8 0 110 16A8 8 0 018 0zm0 1.5a6.5 6.5 0 100 13 6.5 6.5 0 000-13zM8 4a.75.75 0 01.75.75v3.5h2.5a.75.75 0 010 1.5h-3.25a.75.75 0 01-.75-.75v-4.25A.75.75 0 018 4z"/></svg>
+    Timeline <span class="tab-counter" id="timeline-count">0</span>
   </div>
 </div>
 
-<div class="container">
-  <!-- Summary cards -->
-  <div class="summary-row">
-    <div class="summary-card">
-      <div class="label">Tokens consumed</div>
-      <div class="value blue" id="v-tokens">0</div>
-      <div class="sub" id="v-tokens-sub">0.0% of 1M context</div>
-      <div class="progress"><div class="progress-fill" id="v-tokens-bar" style="width:0%;background:var(--color-accent-fg)"></div></div>
-    </div>
-    <div class="summary-card">
-      <div class="label">Tokens saved</div>
-      <div class="value green" id="v-saved">0</div>
-      <div class="sub" id="v-saved-sub">0% compression</div>
-      <div class="progress"><div class="progress-fill" id="v-saved-bar" style="width:0%;background:var(--color-success-fg)"></div></div>
-    </div>
-    <div class="summary-card">
-      <div class="label">Tool calls</div>
-      <div class="value purple" id="v-calls">0</div>
-      <div class="sub">
-        Phase: <span class="phase-label phase-Idle" id="v-phase">Idle</span>
+<!-- ===== TAB 1: OVERVIEW ===== -->
+<div class="tab-panel active" id="panel-overview">
+  <div class="container">
+    <div class="summary-row">
+      <div class="summary-card">
+        <div class="label">Total Tokens</div>
+        <div class="value blue" id="v-tokens">0</div>
+        <div class="sub" id="v-tokens-sub">0.0% of 1M context</div>
+        <div class="progress"><div class="progress-fill" id="v-tokens-bar" style="width:0%;background:var(--color-accent-fg)"></div></div>
+      </div>
+      <div class="summary-card">
+        <div class="label">Tokens Saved</div>
+        <div class="value green" id="v-saved">0</div>
+        <div class="sub" id="v-saved-sub">0% compression</div>
+        <div class="progress"><div class="progress-fill" id="v-saved-bar" style="width:0%;background:var(--color-success-fg)"></div></div>
+      </div>
+      <div class="summary-card">
+        <div class="label">Compression %</div>
+        <div class="value purple" id="v-compression">0%</div>
+        <div class="sub">
+          Phase: <span class="phase-label phase-Idle" id="v-phase">Idle</span>
+        </div>
+      </div>
+      <div class="summary-card">
+        <div class="label">Tool Calls</div>
+        <div class="value orange" id="v-calls">0</div>
+        <div class="sub" id="v-errors-sub">All clear</div>
       </div>
     </div>
-    <div class="summary-card">
-      <div class="label">Error loops</div>
-      <div class="value" id="v-errors" style="color:var(--color-success-fg)">0</div>
-      <div class="sub" id="v-errors-sub">All clear</div>
-    </div>
-  </div>
 
-  <!-- Two-column: Heatmap + Confidence -->
-  <div class="two-col">
-    <div class="Box">
+    <div class="two-col">
+      <!-- Donut chart -->
+      <div class="Box">
+        <div class="Box-header">Token Distribution</div>
+        <div class="Box-body">
+          <div class="donut-container">
+            <svg id="donut-chart" width="180" height="180" viewBox="0 0 180 180"></svg>
+            <div class="donut-legend">
+              <div class="donut-legend-item">
+                <div class="donut-legend-swatch" style="background:var(--color-accent-fg)"></div>
+                <span>Compressed: <strong id="donut-compressed">0</strong></span>
+              </div>
+              <div class="donut-legend-item">
+                <div class="donut-legend-swatch" style="background:var(--color-danger-fg)"></div>
+                <span>Saved: <strong id="donut-saved">0</strong></span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Error loops -->
+      <div class="Box">
+        <div class="Box-header">
+          <span>Error Loop Warnings</span>
+          <span class="count" id="err-count">0 warnings</span>
+        </div>
+        <div class="Box-body" id="err-body">
+          <div class="empty">All clear -- no error loops detected</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- File Heatmap -->
+    <div class="Box" style="margin-bottom:16px">
       <div class="Box-header">
         File Token Heatmap
         <span class="count" id="hm-count">Top 10 by consumption</span>
@@ -427,6 +726,7 @@ body {
       </div>
     </div>
 
+    <!-- Edit Confidence -->
     <div class="Box">
       <div class="Box-header">
         Edit Confidence
@@ -437,24 +737,65 @@ body {
       </div>
     </div>
   </div>
+</div>
 
-  <!-- Session Timeline -->
-  <div class="Box" style="margin-bottom:16px">
-    <div class="Box-header">
-      Session Timeline
-      <span class="count" id="tl-count">0 events</span>
-    </div>
-    <div class="Box-body" id="tl-body" style="max-height:300px;overflow-y:auto">
-      <div class="empty">No tool calls yet</div>
+<!-- ===== TAB 2: MEMORY BROWSER ===== -->
+<div class="tab-panel" id="panel-memory">
+  <div class="container">
+    <div class="Box">
+      <div class="memory-toolbar">
+        <input type="text" class="memory-search" id="memory-search" placeholder="Search memories..." autocomplete="off" spellcheck="false">
+        <div class="filter-pills" id="filter-pills">
+          <span class="filter-pill" data-type="all">All</span>
+          <span class="filter-pill" data-type="bugfix">Bugfix</span>
+          <span class="filter-pill" data-type="feature">Feature</span>
+          <span class="filter-pill" data-type="refactor">Refactor</span>
+          <span class="filter-pill" data-type="change">Change</span>
+          <span class="filter-pill" data-type="discovery">Discovery</span>
+          <span class="filter-pill" data-type="decision">Decision</span>
+        </div>
+      </div>
+      <div class="Box-body">
+        <div class="memory-list" id="memory-list">
+          <div class="empty">No memories yet</div>
+        </div>
+      </div>
     </div>
   </div>
+</div>
 
-  <!-- Error loops detail -->
-  <div class="Box" id="error-box" style="display:none">
-    <div class="Box-header" style="color:var(--color-danger-fg)">
-      <span>Error Loop Warnings</span>
+<!-- ===== TAB 3: DEPENDENCY GRAPH ===== -->
+<div class="tab-panel" id="panel-graph">
+  <div class="container">
+    <div class="Box">
+      <div class="Box-header">
+        File Co-Access Graph
+        <span class="count" id="graph-count">Force-directed layout</span>
+      </div>
+      <div class="Box-body">
+        <div class="graph-container" id="graph-wrapper">
+          <svg id="graph-svg" width="800" height="600" viewBox="0 0 800 600"></svg>
+          <div class="graph-tooltip" id="graph-tooltip"></div>
+        </div>
+      </div>
     </div>
-    <div class="Box-body" id="err-body"></div>
+  </div>
+</div>
+
+<!-- ===== TAB 4: SESSION TIMELINE ===== -->
+<div class="tab-panel" id="panel-timeline">
+  <div class="container">
+    <div class="Box">
+      <div class="Box-header">
+        Session Timeline
+        <span class="count" id="tl-count">0 events</span>
+      </div>
+      <div class="Box-body">
+        <div class="timeline-list" id="tl-body">
+          <div class="empty">No tool calls yet</div>
+        </div>
+      </div>
+    </div>
   </div>
 </div>
 
@@ -464,17 +805,80 @@ body {
 
 <script>
 (function(){
-  var es = null;
-  var badge = document.getElementById('conn-badge');
-  var connText = document.getElementById('conn-text');
-
+  /* ── Utility ── */
   function fmt(n) {
     if (n >= 1000000) return (n/1000000).toFixed(1) + 'M';
     if (n >= 1000) return (n/1000).toFixed(1) + 'K';
     return String(n);
   }
+  function shortPath(p) { return p ? p.split('/').slice(-2).join('/') : ''; }
+  function escHtml(s) { var d = document.createElement('div'); d.textContent = s; return d.innerHTML; }
+  function relTime(iso) {
+    if (!iso) return '';
+    var d = new Date(iso);
+    var now = new Date();
+    var diff = (now - d) / 1000;
+    if (diff < 60) return 'just now';
+    if (diff < 3600) return Math.floor(diff/60) + 'm ago';
+    if (diff < 86400) return Math.floor(diff/3600) + 'h ago';
+    return Math.floor(diff/86400) + 'd ago';
+  }
 
-  function update(d) {
+  /* ── Tab navigation ── */
+  var tabNav = document.getElementById('tab-nav');
+  tabNav.addEventListener('click', function(e) {
+    var item = e.target.closest('.tab-item');
+    if (!item) return;
+    var tabId = item.getAttribute('data-tab');
+    document.querySelectorAll('.tab-item').forEach(function(t) { t.classList.remove('active'); });
+    document.querySelectorAll('.tab-panel').forEach(function(p) { p.classList.remove('active'); });
+    item.classList.add('active');
+    document.getElementById('panel-' + tabId).classList.add('active');
+    if (tabId === 'memory' && !memoriesLoaded) fetchMemories();
+    if (tabId === 'graph' && !graphLoaded) fetchGraph();
+  });
+
+  /* ── Donut Chart ── */
+  function drawDonut(compressed, saved) {
+    var svg = document.getElementById('donut-chart');
+    var total = compressed + saved;
+    if (total === 0) total = 1;
+    var compPct = compressed / total;
+    var cx = 90, cy = 90, r = 70, sw = 20;
+    var compAngle = compPct * 2 * Math.PI;
+
+    function arc(startAngle, endAngle, color) {
+      var x1 = cx + r * Math.cos(startAngle - Math.PI / 2);
+      var y1 = cy + r * Math.sin(startAngle - Math.PI / 2);
+      var x2 = cx + r * Math.cos(endAngle - Math.PI / 2);
+      var y2 = cy + r * Math.sin(endAngle - Math.PI / 2);
+      var largeArc = (endAngle - startAngle > Math.PI) ? 1 : 0;
+      return '<path d="M ' + x1 + ' ' + y1 + ' A ' + r + ' ' + r + ' 0 ' + largeArc + ' 1 ' + x2 + ' ' + y2 + '" fill="none" stroke="' + color + '" stroke-width="' + sw + '" stroke-linecap="round"/>';
+    }
+
+    var html = '';
+    if (compressed > 0 && saved > 0) {
+      html += arc(0, compAngle - 0.04, 'var(--color-accent-fg)');
+      html += arc(compAngle + 0.04, 2 * Math.PI - 0.01, 'var(--color-danger-fg)');
+    } else if (compressed > 0) {
+      html = '<circle cx="' + cx + '" cy="' + cy + '" r="' + r + '" fill="none" stroke="var(--color-accent-fg)" stroke-width="' + sw + '"/>';
+    } else if (saved > 0) {
+      html = '<circle cx="' + cx + '" cy="' + cy + '" r="' + r + '" fill="none" stroke="var(--color-danger-fg)" stroke-width="' + sw + '"/>';
+    } else {
+      html = '<circle cx="' + cx + '" cy="' + cy + '" r="' + r + '" fill="none" stroke="var(--color-border-muted)" stroke-width="' + sw + '"/>';
+    }
+    // Center text
+    var pctText = total > 1 ? Math.round(saved / (compressed + saved) * 100) + '%' : '0%';
+    html += '<text x="' + cx + '" y="' + (cy - 4) + '" text-anchor="middle" fill="var(--color-fg-default)" font-size="24" font-weight="700" font-family="var(--font-mono)">' + pctText + '</text>';
+    html += '<text x="' + cx + '" y="' + (cy + 14) + '" text-anchor="middle" fill="var(--color-fg-muted)" font-size="11">saved</text>';
+    svg.innerHTML = html;
+
+    document.getElementById('donut-compressed').textContent = fmt(compressed);
+    document.getElementById('donut-saved').textContent = fmt(saved);
+  }
+
+  /* ── Overview Update ── */
+  function updateOverview(d) {
     var raw = d.raw_tokens_total || 0;
     var comp = d.compressed_tokens_total || 0;
     var saved = raw > 0 ? raw - comp : 0;
@@ -491,6 +895,7 @@ body {
     document.getElementById('v-saved-sub').textContent = cRatio.toFixed(0) + '% compression';
     document.getElementById('v-saved-bar').style.width = Math.min(cRatio, 100) + '%';
 
+    document.getElementById('v-compression').textContent = cRatio.toFixed(0) + '%';
     document.getElementById('v-calls').textContent = d.tool_calls || 0;
 
     var phase = d.phase || 'Idle';
@@ -498,109 +903,378 @@ body {
     phEl.textContent = phase;
     phEl.className = 'phase-label phase-' + phase;
 
-    // Errors summary
+    // Errors
     var errs = d.error_loops || [];
-    var errVal = document.getElementById('v-errors');
-    errVal.textContent = errs.length;
-    errVal.style.color = errs.length > 0 ? 'var(--color-danger-fg)' : 'var(--color-success-fg)';
     document.getElementById('v-errors-sub').textContent = errs.length > 0 ? errs.length + ' pattern(s) recurring' : 'All clear';
+    document.getElementById('err-count').textContent = errs.length + ' warning' + (errs.length !== 1 ? 's' : '');
+    var errBody = document.getElementById('err-body');
+    if (errs.length === 0) {
+      errBody.innerHTML = '<div class="empty">All clear -- no error loops detected</div>';
+    } else {
+      errBody.innerHTML = errs.map(function(e) {
+        return '<div class="error-item"><span class="error-dot"></span><span class="error-sig">' + escHtml(e) + '</span></div>';
+      }).join('');
+    }
 
     // Session
     if (d.session_id) document.getElementById('f-session').textContent = d.session_id;
 
+    // Donut
+    drawDonut(comp, saved);
+
     // File heatmap
     var ft = d.file_tokens || {};
-    var entries = Object.entries(ft).sort(function(a,b){return b[1]-a[1]}).slice(0,10);
-    document.getElementById('file-count').textContent = Object.keys(ft).length;
+    var entries = Object.entries(ft).sort(function(a, b) { return b[1] - a[1]; }).slice(0, 10);
+    document.getElementById('hm-count').textContent = Object.keys(ft).length + ' files tracked';
     var hmBody = document.getElementById('hm-body');
     if (entries.length === 0) {
       hmBody.innerHTML = '<div class="empty">No files read yet</div>';
     } else {
       var mx = entries[0][1] || 1;
-      hmBody.innerHTML = entries.map(function(e, i){
-        var w = (e[1]/mx*100).toFixed(1);
+      hmBody.innerHTML = entries.map(function(e, i) {
+        var w = (e[1] / mx * 100).toFixed(1);
         var cls = i < 3 ? 'hot' : 'warm';
         return '<div class="Box-row">' +
-          '<span class="hm-name" title="'+e[0]+'">'+e[0].split('/').slice(-2).join('/')+'</span>' +
-          '<div class="hm-bar-wrap"><div class="hm-bar '+cls+'" style="width:'+w+'%"></div></div>' +
-          '<span class="hm-tokens">'+fmt(e[1])+'</span></div>';
+          '<span class="hm-name" title="' + escHtml(e[0]) + '">' + escHtml(shortPath(e[0])) + '</span>' +
+          '<div class="hm-bar-wrap"><div class="hm-bar ' + cls + '" style="width:' + w + '%"></div></div>' +
+          '<span class="hm-tokens">' + fmt(e[1]) + '</span></div>';
       }).join('');
     }
 
     // Edit confidence
     var scores = (d.edit_scores || []).slice(-10).reverse();
-    document.getElementById('edit-count').textContent = (d.edit_scores || []).length;
+    document.getElementById('cf-count').textContent = (d.edit_scores || []).length + ' edits tracked';
     var cfBody = document.getElementById('cf-body');
     if (scores.length === 0) {
       cfBody.innerHTML = '<div class="empty">No edits recorded</div>';
     } else {
-      cfBody.innerHTML = scores.map(function(s){
+      cfBody.innerHTML = scores.map(function(s) {
         var vc = s.score >= 80 ? 'safe' : s.score >= 60 ? 'review' : 'risky';
         var barColor = vc === 'safe' ? 'var(--color-success-fg)' : vc === 'review' ? 'var(--color-attention-fg)' : 'var(--color-danger-fg)';
         return '<div class="Box-row">' +
-          '<span class="cf-score '+vc+'">'+s.score+'</span>' +
-          '<div class="cf-bar-wrap"><div class="cf-bar" style="width:'+s.score+'%;background:'+barColor+'"></div></div>' +
-          '<span class="cf-name" title="'+s.file+'::'+s.symbol+'">'+s.file.split('/').pop()+'<span style="color:var(--color-fg-muted)">::'+s.symbol+'</span></span>' +
-          '<span class="cf-verdict '+vc+'">'+vc+'</span></div>';
+          '<span class="cf-score ' + vc + '">' + s.score + '</span>' +
+          '<div class="cf-bar-wrap"><div class="cf-bar" style="width:' + s.score + '%;background:' + barColor + '"></div></div>' +
+          '<span class="cf-name" title="' + escHtml(s.file) + '::' + escHtml(s.symbol) + '">' + escHtml(s.file.split('/').pop()) + '<span style="color:var(--color-fg-muted)">::' + escHtml(s.symbol) + '</span></span>' +
+          '<span class="cf-verdict ' + vc + '">' + vc + '</span></div>';
       }).join('');
     }
+  }
 
-    // Timeline
-    var tl = (d.timeline || []).slice(-20).reverse();
+  /* ── Timeline Update ── */
+  function updateTimeline(d) {
+    var tl = (d.timeline || []).slice(-50).reverse();
     document.getElementById('tl-count').textContent = (d.timeline || []).length + ' events';
+    document.getElementById('timeline-count').textContent = (d.timeline || []).length;
     var tlBody = document.getElementById('tl-body');
     if (tl.length === 0) {
       tlBody.innerHTML = '<div class="empty">No tool calls yet</div>';
-    } else {
-      tlBody.innerHTML = tl.map(function(e) {
-        var ts = e.timestamp ? new Date(e.timestamp).toLocaleTimeString() : '';
-        var f = e.file ? e.file.split('/').slice(-2).join('/') : '';
-        var toolColor = e.tool === 'smart_read' ? 'var(--color-accent-fg)' :
-                        e.tool === 'smart_edit' ? 'var(--color-attention-fg)' :
-                        e.tool === 'smart_run' ? 'var(--color-success-fg)' : 'var(--color-done-fg)';
-        return '<div class="Box-row" style="font-size:12px;font-family:ui-monospace,SFMono-Regular,monospace">' +
-          '<span style="color:var(--color-fg-muted);width:70px;flex-shrink:0">' + ts + '</span>' +
-          '<span style="color:' + toolColor + ';width:100px;flex-shrink:0;font-weight:600">' + e.tool + '</span>' +
-          '<span style="flex:1;color:var(--color-fg-default);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">' + f + '</span>' +
-          '<span style="color:var(--color-fg-muted);width:60px;text-align:right;flex-shrink:0">' + fmt(e.raw_tokens) + 'tk</span>' +
-          '<span style="color:var(--color-fg-muted);width:50px;text-align:right;flex-shrink:0">' + e.duration_ms + 'ms</span>' +
-          '</div>';
-      }).join('');
+      return;
     }
 
-    // Error loops detail
-    var errBox = document.getElementById('error-box');
-    var errBody = document.getElementById('err-body');
-    if (errs.length === 0) {
-      errBox.style.display = 'none';
-    } else {
-      errBox.style.display = 'block';
-      errBody.innerHTML = errs.map(function(e){
-        return '<div class="error-item"><span class="error-dot"></span><span class="error-sig">'+e+'</span></div>';
-      }).join('');
+    function toolColor(t) {
+      if (t === 'smart_read' || t === 'project_map') return 'var(--color-accent-fg)';
+      if (t === 'smart_edit' || t === 'smart_refactor') return 'var(--color-attention-fg)';
+      if (t === 'smart_run' || t === 'test_coverage_map') return 'var(--color-success-fg)';
+      if (t === 'save_memory' || t === 'search_memory') return 'var(--color-done-fg)';
+      return 'var(--color-fg-muted)';
     }
+
+    tlBody.innerHTML = tl.map(function(e, i) {
+      var ts = e.timestamp ? new Date(e.timestamp).toLocaleTimeString() : '';
+      var f = e.file ? shortPath(e.file) : '';
+      var tc = toolColor(e.tool);
+      var details = 'Raw: ' + fmt(e.raw_tokens) + ' tokens | Compressed: ' + fmt(e.compressed_tokens) + ' tokens | Duration: ' + (e.duration_ms || 0) + 'ms | Phase: ' + (e.phase || 'unknown');
+      return '<div class="timeline-entry" onclick="this.classList.toggle(\'expanded\')">' +
+        '<div class="timeline-dot-col"><div class="timeline-dot" style="background:' + tc + '"></div>' + (i < tl.length - 1 ? '<div class="timeline-line"></div>' : '') + '</div>' +
+        '<div class="timeline-content">' +
+          '<div class="timeline-top">' +
+            '<span class="timeline-ts">' + ts + '</span>' +
+            '<span class="timeline-tool" style="color:' + tc + '">' + escHtml(e.tool) + '</span>' +
+            '<span class="timeline-file">' + escHtml(f) + '</span>' +
+          '</div>' +
+          '<div class="timeline-stats">' +
+            '<span>' + fmt(e.raw_tokens) + ' tk</span>' +
+            '<span>' + (e.duration_ms || 0) + 'ms</span>' +
+          '</div>' +
+          '<div class="timeline-details">' + escHtml(details) + '</div>' +
+        '</div></div>';
+    }).join('');
+  }
+
+  /* ── Memory Browser ── */
+  var memoriesLoaded = false;
+  var allMemories = [];
+  var activeFilter = 'all';
+  var searchQuery = '';
+  var searchTimer = null;
+
+  function fetchMemories() {
+    fetch('/api/memories').then(function(r) { return r.json(); }).then(function(data) {
+      allMemories = data || [];
+      memoriesLoaded = true;
+      document.getElementById('memory-count').textContent = allMemories.length;
+      renderMemories();
+    }).catch(function() {
+      memoriesLoaded = true;
+      renderMemories();
+    });
+  }
+
+  function renderMemories() {
+    var filtered = allMemories;
+    if (activeFilter !== 'all') {
+      filtered = filtered.filter(function(m) { return m.observation_type === activeFilter; });
+    }
+    if (searchQuery) {
+      var q = searchQuery.toLowerCase();
+      filtered = filtered.filter(function(m) {
+        return (m.title && m.title.toLowerCase().indexOf(q) >= 0) ||
+               (m.text && m.text.toLowerCase().indexOf(q) >= 0) ||
+               (m.files && m.files.toLowerCase().indexOf(q) >= 0);
+      });
+    }
+
+    var list = document.getElementById('memory-list');
+    if (filtered.length === 0) {
+      list.innerHTML = '<div class="empty">' + (allMemories.length === 0 ? 'No memories yet' : 'No matches for current filter') + '</div>';
+      return;
+    }
+
+    list.innerHTML = filtered.map(function(m) {
+      var title = m.title || 'Untitled observation';
+      var tp = m.observation_type || 'discovery';
+      var badgeClass = 'badge-' + tp;
+      var text = m.text || '';
+      var ts = relTime(m.created_at);
+      var filesHtml = '';
+      if (m.files) {
+        var files = m.files.split(',').map(function(f) { return f.trim(); }).filter(Boolean).slice(0, 5);
+        if (files.length > 0) {
+          filesHtml = '<div class="memory-card-files">' + files.map(function(f) {
+            return '<span class="memory-file-tag">' + escHtml(shortPath(f)) + '</span>';
+          }).join('') + '</div>';
+        }
+      }
+      return '<div class="memory-card">' +
+        '<div class="memory-card-header">' +
+          '<span class="memory-card-title">' + escHtml(title) + '</span>' +
+          '<span class="memory-card-badge ' + badgeClass + '">' + escHtml(tp) + '</span>' +
+        '</div>' +
+        '<div class="memory-card-text">' + escHtml(text) + '</div>' +
+        '<div class="memory-card-meta"><span>' + ts + '</span></div>' +
+        filesHtml +
+      '</div>';
+    }).join('');
+  }
+
+  document.getElementById('memory-search').addEventListener('input', function(e) {
+    clearTimeout(searchTimer);
+    var val = e.target.value;
+    searchTimer = setTimeout(function() {
+      searchQuery = val;
+      renderMemories();
+    }, 300);
+  });
+
+  document.getElementById('filter-pills').addEventListener('click', function(e) {
+    var pill = e.target.closest('.filter-pill');
+    if (!pill) return;
+    activeFilter = pill.getAttribute('data-type');
+    document.querySelectorAll('.filter-pill').forEach(function(p) { p.classList.remove('active'); });
+    pill.classList.add('active');
+    renderMemories();
+  });
+
+  /* ── Dependency Graph ── */
+  var graphLoaded = false;
+
+  function fetchGraph() {
+    fetch('/api/graph').then(function(r) { return r.json(); }).then(function(data) {
+      graphLoaded = true;
+      renderGraph(data);
+    }).catch(function() {
+      graphLoaded = true;
+      document.getElementById('graph-count').textContent = 'No data available';
+    });
+  }
+
+  function renderGraph(data) {
+    var svg = document.getElementById('graph-svg');
+    var tooltip = document.getElementById('graph-tooltip');
+    var nodes = data.nodes || [];
+    var edges = data.edges || [];
+
+    document.getElementById('graph-count').textContent = nodes.length + ' files, ' + edges.length + ' connections';
+
+    if (nodes.length === 0) {
+      svg.innerHTML = '<text x="400" y="300" text-anchor="middle" fill="var(--color-fg-subtle)" font-size="14" font-style="italic">No file access patterns recorded yet</text>';
+      return;
+    }
+
+    // Build adjacency
+    var nodeMap = {};
+    nodes.forEach(function(n, i) {
+      nodeMap[n.id] = i;
+      n.x = 200 + Math.random() * 400;
+      n.y = 150 + Math.random() * 300;
+      n.vx = 0;
+      n.vy = 0;
+    });
+
+    // Max access for sizing
+    var maxAccess = Math.max.apply(null, nodes.map(function(n) { return n.access_count || 1; }));
+
+    // Simple force simulation
+    var W = 800, H = 600;
+    var iterations = 120;
+
+    for (var iter = 0; iter < iterations; iter++) {
+      var alpha = 1 - iter / iterations;
+      var k = Math.sqrt(W * H / nodes.length) * 0.5;
+
+      // Repulsion (all pairs)
+      for (var i = 0; i < nodes.length; i++) {
+        for (var j = i + 1; j < nodes.length; j++) {
+          var dx = nodes[i].x - nodes[j].x;
+          var dy = nodes[i].y - nodes[j].y;
+          var dist = Math.sqrt(dx * dx + dy * dy) || 1;
+          var force = k * k / dist * alpha * 0.8;
+          var fx = dx / dist * force;
+          var fy = dy / dist * force;
+          nodes[i].vx += fx;
+          nodes[i].vy += fy;
+          nodes[j].vx -= fx;
+          nodes[j].vy -= fy;
+        }
+      }
+
+      // Attraction (edges)
+      edges.forEach(function(e) {
+        var si = nodeMap[e.source];
+        var ti = nodeMap[e.target];
+        if (si === undefined || ti === undefined) return;
+        var sn = nodes[si], tn = nodes[ti];
+        var dx = tn.x - sn.x;
+        var dy = tn.y - sn.y;
+        var dist = Math.sqrt(dx * dx + dy * dy) || 1;
+        var force = (dist - k * 0.8) * alpha * 0.05;
+        var fx = dx / dist * force;
+        var fy = dy / dist * force;
+        sn.vx += fx;
+        sn.vy += fy;
+        tn.vx -= fx;
+        tn.vy -= fy;
+      });
+
+      // Center gravity
+      nodes.forEach(function(n) {
+        n.vx += (W / 2 - n.x) * 0.01 * alpha;
+        n.vy += (H / 2 - n.y) * 0.01 * alpha;
+      });
+
+      // Apply velocities with damping
+      nodes.forEach(function(n) {
+        n.vx *= 0.6;
+        n.vy *= 0.6;
+        n.x += n.vx;
+        n.y += n.vy;
+        // Bound
+        n.x = Math.max(40, Math.min(W - 40, n.x));
+        n.y = Math.max(40, Math.min(H - 40, n.y));
+      });
+    }
+
+    // Render
+    var html = '';
+
+    // Edges
+    edges.forEach(function(e) {
+      var si = nodeMap[e.source];
+      var ti = nodeMap[e.target];
+      if (si === undefined || ti === undefined) return;
+      var sn = nodes[si], tn = nodes[ti];
+      var w = Math.min(e.weight || 1, 5);
+      var op = Math.min(0.2 + (w * 0.15), 0.8);
+      html += '<line x1="' + sn.x.toFixed(1) + '" y1="' + sn.y.toFixed(1) + '" x2="' + tn.x.toFixed(1) + '" y2="' + tn.y.toFixed(1) + '" stroke="var(--color-accent-fg)" stroke-width="' + w + '" stroke-opacity="' + op + '"/>';
+    });
+
+    // Nodes
+    nodes.forEach(function(n, i) {
+      var r = 6 + (n.access_count / maxAccess) * 18;
+      var color = 'var(--color-accent-fg)';
+      if (n.access_count > maxAccess * 0.66) color = 'var(--color-danger-fg)';
+      else if (n.access_count > maxAccess * 0.33) color = 'var(--color-attention-fg)';
+      html += '<circle cx="' + n.x.toFixed(1) + '" cy="' + n.y.toFixed(1) + '" r="' + r.toFixed(1) + '" fill="' + color + '" fill-opacity="0.7" stroke="' + color + '" stroke-width="1.5" data-idx="' + i + '" style="cursor:pointer;transition:fill-opacity 0.15s"/>';
+      // Short label for large nodes
+      if (r > 14) {
+        var label = n.id.split('/').pop().substring(0, 12);
+        html += '<text x="' + n.x.toFixed(1) + '" y="' + (n.y + r + 14).toFixed(1) + '" text-anchor="middle" fill="var(--color-fg-muted)" font-size="10" font-family="var(--font-mono)">' + escHtml(label) + '</text>';
+      }
+    });
+
+    svg.innerHTML = html;
+
+    // Hover interaction
+    svg.addEventListener('mouseover', function(e) {
+      var circle = e.target.closest('circle');
+      if (!circle) { tooltip.classList.remove('visible'); return; }
+      var idx = parseInt(circle.getAttribute('data-idx'));
+      var n = nodes[idx];
+      if (!n) return;
+      circle.setAttribute('fill-opacity', '1');
+      tooltip.innerHTML = '<strong>' + escHtml(shortPath(n.id)) + '</strong><br>Access count: ' + n.access_count;
+      tooltip.classList.add('visible');
+      var rect = svg.getBoundingClientRect();
+      var wrapRect = document.getElementById('graph-wrapper').getBoundingClientRect();
+      tooltip.style.left = (n.x * rect.width / 800 + rect.left - wrapRect.left + 12) + 'px';
+      tooltip.style.top = (n.y * rect.height / 600 + rect.top - wrapRect.top - 30) + 'px';
+    });
+    svg.addEventListener('mouseout', function(e) {
+      if (e.target.tagName === 'circle') {
+        e.target.setAttribute('fill-opacity', '0.7');
+      }
+      tooltip.classList.remove('visible');
+    });
+  }
+
+  /* ── SSE + Initial Load ── */
+  var es = null;
+  var badge = document.getElementById('conn-badge');
+  var connText = document.getElementById('conn-text');
+  var reconnectDelay = 2000;
+  var maxDelay = 30000;
+
+  function update(d) {
+    updateOverview(d);
+    updateTimeline(d);
   }
 
   function connect() {
     if (es) es.close();
     es = new EventSource('/events');
-    es.onopen = function(){
+    es.onopen = function() {
       badge.className = 'conn-badge live';
       connText.textContent = 'Live';
+      reconnectDelay = 2000;
     };
-    es.onmessage = function(ev){
-      try { update(JSON.parse(ev.data)); } catch(e){}
+    es.onmessage = function(ev) {
+      try { update(JSON.parse(ev.data)); } catch(e) {}
     };
-    es.onerror = function(){
+    es.onerror = function() {
       badge.className = 'conn-badge dead';
       connText.textContent = 'Disconnected';
       es.close(); es = null;
-      setTimeout(connect, 3000);
+      setTimeout(connect, reconnectDelay);
+      reconnectDelay = Math.min(reconnectDelay * 1.5, maxDelay);
     };
   }
 
-  fetch('/api/metrics').then(function(r){return r.json()}).then(update).catch(function(){});
+  // Initial fetch
+  fetch('/api/metrics').then(function(r) { return r.json(); }).then(update).catch(function() {});
   connect();
+
+  // Draw initial empty donut
+  drawDonut(0, 0);
 })();
 </script>
 </body>

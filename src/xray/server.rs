@@ -1,3 +1,4 @@
+use crate::session::persistence::SessionDb;
 use crate::xray::metrics::MetricsState;
 use std::io::{Read, Write};
 use std::net::{TcpListener, TcpStream};
@@ -77,7 +78,10 @@ fn bind_with_reuseaddr(port: u16) -> Result<TcpListener, std::io::Error> {
 }
 
 impl XrayServer {
-    pub fn start(metrics: Arc<Mutex<MetricsState>>) -> Result<Self, std::io::Error> {
+    pub fn start(
+        metrics: Arc<Mutex<MetricsState>>,
+        db: Option<Arc<Mutex<SessionDb>>>,
+    ) -> Result<Self, std::io::Error> {
         // If there's already a server on DEFAULT_PORT, reuse it (no new tab)
         if probe_existing_server() {
             return Ok(XrayServer {
@@ -94,7 +98,8 @@ impl XrayServer {
         let handle = thread::spawn(move || {
             for stream in listener.incoming().flatten() {
                 let metrics = Arc::clone(&metrics);
-                thread::spawn(move || handle_connection(stream, &metrics));
+                let db = db.clone();
+                thread::spawn(move || handle_connection(stream, &metrics, &db));
             }
         });
 
@@ -119,7 +124,11 @@ impl XrayServer {
     }
 }
 
-fn handle_connection(mut stream: TcpStream, metrics: &Arc<Mutex<MetricsState>>) {
+fn handle_connection(
+    mut stream: TcpStream,
+    metrics: &Arc<Mutex<MetricsState>>,
+    db: &Option<Arc<Mutex<SessionDb>>>,
+) {
     let mut buf = [0u8; 2048];
     let n = match stream.read(&mut buf) {
         Ok(n) if n > 0 => n,
@@ -135,6 +144,8 @@ fn handle_connection(mut stream: TcpStream, metrics: &Arc<Mutex<MetricsState>>) 
     match path {
         "/" => serve_html(&mut stream),
         "/api/metrics" => serve_metrics_json(&mut stream, metrics),
+        "/api/memories" => serve_memories_json(&mut stream, db),
+        "/api/graph" => serve_graph_json(&mut stream, db),
         "/events" => serve_sse(&mut stream, metrics),
         _ => serve_404(&mut stream),
     }
@@ -217,6 +228,89 @@ fn serve_sse(stream: &mut TcpStream, metrics: &Arc<Mutex<MetricsState>>) {
         let _ = stream.flush();
         thread::sleep(Duration::from_secs(2));
     }
+}
+
+fn serve_memories_json(stream: &mut TcpStream, db: &Option<Arc<Mutex<SessionDb>>>) {
+    let json = match db {
+        Some(db_arc) => {
+            match db_arc.lock() {
+                Ok(db_guard) => {
+                    match db_guard.get_recent_observations_for_project(".", 50) {
+                        Ok(records) => serde_json::to_string(&records).unwrap_or_else(|_| "[]".to_string()),
+                        Err(_) => "[]".to_string(),
+                    }
+                }
+                Err(_) => "[]".to_string(),
+            }
+        }
+        None => "[]".to_string(),
+    };
+    let response = format!(
+        "HTTP/1.1 200 OK\r\nContent-Type: application/json\r\nContent-Length: {}\r\nConnection: close\r\n\r\n{}",
+        json.len(),
+        json
+    );
+    let _ = stream.write_all(response.as_bytes());
+}
+
+fn serve_graph_json(stream: &mut TcpStream, db: &Option<Arc<Mutex<SessionDb>>>) {
+    let json = match db {
+        Some(db_arc) => {
+            match db_arc.lock() {
+                Ok(db_guard) => {
+                    match db_guard.get_file_access_patterns(".") {
+                        Ok(records) => {
+                            let mut nodes: Vec<serde_json::Value> = Vec::new();
+                            let mut edges: Vec<serde_json::Value> = Vec::new();
+                            let mut seen_edges: std::collections::HashSet<(String, String)> = std::collections::HashSet::new();
+
+                            for rec in &records {
+                                nodes.push(serde_json::json!({
+                                    "id": rec.file_path,
+                                    "access_count": rec.access_count,
+                                }));
+
+                                if let Some(ref co_accessed) = rec.co_accessed_with {
+                                    // co_accessed_with is a comma-separated list of file paths
+                                    for co_file in co_accessed.split(',') {
+                                        let co_file = co_file.trim();
+                                        if co_file.is_empty() {
+                                            continue;
+                                        }
+                                        let key = if rec.file_path.as_str() < co_file {
+                                            (rec.file_path.clone(), co_file.to_string())
+                                        } else {
+                                            (co_file.to_string(), rec.file_path.clone())
+                                        };
+                                        if seen_edges.insert(key) {
+                                            edges.push(serde_json::json!({
+                                                "source": rec.file_path,
+                                                "target": co_file,
+                                                "weight": 1,
+                                            }));
+                                        }
+                                    }
+                                }
+                            }
+                            serde_json::json!({
+                                "nodes": nodes,
+                                "edges": edges,
+                            }).to_string()
+                        }
+                        Err(_) => r#"{"nodes":[],"edges":[]}"#.to_string(),
+                    }
+                }
+                Err(_) => r#"{"nodes":[],"edges":[]}"#.to_string(),
+            }
+        }
+        None => r#"{"nodes":[],"edges":[]}"#.to_string(),
+    };
+    let response = format!(
+        "HTTP/1.1 200 OK\r\nContent-Type: application/json\r\nContent-Length: {}\r\nConnection: close\r\n\r\n{}",
+        json.len(),
+        json
+    );
+    let _ = stream.write_all(response.as_bytes());
 }
 
 fn serve_404(stream: &mut TcpStream) {
