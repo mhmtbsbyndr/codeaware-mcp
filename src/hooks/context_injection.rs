@@ -1,9 +1,15 @@
+use crate::hooks::profiles;
 use crate::session::persistence::SessionDb;
 
 /// Load relevant memories from previous sessions and return formatted context.
 /// The returned string is logged to stderr so it appears in the MCP server startup log
 /// visible to the LLM, and can also be stored in SessionState for session_status.
 pub fn inject_context(db: &SessionDb, project_path: &str) -> Option<String> {
+    // Check if this hook is disabled via CODEAWARE_DISABLED_HOOKS
+    if profiles::is_hook_disabled("context_injection") {
+        return None;
+    }
+
     let observations = match db.get_recent_observations_for_project(project_path, 10) {
         Ok(obs) => obs,
         Err(_) => return None,

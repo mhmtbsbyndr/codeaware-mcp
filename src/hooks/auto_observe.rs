@@ -1,3 +1,4 @@
+use crate::hooks::profiles;
 use crate::session::persistence::{AutoObservationOpts, SessionDb};
 
 /// Extract a compact observation from a tool call result and persist it.
@@ -8,6 +9,11 @@ pub fn record_auto_observation(
     session_id: &str,
     result_text: &str,
 ) {
+    // Check if this hook is disabled via CODEAWARE_DISABLED_HOOKS
+    if profiles::is_hook_disabled("auto_observe") {
+        return;
+    }
+
     // Skip tools that don't produce useful observations
     if matches!(tool_name, "xray" | "session_status" | "validate_config") {
         return;

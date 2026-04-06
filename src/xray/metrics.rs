@@ -45,6 +45,8 @@ pub struct MetricsState {
     phase: String,
     session_id: String,
     error_loops: Vec<String>,
+    compact_hint_40: bool,
+    compact_hint_tokens: bool,
 }
 
 impl Default for MetricsState {
@@ -65,6 +67,8 @@ impl MetricsState {
             phase: "Idle".to_string(),
             session_id: String::new(),
             error_loops: Vec::new(),
+            compact_hint_40: false,
+            compact_hint_tokens: false,
         }
     }
 
@@ -105,6 +109,19 @@ impl MetricsState {
             duration_ms,
             phase: phase.to_string(),
         });
+    }
+
+    /// Check and emit compaction hints when thresholds are exceeded.
+    /// Each hint is only emitted once per session.
+    pub fn check_compaction_hints(&mut self) {
+        if !self.compact_hint_40 && self.tool_calls > 40 {
+            self.compact_hint_40 = true;
+            eprintln!("CodeAware: 40+ tool calls \u{2014} consider /compact to free context");
+        }
+        if !self.compact_hint_tokens && self.raw_tokens_total > 500_000 {
+            self.compact_hint_tokens = true;
+            eprintln!("CodeAware: 500k+ raw tokens \u{2014} consider /compact to free context");
+        }
     }
 
     pub fn add_error_loop(&mut self, sig: &str) {

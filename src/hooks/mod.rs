@@ -1,7 +1,10 @@
 pub mod auto_observe;
 pub mod compact;
 pub mod context_injection;
+pub mod governance;
 pub mod post_tool_use;
+pub mod profiles;
+pub mod session_persistence;
 pub mod session_stop;
 pub mod subagent_stop;
 pub mod tool_failure;

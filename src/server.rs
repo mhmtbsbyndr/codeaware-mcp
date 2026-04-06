@@ -1,5 +1,6 @@
 use serde_json::{json, Value};
 use std::sync::{Arc, Mutex};
+use crate::hooks::profiles::{self, Profile};
 use crate::session::state::SessionState;
 use crate::session::persistence::SessionDb;
 use crate::xray::metrics::MetricsState;
@@ -42,6 +43,19 @@ impl McpServer {
             }
         }
 
+        // Session persistence: load recent session state if available
+        if let Some(prev_state) = crate::hooks::session_persistence::load_recent_session(".") {
+            eprintln!("CodeAware: Restored previous session state for project");
+            if let Ok(mut s) = state.lock() {
+                s.set_injected_context(
+                    format!(
+                        "Resumed session state: {}",
+                        serde_json::to_string(&prev_state).unwrap_or_default()
+                    ),
+                );
+            }
+        }
+
         McpServer {
             state,
             metrics,
@@ -68,6 +82,19 @@ impl McpServer {
                         s.set_injected_context(ctx);
                     }
                 }
+            }
+        }
+
+        // Session persistence: load recent session state if available
+        if let Some(prev_state) = crate::hooks::session_persistence::load_recent_session(&project_path) {
+            eprintln!("CodeAware: Restored previous session state for project");
+            if let Ok(mut s) = state.lock() {
+                s.set_injected_context(
+                    format!(
+                        "Resumed session state: {}",
+                        serde_json::to_string(&prev_state).unwrap_or_default()
+                    ),
+                );
             }
         }
 
@@ -622,30 +649,48 @@ impl McpServer {
             };
             let compressed_tokens = raw_tokens * compression / 100;
 
+            let profile = profiles::get_profile();
+
             if let Ok(mut m) = self.metrics.lock() {
                 m.record_tool_call(tool_name, file_path, raw_tokens, compressed_tokens);
 
-                // Sync phase from session state
-                if let Ok(state) = self.state.lock() {
-                    let phase = match state.phase() {
-                        crate::session::state::SessionPhase::Idle => "Idle",
-                        crate::session::state::SessionPhase::Analyzing => "Analyzing",
-                        crate::session::state::SessionPhase::Editing => "Editing",
-                        crate::session::state::SessionPhase::Verifying => "Verifying",
-                        crate::session::state::SessionPhase::Complete => "Complete",
-                        crate::session::state::SessionPhase::Compacting => "Compacting",
-                    };
-                    m.record_timeline_event(
-                        tool_name,
-                        file_path,
-                        raw_tokens,
-                        compressed_tokens,
-                        start_time.elapsed().as_millis() as u64,
-                        phase,
-                    );
-                    m.set_phase(phase);
-                    m.set_session_id(state.session_id());
+                // Sync phase from session state — minimal profile skips timeline events
+                if profile != Profile::Minimal {
+                    if let Ok(state) = self.state.lock() {
+                        let phase = match state.phase() {
+                            crate::session::state::SessionPhase::Idle => "Idle",
+                            crate::session::state::SessionPhase::Analyzing => "Analyzing",
+                            crate::session::state::SessionPhase::Editing => "Editing",
+                            crate::session::state::SessionPhase::Verifying => "Verifying",
+                            crate::session::state::SessionPhase::Complete => "Complete",
+                            crate::session::state::SessionPhase::Compacting => "Compacting",
+                        };
+                        m.record_timeline_event(
+                            tool_name,
+                            file_path,
+                            raw_tokens,
+                            compressed_tokens,
+                            start_time.elapsed().as_millis() as u64,
+                            phase,
+                        );
+                        m.set_phase(phase);
+                        m.set_session_id(state.session_id());
+                    }
                 }
+
+                // Fix 3: Strategic compaction hints
+                m.check_compaction_hints();
+            }
+
+            // Rich profile: log extra detail per tool call
+            if profile == Profile::Rich {
+                eprintln!(
+                    "CodeAware [rich]: {} on {} — {} raw tokens, {} compressed",
+                    tool_name,
+                    file_path.unwrap_or("-"),
+                    raw_tokens,
+                    compressed_tokens
+                );
             }
 
             // Auto-observe: record observation from tool call result
@@ -661,6 +706,17 @@ impl McpServer {
                         &session_id,
                         &result_text,
                     );
+                }
+            }
+
+            // Fix 2: Governance capture — only when CODEAWARE_GOVERNANCE=1
+            if crate::hooks::governance::is_governance_enabled() {
+                if let Some(event) = crate::hooks::governance::check_governance(
+                    tool_name,
+                    file_path,
+                    &result_text,
+                ) {
+                    crate::hooks::governance::log_governance_event(&event);
                 }
             }
         }
