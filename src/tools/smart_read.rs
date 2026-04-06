@@ -167,6 +167,9 @@ pub fn smart_read(input: &SmartReadInput, _project_root: &Path) -> Result<SmartR
         }
     };
 
+    // Build suggested_next: related files the caller might want to read next
+    let suggested_next = suggest_next_files(&input.path, _project_root);
+
     Ok(SmartReadResult {
         path: input.path.clone(),
         mode_used,
@@ -181,7 +184,7 @@ pub fn smart_read(input: &SmartReadInput, _project_root: &Path) -> Result<SmartR
         callers: vec![],
         relevant_tests: vec![],
         content,
-        suggested_next: vec![],
+        suggested_next,
         prefetched: vec![],
     })
 }
@@ -309,6 +312,105 @@ fn extract_line_range(lines: &[&str], range: &str) -> Result<String, SmartReadEr
     let start_idx = start - 1;
     let end_idx = end.min(lines.len());
     Ok(lines[start_idx..end_idx].join("\n"))
+}
+
+/// Suggest related files the caller might want to read next.
+/// Looks for test/source counterparts and sibling files in the same directory.
+fn suggest_next_files(file_path: &str, project_root: &Path) -> Vec<String> {
+    let path = Path::new(file_path);
+    let base_name = path.file_stem().and_then(|s| s.to_str()).unwrap_or("");
+    let ext = path.extension().and_then(|e| e.to_str()).unwrap_or("");
+
+    if base_name.is_empty() {
+        return vec![];
+    }
+
+    let mut suggestions: Vec<String> = Vec::new();
+    let max_suggestions = 3;
+
+    // Strategy 1: If this is a test file, suggest the source file (and vice versa)
+    let is_test = base_name.starts_with("test_")
+        || base_name.ends_with("_test")
+        || base_name.ends_with("_tests")
+        || file_path.contains("/tests/");
+
+    if is_test {
+        // Strip test prefix/suffix to find source file name
+        let source_name = base_name
+            .strip_prefix("test_")
+            .or_else(|| base_name.strip_suffix("_test"))
+            .or_else(|| base_name.strip_suffix("_tests"))
+            .unwrap_or(base_name);
+        // Look for source in src/ directory
+        let candidates = [
+            format!("src/{}.{}", source_name, ext),
+            format!("src/{}/mod.{}", source_name, ext),
+        ];
+        for candidate in &candidates {
+            if suggestions.len() >= max_suggestions {
+                break;
+            }
+            let abs = project_root.join(candidate);
+            if abs.exists() {
+                suggestions.push(candidate.clone());
+            }
+        }
+    } else {
+        // Look for test counterpart
+        let test_candidates = [
+            format!("tests/test_{}.{}", base_name, ext),
+            format!("tests/{}_test.{}", base_name, ext),
+        ];
+        for candidate in &test_candidates {
+            if suggestions.len() >= max_suggestions {
+                break;
+            }
+            let abs = project_root.join(candidate);
+            if abs.exists() {
+                suggestions.push(candidate.clone());
+            }
+        }
+    }
+
+    // Strategy 2: Suggest other files in the same directory (excluding self)
+    if let Some(parent) = path.parent() {
+        let parent_abs = if parent.is_absolute() {
+            parent.to_path_buf()
+        } else {
+            project_root.join(parent)
+        };
+        if let Ok(entries) = std::fs::read_dir(&parent_abs) {
+            for entry in entries.flatten() {
+                if suggestions.len() >= max_suggestions {
+                    break;
+                }
+                let entry_path = entry.path();
+                if !entry_path.is_file() {
+                    continue;
+                }
+                let entry_ext = entry_path.extension().and_then(|e| e.to_str()).unwrap_or("");
+                if entry_ext != ext {
+                    continue;
+                }
+                let entry_name = entry_path.file_name().and_then(|n| n.to_str()).unwrap_or("");
+                let self_name = path.file_name().and_then(|n| n.to_str()).unwrap_or("");
+                if entry_name == self_name {
+                    continue;
+                }
+                let rel = entry_path
+                    .strip_prefix(project_root)
+                    .unwrap_or(&entry_path)
+                    .to_string_lossy()
+                    .to_string();
+                if !suggestions.contains(&rel) {
+                    suggestions.push(rel);
+                }
+            }
+        }
+    }
+
+    suggestions.truncate(max_suggestions);
+    suggestions
 }
 
 /// Extract lines around each match of `term`, with 5 lines context on each side. Merges overlapping ranges.

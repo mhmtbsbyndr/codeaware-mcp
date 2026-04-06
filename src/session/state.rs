@@ -23,6 +23,8 @@ pub struct SessionState {
     files_edited: HashSet<String>,
     error_signatures: HashMap<String, u32>,
     pub workspace_slots: WorkspaceSlots,
+    /// Memories injected from previous sessions at startup
+    injected_context: Option<String>,
     // These fields are specified in the design and will be used in later phases
     #[allow(dead_code)]
     last_test_result: Option<TestResult>,
@@ -48,6 +50,7 @@ impl SessionState {
             files_edited: HashSet::new(),
             error_signatures: HashMap::new(),
             workspace_slots: WorkspaceSlots::new(),
+            injected_context: None,
             last_test_result: None,
             started_at: Utc::now(),
         }
@@ -126,5 +129,13 @@ impl SessionState {
 
     pub fn is_error_loop(&self, sig: &str, threshold: u32) -> bool {
         self.error_signatures.get(sig).copied().unwrap_or(0) >= threshold
+    }
+
+    pub fn set_injected_context(&mut self, ctx: String) {
+        self.injected_context = Some(ctx);
+    }
+
+    pub fn injected_context(&self) -> Option<&str> {
+        self.injected_context.as_deref()
     }
 }

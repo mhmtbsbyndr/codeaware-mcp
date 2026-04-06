@@ -13,8 +13,10 @@ pub fn record_auto_observation(
         return;
     }
 
-    // Build dedup hash from tool_name + file_path
-    let dedup_input = format!("{}:{}", tool_name, file_path.unwrap_or(""));
+    // Build dedup hash from tool_name + file_path + content hash (first 100 chars).
+    // Including content ensures re-reading after an edit creates a new observation.
+    let content_prefix: String = result_text.chars().take(100).collect();
+    let dedup_input = format!("{}:{}:{}", tool_name, file_path.unwrap_or(""), content_prefix);
     let dedup_hash = blake3::hash(dedup_input.as_bytes()).to_hex().to_string();
 
     // Extract summary (first 200 chars of result, truncated at word boundary)
@@ -24,7 +26,15 @@ pub fn record_auto_observation(
     let obs_type = match tool_name {
         "smart_edit" => "change",
         "smart_run" => {
-            if result_text.contains("fail") {
+            // Check for actual failures, not just the word "fail" which appears in
+            // passing test output as "0 failed"
+            let lower = result_text.to_lowercase();
+            let has_failure = lower.contains("failed")
+                && !lower.contains("0 failed");
+            let has_error = lower.contains("error[")
+                || lower.contains("error:")
+                || result_text.contains("FAILED");
+            if has_failure || has_error {
                 "bugfix"
             } else {
                 "discovery"

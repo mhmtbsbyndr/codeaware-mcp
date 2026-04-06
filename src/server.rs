@@ -31,14 +31,19 @@ impl McpServer {
         }
 
         // Context injection: load memories from previous sessions
+        let state = Arc::new(Mutex::new(SessionState::new(".")));
         if let Some(ref db_arc) = db {
             if let Ok(db_guard) = db_arc.lock() {
-                crate::hooks::context_injection::inject_context(&db_guard, ".");
+                if let Some(ctx) = crate::hooks::context_injection::inject_context(&db_guard, ".") {
+                    if let Ok(mut s) = state.lock() {
+                        s.set_injected_context(ctx);
+                    }
+                }
             }
         }
 
         McpServer {
-            state: Arc::new(Mutex::new(SessionState::new("."))),
+            state,
             metrics,
             xray_server: Mutex::new(xray),
             db,
@@ -58,7 +63,11 @@ impl McpServer {
         let project_path = state.lock().map(|s| s.project_path().to_string()).unwrap_or_else(|_| ".".to_string());
         if let Some(ref db_arc) = db {
             if let Ok(db_guard) = db_arc.lock() {
-                crate::hooks::context_injection::inject_context(&db_guard, &project_path);
+                if let Some(ctx) = crate::hooks::context_injection::inject_context(&db_guard, &project_path) {
+                    if let Ok(mut s) = state.lock() {
+                        s.set_injected_context(ctx);
+                    }
+                }
             }
         }
 

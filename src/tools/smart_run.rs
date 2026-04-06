@@ -102,6 +102,49 @@ pub fn compute_error_signature(output: &str) -> String {
     blake3::hash(normalized.as_bytes()).to_hex()[..16].to_string()
 }
 
+/// Pick the most informative summary line based on command type.
+fn pick_summary(command_type: &str, compressed: &str, raw: &str) -> String {
+    match command_type {
+        "compiler" => {
+            // Find the first actual error line, not "Compiling foo v0.1.0"
+            if let Some(error_line) = raw.lines().find(|l| {
+                l.starts_with("error[") || l.starts_with("error:")
+            }) {
+                return error_line.to_string();
+            }
+            // Fall through to default
+        }
+        "test_runner" => {
+            // Use the "test result:" line which has pass/fail counts
+            if let Some(result_line) = raw.lines().find(|l| l.starts_with("test result:")) {
+                return result_line.to_string();
+            }
+            // For pytest, look for the summary line with counts
+            if let Some(result_line) = raw.lines().find(|l| {
+                l.contains("passed") && l.starts_with('=')
+            }) {
+                return result_line.trim_matches('=').trim().to_string();
+            }
+        }
+        "linter" => {
+            // For clippy/eslint, find first warning or error
+            if let Some(line) = raw.lines().find(|l| {
+                l.starts_with("error[") || l.starts_with("error:") || l.starts_with("warning:")
+            }) {
+                return line.to_string();
+            }
+        }
+        _ => {}
+    }
+
+    // Default: first non-empty line of compressed output
+    compressed
+        .lines()
+        .find(|l| !l.trim().is_empty())
+        .unwrap_or("(no output)")
+        .to_string()
+}
+
 pub async fn smart_run(input: &SmartRunInput) -> Result<SmartRunResult, SmartRunError> {
     let command_type = crate::compressor::classify_command(&input.command);
 
@@ -158,12 +201,8 @@ pub async fn smart_run(input: &SmartRunInput) -> Result<SmartRunResult, SmartRun
         1.0
     };
 
-    // Summary: first non-empty line or a default message
-    let summary = compressed_output
-        .lines()
-        .find(|l| !l.trim().is_empty())
-        .unwrap_or("(no output)")
-        .to_string();
+    // Summary: pick a meaningful line depending on command type
+    let summary = pick_summary(command_type, &compressed_output, &processed_output);
 
     // Compute error signature
     let error_sig = compute_error_signature(&combined);
