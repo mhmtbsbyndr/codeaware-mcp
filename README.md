@@ -2,7 +2,7 @@
 
 An AI-powered development platform that acts as a **compression, intelligence, and memory layer** between Claude Code and your filesystem. 17 MCP tools, 10 programming languages, persistent cross-session memory, git intelligence, test coverage analysis, and a live dashboard — all in a single Rust binary.
 
-> **v2.0** — 17 tools · 10 languages · persistent memory · git intelligence · smart refactoring · test coverage · live dashboard
+> **v2.1** — 17 tools · 10 languages · persistent memory · git intelligence · smart refactoring · test coverage · live dashboard · hook profiles · governance capture · session persistence · compaction hints
 
 ---
 
