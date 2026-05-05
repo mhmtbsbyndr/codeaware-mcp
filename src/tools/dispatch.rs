@@ -17,6 +17,17 @@ pub fn dispatch_tool(
     metrics: &Arc<Mutex<crate::xray::metrics::MetricsState>>,
 ) -> Value {
     match tool_name {
+        // Foundation runtime tools
+        "token_stats" => crate::tools::foundation::handle_token_stats(tool_input),
+        "token_savings_report" => {
+            crate::tools::foundation::handle_token_savings_report(tool_input)
+        }
+        "benchmark_compression" => {
+            crate::tools::foundation::handle_benchmark_compression(tool_input)
+        }
+        "provide_feedback" => crate::tools::foundation::handle_provide_feedback(tool_input),
+        "token_quality" => crate::tools::foundation::handle_token_quality(tool_input),
+
         "workspace_state" => {
             let result = crate::tools::workspace_state::handle_workspace_state(tool_input, state);
             json!({

@@ -8,3 +8,25 @@ pub mod server;
 pub mod session;
 pub mod tools;
 pub mod xray;
+
+// Token accounting and benchmarking
+pub mod token_stats;
+pub mod token_stats_persistence;
+pub mod token_stats_tools;
+pub mod token_benchmark;
+pub mod token_quality;
+pub mod feedback_layer;
+pub mod experiment_layer;
+
+// Code intelligence
+pub mod symbol_index;
+pub mod deep_research;
+pub mod workspace_awareness;
+
+// Integrations
+pub mod lsp_bridge;
+pub mod browser_awareness;
+
+// Runtime policy and orchestration
+pub mod security_policy;
+pub mod mcp_router;
