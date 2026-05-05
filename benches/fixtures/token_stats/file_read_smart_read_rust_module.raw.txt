@@ -1,0 +1,18 @@
+use axum::{Router, routing::get};
+use serde::{Deserialize, Serialize};
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct AppState {
+    pub version: String,
+    pub environment: String,
+}
+
+pub async fn healthcheck() -> &'static str {
+    "ok"
+}
+
+pub async fn build_router(state: AppState) -> Router {
+    Router::new()
+        .route("/health", get(healthcheck))
+        .with_state(state)
+}

@@ -1,0 +1,15 @@
+symbols:
+- AppState
+- healthcheck
+- build_router
+
+imports:
+- axum::Router
+- axum::routing::get
+- serde::Deserialize
+- serde::Serialize
+
+summary:
+- Router exposes /health endpoint
+- AppState contains version and environment
+- healthcheck returns static ok response

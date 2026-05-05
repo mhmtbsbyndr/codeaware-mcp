@@ -1,0 +1,9 @@
+{
+  "category": "file_read",
+  "tool": "smart_read",
+  "language": "rust",
+  "subject": "src/server.rs",
+  "expected_min_savings_ratio": 0.50,
+  "expected_max_savings_ratio": 0.98,
+  "notes": "Synthetic Rust module fixture for deterministic token accounting benchmarks"
+}
