@@ -27,6 +27,197 @@ This README intentionally separates what is **stable**, what is **runtime-wired 
 
 ---
 
+## ⚡ Quick Start
+
+### 1. Clone the repository
+
+```bash
+git clone https://github.com/mhmtbsbyndr/codeaware-mcp.git
+cd codeaware-mcp
+```
+
+### 2. Build the MCP server
+
+```bash
+cargo build --release
+```
+
+The binary will be available at:
+
+```bash
+./target/release/codeaware-mcp
+```
+
+### 3. Run locally over stdio
+
+```bash
+./target/release/codeaware-mcp
+```
+
+The server speaks **JSON-RPC over stdio**, as expected by MCP clients.
+
+### 4. Add it to Claude Code / MCP config
+
+Example `.mcp.json`:
+
+```json
+{
+  "mcpServers": {
+    "codeaware": {
+      "command": "/absolute/path/to/codeaware-mcp/target/release/codeaware-mcp",
+      "args": [],
+      "env": {}
+    }
+  }
+}
+```
+
+Use an absolute path for the binary when configuring an MCP client.
+
+### 5. Restart Claude Code
+
+After restarting, the `codeaware` MCP server should appear as an available tool provider.
+
+---
+
+## ✅ Requirements
+
+| Requirement | Version / Notes |
+|---|---|
+| Rust | 2021 edition compatible toolchain |
+| Cargo | Included with Rust |
+| SQLite | Used by the existing session/memory foundation |
+| Git | Required for git intelligence tools |
+| Claude Code or MCP client | Any client supporting stdio MCP servers |
+
+Recommended setup:
+
+```bash
+rustup update
+cargo build --release
+cargo test
+```
+
+---
+
+## 🧪 Verify the server
+
+Run tests:
+
+```bash
+cargo test
+```
+
+Start the binary manually:
+
+```bash
+./target/release/codeaware-mcp
+```
+
+Example JSON-RPC initialize call:
+
+```json
+{"jsonrpc":"2.0","id":1,"method":"initialize","params":{}}
+```
+
+Example tool call:
+
+```json
+{"jsonrpc":"2.0","id":2,"method":"tools/call","params":{"name":"token_stats","arguments":{}}}
+```
+
+Example context optimizer call:
+
+```json
+{"jsonrpc":"2.0","id":3,"method":"tools/call","params":{"name":"get_relevant_code","arguments":{"query":"login","source":"fn login() {}\nfn logout() {}","max_snippets":5}}}
+```
+
+---
+
+## ⚙️ Configuration
+
+`codeaware-mcp` is designed to work with a local configuration file such as:
+
+```text
+.codeaware.toml
+```
+
+Example:
+
+```toml
+[context]
+compression_level = "medium"
+tool_policy = "focus_tools"
+extended_thinking_policy = "auto"
+
+[security]
+redact_secrets = true
+allow_network_access = false
+
+[memory]
+enable_progressive_retrieval = true
+respect_private_tags = true
+```
+
+The current stable runtime also supports project/session persistence through the existing internal session database.
+
+---
+
+## 🧰 Common usage patterns
+
+### Explore a project
+
+Use:
+
+```text
+project_map
+smart_read
+code_search
+get_relevant_code
+```
+
+### Debug failing tests
+
+Use:
+
+```text
+smart_run
+get_relevant_test_errors
+token_quality
+```
+
+### Reduce context overhead
+
+Use:
+
+```text
+get_project_context
+tool_manager
+token_stats
+token_savings_report
+```
+
+### Work with memory
+
+Use:
+
+```text
+save_memory
+search_memory
+memory_timeline
+summarize_memory
+```
+
+Progressive memory foundations add:
+
+```text
+compact index -> timeline -> full details
+privacy tags
+memory citations
+```
+
+---
+
 ## ✅ Current capability status
 
 | Feature category | Included? | Status | Notes |
@@ -199,7 +390,7 @@ codeaware-mcp Runtime
 
 ## 🔎 Context optimizer tools
 
-These tools implement the "effective context window expansion" strategy: fewer irrelevant tokens, more useful signal.
+These tools implement the **effective context window expansion** strategy: fewer irrelevant tokens, more useful signal.
 
 ### `get_relevant_code`
 
@@ -279,7 +470,7 @@ Selects enabled tools and extended-thinking behavior based on a context policy.
 
 ## 🧠 Progressive Memory Retrieval
 
-Inspired by layered memory retrieval patterns, `codeaware-mcp` now includes a progressive memory foundation:
+Inspired by layered memory retrieval patterns, `codeaware-mcp` includes a progressive memory foundation:
 
 ```text
 Layer 1: compact index search
