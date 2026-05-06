@@ -1,7 +1,7 @@
 # 🧠 codeaware-mcp
 
 <p align="center">
-  <strong>Local-first AI Code Intelligence, Token Compression, Research & Quality Runtime for MCP Agents</strong>
+  <strong>Local-first AI Code Intelligence, Token Compression, Progressive Memory, Research & Quality Runtime for MCP Agents</strong>
 </p>
 
 <p align="center">
@@ -21,15 +21,15 @@ It sits between the agent and your repository and returns **compressed, structur
 
 The current project is best described as:
 
-> **Stable core compression + runtime-wired v3 foundation for token quality, feedback, benchmarks and future code intelligence.**
+> **Stable core compression + runtime-wired v3 foundation for token quality, feedback, context optimization, progressive memory, benchmarks and future code intelligence.**
 
-This README intentionally separates what is **stable**, what is **runtime-wired foundation**, and what is still **planned**.
+This README intentionally separates what is **stable**, what is **runtime-wired foundation**, and what is still **planned/provider-backed**.
 
 ---
 
 ## ✅ Current capability status
 
-| Feature category | Currently included? | Status | Notes |
+| Feature category | Included? | Status | Notes |
 |---|---:|---|---|
 | Tree-sitter based AST/code compression | ✅ | Stable core | Core code-aware compression concept |
 | Terminal / run output compression | ✅ | Stable core | Reduces build/test output to relevant signals |
@@ -41,6 +41,8 @@ This README intentionally separates what is **stable**, what is **runtime-wired 
 | Compression benchmark runtime | ✅ | Runtime-wired foundation | `benchmark_compression` tool wired into MCP dispatch |
 | Token quality monitor | ✅ | Runtime-wired foundation | Quality model exists; DB-backed history is next |
 | Human feedback layer | ✅ | Runtime-wired foundation | `provide_feedback` validates feedback; persistence is next |
+| Context optimizer | ✅ | Runtime-wired foundation | Relevant snippets, test-error extraction, project-context reduction, tool policies |
+| Progressive memory retrieval | ✅ | Foundation | Compact index → timeline → detail workflow, privacy tags, citations |
 | A/B compression experiments | ✅ | Foundation | Pipeline model and report logic exist |
 | Symbol index / code graph | 🧱 | Foundation | Models and query logic exist; provider ingestion is next |
 | Deep research layer | 🧱 | Foundation | Evidence model exists; full provider wiring is next |
@@ -71,16 +73,18 @@ Context compaction           -> working memory disappears
 `codeaware-mcp` aims to turn that into:
 
 ```text
-smart_read              -> symbols, imports, focused context
-token_stats             -> measurable token savings
-token_quality           -> quality rating from test/build signals
-benchmark_compression   -> reproducible compression metrics
-deep_research           -> evidence-based repository answers
-query_symbols           -> graph-aware code navigation
-provide_feedback        -> human-in-the-loop improvement signal
+smart_read                  -> symbols, imports, focused context
+token_stats                 -> measurable token savings
+token_quality               -> quality rating from test/build signals
+benchmark_compression       -> reproducible compression metrics
+get_relevant_code           -> only matching code snippets
+get_relevant_test_errors    -> only failure signals and impacted files
+get_project_context         -> compact project instructions
+progressive_memory_plan     -> compact index -> timeline -> full detail pattern
+provide_feedback            -> human-in-the-loop improvement signal
 ```
 
-The goal is not only to save tokens. The goal is to make AI coding agents cheaper, safer, more evidence-based, and measurable over time.
+The goal is not to increase a model's raw context window. The goal is to increase **effective usable context** through relevance density, progressive retrieval and quality-per-token.
 
 ---
 
@@ -105,10 +109,24 @@ codeaware-mcp Runtime
       |     +-- token_savings_report
       |     +-- benchmark_compression
       |
+      +-- Context Optimization Runtime
+      |     +-- get_relevant_code
+      |     +-- code_search
+      |     +-- get_relevant_test_errors
+      |     +-- get_project_context
+      |     +-- tool_manager
+      |
       +-- Quality Runtime
       |     +-- token_quality
       |     +-- provide_feedback
       |     +-- compression experiments
+      |
+      +-- Progressive Memory Foundation
+      |     +-- compact memory index
+      |     +-- timeline window
+      |     +-- observation details
+      |     +-- privacy tag filtering
+      |     +-- memory citations
       |
       +-- Code Intelligence Foundation
       |     +-- symbol index
@@ -138,9 +156,31 @@ codeaware-mcp Runtime
 
 ---
 
-## ✅ Runtime-wired MCP tools added in v3 foundation
+## 🧰 Full MCP tool inventory
 
-These tools are connected to the real MCP `tools/call` dispatch path.
+### Stable / existing tools
+
+| Tool | Purpose |
+|---|---|
+| `project_map` | Generate a compressed structural overview of a project |
+| `smart_read` | Read code with skeleton/focused/diff/full modes |
+| `smart_edit` | Edit files with impact/conflict-aware strategies |
+| `smart_run` | Run commands with compressed output capture |
+| `session_status` | Report current session state and compaction context |
+| `workspace_state` | Read/write typed workspace slots |
+| `validate_config` | Validate CodeAware configuration |
+| `xray` | Open live metrics/dashboard view |
+| `save_memory` | Save persistent semantic observations |
+| `search_memory` | Search persistent memory |
+| `memory_timeline` | Retrieve observations around an anchor |
+| `summarize_memory` | Cluster and deduplicate observations |
+| `git_diff` | Structured git diff summaries |
+| `git_blame` | Structured blame context |
+| `git_changelog` | Conventional changelog generation |
+| `smart_refactor` | AST-aware rename/refactor preview |
+| `test_coverage_map` | Function-level heuristic test coverage map |
+
+### Runtime-wired v3 foundation tools
 
 | Tool | Purpose | Status |
 |---|---|---|
@@ -149,20 +189,122 @@ These tools are connected to the real MCP `tools/call` dispatch path.
 | `benchmark_compression` | Runs deterministic compression benchmark logic | Runtime-wired foundation |
 | `provide_feedback` | Accepts human feedback ratings and comments | Runtime-wired foundation |
 | `token_quality` | Evaluates quality from test/build signals | Runtime-wired foundation |
+| `get_relevant_code` | Returns relevant code snippets instead of whole files | Runtime-wired foundation |
+| `code_search` | Finds relevant snippets with file/symbol hints | Runtime-wired foundation |
+| `get_relevant_test_errors` | Extracts test/build errors and impacted files | Runtime-wired foundation |
+| `get_project_context` | Reduces long instructions/docs to architecture and rules | Runtime-wired foundation |
+| `tool_manager` | Selects enabled tools and thinking policy by context policy | Runtime-wired foundation |
 
-Example:
+---
+
+## 🔎 Context optimizer tools
+
+These tools implement the "effective context window expansion" strategy: fewer irrelevant tokens, more useful signal.
+
+### `get_relevant_code`
+
+Returns only matching code snippets rather than whole files.
 
 ```json
 {
-  "name": "token_quality",
+  "name": "get_relevant_code",
   "arguments": {
-    "command": "cargo test",
-    "exit_code": 0,
-    "passed": 42,
-    "failed": 0,
-    "duration_ms": 1500
+    "query": "login",
+    "source": "fn login() {}\nfn logout() {}",
+    "max_snippets": 5
   }
 }
+```
+
+### `code_search`
+
+Searches source content and returns file/symbol/line/snippet matches.
+
+```json
+{
+  "name": "code_search",
+  "arguments": {
+    "query": "AuthManager",
+    "path": "src/auth.rs",
+    "source": "struct AuthManager {}",
+    "max_results": 8
+  }
+}
+```
+
+### `get_relevant_test_errors`
+
+Extracts relevant failure lines and impacted files from noisy test/build output.
+
+```json
+{
+  "name": "get_relevant_test_errors",
+  "arguments": {
+    "output": "test failed\nerror in src/auth.rs:10",
+    "duration_ms": 1200
+  }
+}
+```
+
+### `get_project_context`
+
+Compresses long project instructions or docs into architecture and key rules.
+
+```json
+{
+  "name": "get_project_context",
+  "arguments": {
+    "source": "Architecture: Rust MCP runtime\nYou must keep responses deterministic\nLong example text"
+  }
+}
+```
+
+### `tool_manager`
+
+Selects enabled tools and extended-thinking behavior based on a context policy.
+
+```json
+{
+  "name": "tool_manager",
+  "arguments": {
+    "context_compression_level": "aggressive",
+    "tool_policy": "minimal_tools",
+    "extended_thinking_policy": "auto",
+    "tools_to_enable": ["smart_read", "web_search", "token_stats"]
+  }
+}
+```
+
+---
+
+## 🧠 Progressive Memory Retrieval
+
+Inspired by layered memory retrieval patterns, `codeaware-mcp` now includes a progressive memory foundation:
+
+```text
+Layer 1: compact index search
+Layer 2: timeline/context window around selected IDs
+Layer 3: full observation details only for final filtered IDs
+```
+
+This avoids loading full memories too early and improves context density.
+
+### Privacy tags
+
+`codeaware-mcp` recognizes private memory sections:
+
+```text
+<private>
+Do not inject this into future context.
+</private>
+```
+
+### Memory citations
+
+Memory observations can be cited with stable IDs:
+
+```text
+memory://observation/42
 ```
 
 ---
@@ -178,6 +320,8 @@ Example:
 | `src/token_quality.rs` | Quality rating from test/build signals | Runtime-wired foundation |
 | `src/feedback_layer.rs` | Human-in-the-loop feedback model | Runtime-wired foundation |
 | `src/experiment_layer.rs` | Compression pipeline experiments | Foundation |
+| `src/context_optimizer.rs` | Effective context-window optimization runtime | Runtime-wired foundation |
+| `src/progressive_memory.rs` | Progressive disclosure memory retrieval, privacy tags and citations | Foundation |
 | `src/symbol_index.rs` | Repository symbol graph foundation | Foundation |
 | `src/deep_research.rs` | Evidence-based research skeleton | Foundation |
 | `src/workspace_awareness.rs` | Multi-repo workspace model | Foundation |
@@ -222,7 +366,7 @@ Example metadata:
 
 ## 🧠 Token Quality Monitoring
 
-`codeaware-mcp` now includes a quality model so compression can be judged by outcome, not just smaller output.
+`codeaware-mcp` includes a quality model so compression can be judged by outcome, not just smaller output.
 
 | Rating | Meaning |
 |---|---|
@@ -267,6 +411,7 @@ Security is part of the runtime model:
 - command deny-list checks,
 - path deny-list checks,
 - future secret redaction hooks,
+- privacy-tag filtering,
 - explicit security findings,
 - local-first default behavior,
 - future network/offline policy controls.
@@ -285,6 +430,8 @@ Security is part of the runtime model:
 - benchmark runtime
 - token quality monitoring
 - feedback layer
+- context optimizer tools
+- progressive memory foundations
 - compression experiments
 - MCP dispatch wiring
 
@@ -293,6 +440,7 @@ Security is part of the runtime model:
 - SQLite-backed token events
 - persisted feedback
 - persisted quality history
+- persisted progressive memory index
 - benchmark fixture loader
 - dashboard panels
 
@@ -330,7 +478,8 @@ Security is part of the runtime model:
 - real JSON-RPC dispatch,
 - stable compression-oriented MCP tools,
 - real foundation tool handlers,
-- runtime-wired token/quality/benchmark tools,
+- runtime-wired token/quality/benchmark/context tools,
+- progressive memory foundations,
 - architecture foundations for code intelligence and research.
 
 Some modules are intentionally foundation-level and still need provider wiring, especially SQLite adapters, tree-sitter ingestion, LSP process integration, browser/CDP runtime connection, and dashboard UI updates.
