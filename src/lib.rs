@@ -21,6 +21,9 @@ pub mod experiment_layer;
 // Context window optimization
 pub mod context_optimizer;
 
+// Progressive memory inspired by layered retrieval patterns
+pub mod progressive_memory;
+
 // Code intelligence
 pub mod symbol_index;
 pub mod deep_research;
