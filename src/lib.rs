@@ -18,6 +18,9 @@ pub mod token_quality;
 pub mod feedback_layer;
 pub mod experiment_layer;
 
+// Context window optimization
+pub mod context_optimizer;
+
 // Code intelligence
 pub mod symbol_index;
 pub mod deep_research;

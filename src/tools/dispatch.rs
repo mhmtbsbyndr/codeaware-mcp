@@ -28,6 +28,15 @@ pub fn dispatch_tool(
         "provide_feedback" => crate::tools::foundation::handle_provide_feedback(tool_input),
         "token_quality" => crate::tools::foundation::handle_token_quality(tool_input),
 
+        // Context-window optimizer tools
+        "get_relevant_code" => crate::tools::foundation::handle_get_relevant_code(tool_input),
+        "code_search" => crate::tools::foundation::handle_code_search(tool_input),
+        "get_relevant_test_errors" => {
+            crate::tools::foundation::handle_get_relevant_test_errors(tool_input)
+        }
+        "get_project_context" => crate::tools::foundation::handle_get_project_context(tool_input),
+        "tool_manager" => crate::tools::foundation::handle_tool_manager(tool_input),
+
         "workspace_state" => {
             let result = crate::tools::workspace_state::handle_workspace_state(tool_input, state);
             json!({
