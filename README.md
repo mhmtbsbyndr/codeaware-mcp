@@ -19,29 +19,41 @@
 
 It sits between the agent and your repository and returns **compressed, structured, evidence-based code intelligence** instead of raw files, noisy terminal output, repeated diffs, and unmeasured token usage.
 
-It is evolving from a token-saving helper into a full:
+The current project is best described as:
 
-> **AI Code Intelligence / Compression / Research / Quality Optimization Runtime**
+> **Stable core compression + runtime-wired v3 foundation for token quality, feedback, benchmarks and future code intelligence.**
+
+This README intentionally separates what is **stable**, what is **runtime-wired foundation**, and what is still **planned**.
 
 ---
 
-## ✨ Highlights
+## ✅ Current capability status
 
-| Capability | Status | Description |
-|---|---:|---|
-| 🧮 Token Accounting | ✅ Runtime wired | Measure raw vs compressed token usage |
-| 📊 Savings Reports | ✅ Runtime wired | Generate Markdown token savings reports |
-| 🧪 Compression Benchmarks | ✅ Runtime wired | Validate compression fixtures and savings ratios |
-| ⭐ Token Quality Monitor | ✅ Foundation | Good/Warning/Bad evaluation from test signals |
-| 💬 Human Feedback Layer | ✅ Foundation | Feedback entries, ratings, aggregation |
-| 🧪 A/B Compression Experiments | ✅ Foundation | Compare compression pipelines by quality and token cost |
-| 🧠 Symbol Index | 🧱 Foundation | Repository graph: files, symbols, references, call edges |
-| 🔎 Deep Research | 🧱 Foundation | Evidence-based answers from code structure |
-| 🧩 Multi-Repo Workspace | 🧱 Foundation | Workspace maps and cross-repo awareness |
-| 🧬 LSP Bridge | 🧱 Foundation | Hover, definitions, references, diagnostics abstraction |
-| 🌐 Browser Awareness | 🧱 Foundation | DOM, console, and network summaries |
-| 🛡️ Security Policy | 🧱 Foundation | Command/path validation and policy findings |
-| 🔀 MCP Router | 🧱 Foundation | Capability-based MCP routing skeleton |
+| Feature category | Currently included? | Status | Notes |
+|---|---:|---|---|
+| Tree-sitter based AST/code compression | ✅ | Stable core | Core code-aware compression concept |
+| Terminal / run output compression | ✅ | Stable core | Reduces build/test output to relevant signals |
+| Git intelligence and session reconstruction | ✅ | Stable core | Git diff, changelog, blame and session context support |
+| Persistent session/memory layer | ✅ | Stable core | Existing SQLite/session foundation |
+| XRay dashboard | ✅ | Stable core | Existing live metrics/dashboard layer |
+| Token accounting runtime | ✅ | Runtime-wired foundation | `token_stats` tool wired into MCP dispatch |
+| Token savings reports | ✅ | Runtime-wired foundation | `token_savings_report` tool wired into MCP dispatch |
+| Compression benchmark runtime | ✅ | Runtime-wired foundation | `benchmark_compression` tool wired into MCP dispatch |
+| Token quality monitor | ✅ | Runtime-wired foundation | Quality model exists; DB-backed history is next |
+| Human feedback layer | ✅ | Runtime-wired foundation | `provide_feedback` validates feedback; persistence is next |
+| A/B compression experiments | ✅ | Foundation | Pipeline model and report logic exist |
+| Symbol index / code graph | 🧱 | Foundation | Models and query logic exist; provider ingestion is next |
+| Deep research layer | 🧱 | Foundation | Evidence model exists; full provider wiring is next |
+| LSP bridge | 🧱 | Foundation | Abstraction exists; process/provider wiring is next |
+| Browser/CDP awareness | 🧱 | Foundation | Summary model exists; runtime browser connector is next |
+| Security / policy layer | 🧱 | Foundation | Validation model exists; wider enforcement is next |
+| MCP router / orchestration | 🧱 | Foundation | Capability routing skeleton exists |
+
+Legend:
+
+- ✅ **Stable core**: implemented as part of the existing MCP server capability set.
+- ✅ **Runtime-wired foundation**: handler is connected to the MCP `tools/call` dispatch path, but deeper persistence/provider wiring may still evolve.
+- 🧱 **Foundation**: models and core logic exist, but external providers or full runtime integration are roadmap work.
 
 ---
 
@@ -83,7 +95,7 @@ MCP JSON-RPC / stdio
       v
 codeaware-mcp Runtime
       |
-      +-- Compression Layer
+      +-- Stable Compression Layer
       |     +-- smart_read
       |     +-- smart_run
       |     +-- git intelligence
@@ -98,26 +110,26 @@ codeaware-mcp Runtime
       |     +-- provide_feedback
       |     +-- compression experiments
       |
-      +-- Code Intelligence Layer
+      +-- Code Intelligence Foundation
       |     +-- symbol index
       |     +-- references
       |     +-- callers / callees
       |     +-- outline extraction
       |
-      +-- Research Layer
+      +-- Research Foundation
       |     +-- deep_research
       |     +-- evidence model
       |     +-- suggested next actions
       |
-      +-- Workspace Layer
+      +-- Workspace Foundation
       |     +-- workspace map
       |     +-- cross-repo search
       |
-      +-- Integration Layer
+      +-- Integration Foundations
       |     +-- LSP bridge
       |     +-- browser/CDP awareness
       |
-      +-- Safety Layer
+      +-- Safety Foundation
             +-- security policy
             +-- command validation
             +-- path validation
@@ -126,17 +138,17 @@ codeaware-mcp Runtime
 
 ---
 
-## ✅ Runtime-wired MCP tools
+## ✅ Runtime-wired MCP tools added in v3 foundation
 
 These tools are connected to the real MCP `tools/call` dispatch path.
 
-| Tool | Purpose |
-|---|---|
-| `token_stats` | Returns a token accounting summary |
-| `token_savings_report` | Returns a Markdown savings report |
-| `benchmark_compression` | Runs deterministic compression benchmark logic |
-| `provide_feedback` | Accepts human feedback ratings and comments |
-| `token_quality` | Evaluates quality from test/build signals |
+| Tool | Purpose | Status |
+|---|---|---|
+| `token_stats` | Returns a token accounting summary | Runtime-wired foundation |
+| `token_savings_report` | Returns a Markdown savings report | Runtime-wired foundation |
+| `benchmark_compression` | Runs deterministic compression benchmark logic | Runtime-wired foundation |
+| `provide_feedback` | Accepts human feedback ratings and comments | Runtime-wired foundation |
+| `token_quality` | Evaluates quality from test/build signals | Runtime-wired foundation |
 
 Example:
 
@@ -155,25 +167,25 @@ Example:
 
 ---
 
-## 📦 Runtime modules
+## 📦 v3 foundation modules
 
-| Module | Purpose |
-|---|---|
-| `src/token_stats.rs` | Token events, deterministic estimation, aggregation |
-| `src/token_stats_persistence.rs` | Token event persistence contract and SQL schema |
-| `src/token_stats_tools.rs` | Tool DTOs and Markdown report rendering |
-| `src/token_benchmark.rs` | Compression benchmark runtime |
-| `src/token_quality.rs` | Quality rating from test/build signals |
-| `src/feedback_layer.rs` | Human-in-the-loop feedback model |
-| `src/experiment_layer.rs` | Compression pipeline experiments |
-| `src/symbol_index.rs` | Repository symbol graph foundation |
-| `src/deep_research.rs` | Evidence-based research skeleton |
-| `src/workspace_awareness.rs` | Multi-repo workspace model |
-| `src/lsp_bridge.rs` | Editor/LSP bridge abstraction |
-| `src/browser_awareness.rs` | Browser/CDP summary abstraction |
-| `src/security_policy.rs` | Security policy and validation findings |
-| `src/mcp_router.rs` | MCP route and capability router |
-| `src/tools/foundation.rs` | Live MCP handlers for foundation tools |
+| Module | Purpose | Status |
+|---|---|---|
+| `src/token_stats.rs` | Token events, deterministic estimation, aggregation | Runtime-wired foundation |
+| `src/token_stats_persistence.rs` | Token event persistence contract and SQL schema | Foundation |
+| `src/token_stats_tools.rs` | Tool DTOs and Markdown report rendering | Runtime-wired foundation |
+| `src/token_benchmark.rs` | Compression benchmark runtime | Runtime-wired foundation |
+| `src/token_quality.rs` | Quality rating from test/build signals | Runtime-wired foundation |
+| `src/feedback_layer.rs` | Human-in-the-loop feedback model | Runtime-wired foundation |
+| `src/experiment_layer.rs` | Compression pipeline experiments | Foundation |
+| `src/symbol_index.rs` | Repository symbol graph foundation | Foundation |
+| `src/deep_research.rs` | Evidence-based research skeleton | Foundation |
+| `src/workspace_awareness.rs` | Multi-repo workspace model | Foundation |
+| `src/lsp_bridge.rs` | Editor/LSP bridge abstraction | Foundation |
+| `src/browser_awareness.rs` | Browser/CDP summary abstraction | Foundation |
+| `src/security_policy.rs` | Security policy and validation findings | Foundation |
+| `src/mcp_router.rs` | MCP route and capability router | Foundation |
+| `src/tools/foundation.rs` | Live MCP handlers for foundation tools | Runtime-wired foundation |
 
 ---
 
@@ -193,6 +205,19 @@ Naming convention:
 <category>_<tool>_<name>.meta.json
 ```
 
+Example metadata:
+
+```json
+{
+  "category": "file_read",
+  "tool": "smart_read",
+  "language": "rust",
+  "subject": "src/server.rs",
+  "expected_min_savings_ratio": 0.50,
+  "expected_max_savings_ratio": 0.98
+}
+```
+
 ---
 
 ## 🧠 Token Quality Monitoring
@@ -204,6 +229,20 @@ Naming convention:
 | `Good` | Tests/build signals are clean |
 | `Warning` | Tests pass, but signals are suspicious, slow, or degraded |
 | `Bad` | Tests/build failed |
+
+This enables future reports such as:
+
+```text
+Pipeline: ast_diff_only
+  - Average tokens: 1,200
+  - Quality GOOD: 85%
+  - Tests pass: 92%
+
+Pipeline: git_only
+  - Average tokens: 900
+  - Quality GOOD: 70%
+  - Tests pass: 65%
+```
 
 ---
 
@@ -236,8 +275,11 @@ Security is part of the runtime model:
 
 ## 🗺️ Roadmap
 
-### Phase 1 — Token & Quality Runtime ✅
+### Phase 1 — Stable core + v3 runtime foundation ✅
 
+- AST/code compression
+- terminal output compression
+- git intelligence
 - token accounting
 - savings reports
 - benchmark runtime
@@ -246,7 +288,7 @@ Security is part of the runtime model:
 - compression experiments
 - MCP dispatch wiring
 
-### Phase 2 — Persistence & Real Metrics
+### Phase 2 — Persistence & real metrics
 
 - SQLite-backed token events
 - persisted feedback
@@ -254,7 +296,7 @@ Security is part of the runtime model:
 - benchmark fixture loader
 - dashboard panels
 
-### Phase 3 — Code Intelligence Runtime
+### Phase 3 — Code intelligence runtime
 
 - persistent symbol index
 - tree-sitter ingestion
@@ -262,7 +304,7 @@ Security is part of the runtime model:
 - impact analysis
 - hotspot ranking
 
-### Phase 4 — Research & Workspace Intelligence
+### Phase 4 — Research & workspace intelligence
 
 - deep research with evidence
 - workspace map tool
@@ -281,11 +323,12 @@ Security is part of the runtime model:
 
 ## 🚦 Current status
 
-`codeaware-mcp` now has:
+`codeaware-mcp` currently has:
 
 - real Rust crate structure,
 - real MCP stdio server,
 - real JSON-RPC dispatch,
+- stable compression-oriented MCP tools,
 - real foundation tool handlers,
 - runtime-wired token/quality/benchmark tools,
 - architecture foundations for code intelligence and research.
