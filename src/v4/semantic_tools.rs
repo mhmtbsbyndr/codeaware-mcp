@@ -54,7 +54,7 @@ impl SemanticTools {
 
     pub fn find_tests(req: FindTestsRequest) -> V4Result<SymbolTestResult> {
         let index = SemanticIndexBuilder::build(&req.repo_root)?;
-        SemanticRetrieval::find_tests(&index.tests, &req.symbol)
+        Ok(SemanticRetrieval::find_tests(&index.tests, &req.symbol))
     }
 
     pub fn diff_impact(req: DiffImpactRequest) -> V4Result<ImpactResult> {

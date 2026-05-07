@@ -32,46 +32,9 @@ fn probe_existing_server() -> bool {
     false
 }
 
-/// Create a TcpListener with SO_REUSEADDR so the port is available immediately
-/// after a previous process exits.
 fn bind_with_reuseaddr(port: u16) -> Result<TcpListener, std::io::Error> {
-    use std::os::unix::io::FromRawFd;
-
-    unsafe {
-        let fd = libc::socket(libc::AF_INET, libc::SOCK_STREAM, 0);
-        if fd < 0 {
-            return Err(std::io::Error::last_os_error());
-        }
-
-        let optval: libc::c_int = 1;
-        libc::setsockopt(
-            fd,
-            libc::SOL_SOCKET,
-            libc::SO_REUSEADDR,
-            &optval as *const _ as *const libc::c_void,
-            std::mem::size_of::<libc::c_int>() as libc::socklen_t,
-        );
-
-        let mut addr: libc::sockaddr_in = std::mem::zeroed();
-        addr.sin_family = libc::AF_INET as libc::sa_family_t;
-        addr.sin_port = port.to_be();
-        addr.sin_addr = libc::in_addr { s_addr: u32::from_be_bytes([127, 0, 0, 1]).to_be() };
-
-        if libc::bind(fd, &addr as *const libc::sockaddr_in as *const libc::sockaddr,
-                       std::mem::size_of::<libc::sockaddr_in>() as libc::socklen_t) < 0 {
-            let err = std::io::Error::last_os_error();
-            libc::close(fd);
-            return Err(err);
-        }
-
-        if libc::listen(fd, 128) < 0 {
-            let err = std::io::Error::last_os_error();
-            libc::close(fd);
-            return Err(err);
-        }
-
-        Ok(TcpListener::from_raw_fd(fd))
-    }
+    let address = format!("127.0.0.1:{port}");
+    TcpListener::bind(address)
 }
 
 impl XrayServer {
@@ -87,7 +50,7 @@ impl XrayServer {
             });
         }
 
-        // Bind with SO_REUSEADDR so port is immediately reusable after process exit
+        // Bind to default port first, then gracefully fall back to a free ephemeral port.
         let listener = bind_with_reuseaddr(DEFAULT_PORT)
             .or_else(|_| TcpListener::bind("127.0.0.1:0"))?;
         let port = listener.local_addr()?.port();

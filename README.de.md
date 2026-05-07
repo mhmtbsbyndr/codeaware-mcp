@@ -434,7 +434,22 @@ cargo test
 
 Der Server spricht **JSON-RPC über stdio**, wie von MCP-Clients erwartet.
 
-### 5. In Claude Code / MCP konfigurieren
+### 5. Optional: Dashboard auf macOS dauerhaft laufen lassen (LaunchAgent)
+
+```bash
+chmod +x scripts/setup-codeaware-mcp-dashboard-launchd.sh
+./scripts/setup-codeaware-mcp-dashboard-launchd.sh install /usr/local/bin/codeaware-mcp
+```
+
+Weitere Befehle:
+
+- `./scripts/setup-codeaware-mcp-dashboard-launchd.sh stop`
+- `./scripts/setup-codeaware-mcp-dashboard-launchd.sh start`
+- `./scripts/setup-codeaware-mcp-dashboard-launchd.sh uninstall`
+
+Zur Prüfung: Rufe im MCP die `xray`-Funktion auf und öffne die angezeigte URL (z. B. `http://127.0.0.1:9847`).
+
+### 6. In Claude Code / MCP konfigurieren
 
 Beispiel `.mcp.json`:
 
