@@ -8,7 +8,7 @@
   <img alt="Rust" src="https://img.shields.io/badge/Rust-2021-orange?style=for-the-badge&logo=rust" />
   <img alt="MCP" src="https://img.shields.io/badge/MCP-JSON--RPC-blue?style=for-the-badge" />
   <img alt="Local First" src="https://img.shields.io/badge/Local--First-Yes-success?style=for-the-badge" />
-  <img alt="Status" src="https://img.shields.io/badge/Status-v4%20Kernel-purple?style=for-the-badge" />
+  <img alt="Status" src="https://img.shields.io/badge/Status-v4%20Semantic%20Runtime-purple?style=for-the-badge" />
 </p>
 
 ---
@@ -60,6 +60,7 @@ src/v4/
   architecture_memory.rs
   budget.rs
   cache.rs
+  cache_invalidation.rs
   call_graph.rs
   context.rs
   context_items.rs
@@ -69,6 +70,8 @@ src/v4/
   impact.rs
   import_graph.rs
   index_builder.rs
+  language_support.rs
+  precision.rs
   ranking.rs
   recovery.rs
   retrieval.rs
@@ -106,13 +109,123 @@ src/v4/
 | SemanticIndex | Implemented |
 | SemanticContextAssembler | Implemented |
 | semantic-first `get_task_context` | Implemented |
-| Semantic tools: find_symbol/find_callers/find_tests/diff_impact | Implemented as runtime APIs |
+| Semantic tools: find_symbol/find_callers/find_tests/diff_impact | Implemented and wired into MCP dispatch |
 | Architecture memory | Implemented foundation |
 | Decision memory | Implemented foundation |
 | Semantic recovery | Implemented foundation |
 | Semantic router | Implemented foundation |
+| Cache invalidation | Implemented foundation |
+| Multi-language detection | Implemented foundation |
+| Precision metrics | Implemented foundation |
 
-Important: some v4 tools exist as runtime APIs and still need full JSON-RPC MCP dispatch registration for production MCP clients.
+---
+
+## 🔌 v4 MCP tools
+
+The following v4 tools are wired into the MCP `tools/call` dispatcher:
+
+```text
+codeaware.get_task_context
+codeaware.find_symbol
+codeaware.find_callers
+codeaware.find_tests
+codeaware.diff_impact
+```
+
+### `codeaware.get_task_context`
+
+Builds a bounded semantic context package for an AI coding task.
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 10,
+  "method": "tools/call",
+  "params": {
+    "name": "codeaware.get_task_context",
+    "arguments": {
+      "repo_root": "/workspace/project",
+      "goal": "Refactor semantic context assembly"
+    }
+  }
+}
+```
+
+### `codeaware.find_symbol`
+
+Finds symbols from the semantic index.
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 11,
+  "method": "tools/call",
+  "params": {
+    "name": "codeaware.find_symbol",
+    "arguments": {
+      "repo_root": "/workspace/project",
+      "query": "ContextPackage"
+    }
+  }
+}
+```
+
+### `codeaware.find_callers`
+
+Finds callers of a symbol.
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 12,
+  "method": "tools/call",
+  "params": {
+    "name": "codeaware.find_callers",
+    "arguments": {
+      "repo_root": "/workspace/project",
+      "symbol": "build_context"
+    }
+  }
+}
+```
+
+### `codeaware.find_tests`
+
+Finds tests related to a symbol.
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 13,
+  "method": "tools/call",
+  "params": {
+    "name": "codeaware.find_tests",
+    "arguments": {
+      "repo_root": "/workspace/project",
+      "symbol": "ContextPackage"
+    }
+  }
+}
+```
+
+### `codeaware.diff_impact`
+
+Estimates semantic impact for a changed file.
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 14,
+  "method": "tools/call",
+  "params": {
+    "name": "codeaware.diff_impact",
+    "arguments": {
+      "repo_root": "/workspace/project",
+      "changed_path": "src/v4/tools.rs"
+    }
+  }
+}
+```
 
 ---
 
@@ -205,11 +318,11 @@ Context compaction           -> working memory disappears
 CodeAware v4 moves toward:
 
 ```text
-get_task_context             -> bounded semantic context package
-find_symbol                  -> symbol-level retrieval
-find_callers                 -> caller graph lookup
-find_tests                   -> related tests
-_diff_impact                 -> impact-aware reasoning
+codeaware.get_task_context   -> bounded semantic context package
+codeaware.find_symbol        -> symbol-level retrieval
+codeaware.find_callers       -> caller graph lookup
+codeaware.find_tests         -> related tests
+codeaware.diff_impact        -> impact-aware reasoning
 semantic_router              -> cheap/balanced/premium model routing hint
 semantic_recovery            -> compact task recovery snapshot
 ```
@@ -303,6 +416,12 @@ Example existing tool call:
 {"jsonrpc":"2.0","id":2,"method":"tools/call","params":{"name":"token_stats","arguments":{}}}
 ```
 
+Example v4 semantic tool call:
+
+```json
+{"jsonrpc":"2.0","id":3,"method":"tools/call","params":{"name":"codeaware.get_task_context","arguments":{"repo_root":".","goal":"Explain v4 semantic context"}}}
+```
+
 ---
 
 ## 🗂️ v4 Documentation
@@ -316,6 +435,7 @@ docs/CODEAWARE_V4_PHASE1_IMPLEMENTATION_SPEC.md
 docs/CODEAWARE_V4_IMPLEMENTATION_SNAPSHOT.md
 docs/CODEAWARE_V4_PHASE2_STATUS.md
 docs/CODEAWARE_V4_FINAL_ARCHITECTURE.md
+docs/CODEAWARE_V4_MCP_TOOLS.md
 ```
 
 ---
@@ -327,6 +447,7 @@ CodeAware currently has:
 - real Rust crate structure,
 - real MCP stdio server,
 - real JSON-RPC dispatch for existing tools,
+- v4 semantic MCP tool dispatch,
 - stable compression-oriented MCP tools,
 - runtime-wired token/quality/benchmark/context tools,
 - progressive memory foundations,
@@ -339,10 +460,9 @@ Remaining production-hardening tasks:
 ```text
 - run full cargo test in CI/local environment
 - fix any compile/test regressions if found
-- wire v4 semantic APIs into MCP tools/call dispatch
-- add persistent semantic cache invalidation
-- extend tree-sitter support beyond Rust
+- extend tree-sitter support beyond Rust extraction
 - add production-grade AST call extraction
+- improve semantic index cache invalidation strategy
 ```
 
 ---
