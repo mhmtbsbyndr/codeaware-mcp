@@ -3,8 +3,34 @@ set -euo pipefail
 
 OS="$(uname -s)"
 LABEL="com.mhmtbsbyndr.codeaware-mcp"
-WRAPPER_DIR="$HOME/.local/bin"
+resolve_wrapper_dir() {
+  for dir in "$HOME/.local/bin" "$HOME/.cache/codeaware-mcp" "/tmp/codeaware-mcp-dashboard"; do
+    if mkdir -p "$dir" 2>/dev/null && touch "$dir/.codeaware-mcp-dashboard-test-write" 2>/dev/null; then
+      rm -f "$dir/.codeaware-mcp-dashboard-test-write"
+      echo "$dir"
+      return 0
+    fi
+  done
+  return 1
+}
+
+WRAPPER_DIR="$(resolve_wrapper_dir)" || {
+  echo "No writable wrapper directory found."
+  exit 1
+}
+
 WRAPPER="$WRAPPER_DIR/codeaware-mcp-dashboard-daemon.sh"
+LOG_DIR_CANDIDATES=("$HOME/Library/Logs/codeaware-mcp-dashboard" "/tmp/codeaware-mcp-dashboard")
+resolve_log_dir() {
+  for dir in "$@"; do
+    if mkdir -p "$dir" 2>/dev/null && touch "$dir/.codeaware-mcp-dashboard-test-write" 2>/dev/null; then
+      rm -f "$dir/.codeaware-mcp-dashboard-test-write"
+      echo "$dir"
+      return 0
+    fi
+  done
+  return 1
+}
 
 ACTION="${1:-}"
 BINARY="${2:-}"
@@ -21,9 +47,25 @@ if [ "$ACTION" = "" ]; then
 fi
 
 if [ "$OS" = "Darwin" ]; then
-  LAUNCH_DIR="$HOME/Library/LaunchAgents"
+resolve_launch_dir() {
+  for dir in "$HOME/Library/LaunchAgents" "/tmp/codeaware-mcp-dashboard"; do
+      if mkdir -p "$dir" 2>/dev/null && touch "$dir/.codeaware-mcp-dashboard-test-write" 2>/dev/null; then
+        rm -f "$dir/.codeaware-mcp-dashboard-test-write"
+        echo "$dir"
+        return 0
+      fi
+    done
+    return 1
+  }
+  LAUNCH_DIR="$(resolve_launch_dir)" || {
+    echo "No writable launch dir found."
+    exit 1
+  }
   PLIST="$LAUNCH_DIR/$LABEL.plist"
-  LOG_DIR="$HOME/Library/Logs/codeaware-mcp-dashboard"
+  LOG_DIR="$(resolve_log_dir "${LOG_DIR_CANDIDATES[@]}")" || {
+    echo "No writable log directory found."
+    exit 1
+  }
 else
   SERVICE_DIR="$HOME/.config/systemd/user"
   SERVICE_FILE="$SERVICE_DIR/$LABEL.service"
