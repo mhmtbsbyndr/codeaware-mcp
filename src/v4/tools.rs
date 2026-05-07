@@ -1,5 +1,8 @@
 use serde::{Deserialize, Serialize};
 
+use crate::v4::budget::BudgetState;
+use crate::v4::context::ContextPackage;
+use crate::v4::context_items::{ContextItem, ContextItemKind, ExcludedContext};
 use crate::v4::contracts::{TaskContract, TaskIntent, TaskScope};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -23,6 +26,13 @@ pub struct GetTaskContextRequest {
     pub intent: TaskIntent,
 }
 
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct GetTaskContextResponse {
+    pub task_id: String,
+    pub context_package: ContextPackage,
+    pub agent_instructions: Vec<String>,
+}
+
 pub struct V4Tools;
 
 impl V4Tools {
@@ -37,11 +47,76 @@ impl V4Tools {
                 "target/**".to_string(),
                 "node_modules/**".to_string(),
                 "vendor/**".to_string(),
+                ".git/**".to_string(),
+                ".codeaware/**".to_string(),
             ],
             stop_conditions: vec![
                 crate::v4::contracts::StopCondition::ShowDiff,
                 crate::v4::contracts::StopCondition::WaitForHuman,
             ],
         }
+    }
+
+    pub fn get_task_context(req: GetTaskContextRequest, repo_root: String) -> GetTaskContextResponse {
+        let mut contract = Self::default_contract(req.goal.clone(), req.intent);
+        if let Some(task_id) = req.task_id {
+            contract.task_id = task_id;
+        }
+
+        let budget = BudgetState {
+            task_id: contract.task_id.clone(),
+            files_read: 0,
+            files_changed: 0,
+            tool_calls: 1,
+            estimated_context_tokens: 900,
+            max_files_read: contract.scope.max_files_read,
+            max_files_changed: contract.scope.max_files_changed,
+            max_tool_calls: contract.scope.max_tool_calls,
+            max_context_tokens: contract.scope.max_context_tokens,
+        };
+
+        let selected_context = vec![ContextItem {
+            kind: ContextItemKind::Contract,
+            path: None,
+            symbol: None,
+            content: "CodeAware v4 task contract active. Use bounded context only.".to_string(),
+            reason: "Every v4 task starts with a contract before repository exploration.".to_string(),
+            estimated_tokens: 80,
+        }];
+
+        let excluded_context = contract
+            .forbidden_paths
+            .iter()
+            .map(|path| ExcludedContext {
+                path: path.clone(),
+                reason: "Forbidden by default v4 task contract.".to_string(),
+            })
+            .collect();
+
+        let context_package = ContextPackage {
+            task_id: contract.task_id.clone(),
+            repo_root,
+            contract: contract.clone(),
+            budget,
+            selected_context,
+            excluded_context,
+            warnings: vec!["Phase 1 context assembly is conservative and contract-first.".to_string()],
+        };
+
+        GetTaskContextResponse {
+            task_id: contract.task_id,
+            context_package,
+            agent_instructions: Self::agent_instructions(),
+        }
+    }
+
+    pub fn agent_instructions() -> Vec<String> {
+        vec![
+            "You are operating under a CodeAware v4 task contract.".to_string(),
+            "Do not scan the full repository.".to_string(),
+            "Do not open files outside allowed paths unless a new contract is created.".to_string(),
+            "Do not re-read files already summarized in the context package.".to_string(),
+            "Stop after one implementation step and show the diff.".to_string(),
+        ]
     }
 }
