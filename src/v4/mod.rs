@@ -1,3 +1,4 @@
+pub mod architecture_memory;
 pub mod budget;
 pub mod cache;
 pub mod call_graph;
@@ -10,9 +11,11 @@ pub mod impact;
 pub mod import_graph;
 pub mod index_builder;
 pub mod ranking;
+pub mod recovery;
 pub mod retrieval;
 pub mod semantic_context;
 pub mod semantic_index;
+pub mod semantic_router;
 pub mod semantic_tools;
 pub mod storage;
 pub mod summaries;
@@ -22,6 +25,7 @@ pub mod tokens;
 pub mod tools;
 pub mod trace;
 
+pub use architecture_memory::{ArchitectureMemory, ArchitectureRule, DecisionRecord};
 pub use budget::{BudgetCheck, BudgetRemaining, BudgetState};
 pub use call_graph::{CallEdge, CallGraph, HeuristicCallExtractor};
 pub use context::{ContextAssembler, ContextPackage};
@@ -33,9 +37,11 @@ pub use impact::{ImpactAnalyzer, ImpactResult};
 pub use import_graph::{ImportEdge, ImportGraph, RustImportExtractor};
 pub use index_builder::SemanticIndexBuilder;
 pub use ranking::{ContextRanker, RankedPath};
+pub use recovery::{RecoverySnapshot, SemanticRecovery};
 pub use retrieval::{SemanticRetrieval, SymbolSearchResult, SymbolTestResult};
 pub use semantic_context::{SemanticContextAssembler, SemanticContextOptions};
 pub use semantic_index::SemanticIndex;
+pub use semantic_router::{ModelTier, RoutingDecision, SemanticRouter};
 pub use semantic_tools::{
     DiffImpactRequest, FindCallersRequest, FindCallersResponse, FindSymbolRequest,
     FindTestsRequest, SemanticTools,
