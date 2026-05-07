@@ -6,6 +6,8 @@ use crate::v4::context::ContextPackage;
 use crate::v4::context_items::{ContextItem, ContextItemKind, ExcludedContext};
 use crate::v4::contracts::{TaskContract, TaskIntent, TaskScope};
 use crate::v4::discovery::{CandidateDiscovery, DiscoveryConfig};
+use crate::v4::index_builder::SemanticIndexBuilder;
+use crate::v4::semantic_context::{SemanticContextAssembler, SemanticContextOptions};
 use crate::v4::storage::V4Storage;
 use crate::v4::summaries::SummaryGenerator;
 use crate::v4::tokens::estimate_tokens;
@@ -69,38 +71,51 @@ impl V4Tools {
             contract.task_id = task_id;
         }
 
-        let ranked_candidates = CandidateDiscovery::discover_ranked(
-            &repo_root,
-            &contract.goal,
-            DiscoveryConfig::default(),
-        )
-        .unwrap_or_default();
-
         let mut selected_context = Vec::new();
         let mut files_read = 0usize;
-        let mut estimated_context_tokens = 0usize;
 
-        for candidate in ranked_candidates.into_iter().take(contract.scope.max_files_read) {
-            let full_path = std::path::Path::new(&repo_root).join(&candidate.path);
-            let Ok(content) = fs::read_to_string(&full_path) else {
-                continue;
-            };
+        if let Ok(index) = SemanticIndexBuilder::build(&repo_root) {
+            selected_context.extend(SemanticContextAssembler::assemble(
+                &contract.goal,
+                &index,
+                SemanticContextOptions::default(),
+            ));
+        }
 
-            let summary = SummaryGenerator::summarize_file(candidate.path.clone(), &content);
-            estimated_context_tokens += estimate_tokens(&summary.summary);
-            files_read += 1;
+        if selected_context.is_empty() {
+            let ranked_candidates = CandidateDiscovery::discover_ranked(
+                &repo_root,
+                &contract.goal,
+                DiscoveryConfig::default(),
+            )
+            .unwrap_or_default();
 
-            selected_context.push(ContextItem {
-                kind: ContextItemKind::FileSummary,
-                path: Some(summary.path),
-                symbol: None,
-                content: summary.summary,
-                reason: candidate.reason,
-                estimated_tokens: summary.estimated_tokens,
-            });
+            for candidate in ranked_candidates.into_iter().take(contract.scope.max_files_read) {
+                let full_path = std::path::Path::new(&repo_root).join(&candidate.path);
+                let Ok(content) = fs::read_to_string(&full_path) else {
+                    continue;
+                };
 
-            if estimated_context_tokens >= contract.scope.max_context_tokens {
-                break;
+                let summary = SummaryGenerator::summarize_file(candidate.path.clone(), &content);
+                files_read += 1;
+
+                selected_context.push(ContextItem {
+                    kind: ContextItemKind::FileSummary,
+                    path: Some(summary.path),
+                    symbol: None,
+                    content: summary.summary,
+                    reason: candidate.reason,
+                    estimated_tokens: summary.estimated_tokens,
+                });
+
+                let current_tokens: usize = selected_context
+                    .iter()
+                    .map(|item| item.estimated_tokens)
+                    .sum();
+
+                if current_tokens >= contract.scope.max_context_tokens {
+                    break;
+                }
             }
         }
 
@@ -109,7 +124,6 @@ impl V4Tools {
                 "contract://v4",
                 "CodeAware v4 task contract active. Use bounded context only.",
             );
-            estimated_context_tokens = summary.estimated_tokens;
             selected_context.push(ContextItem {
                 kind: ContextItemKind::Contract,
                 path: Some(summary.path.clone()),
@@ -119,6 +133,11 @@ impl V4Tools {
                 estimated_tokens: summary.estimated_tokens,
             });
         }
+
+        let estimated_context_tokens: usize = selected_context
+            .iter()
+            .map(|item| item.estimated_tokens.max(estimate_tokens(&item.content)))
+            .sum();
 
         let budget = BudgetState {
             task_id: contract.task_id.clone(),
@@ -149,8 +168,8 @@ impl V4Tools {
             selected_context,
             excluded_context,
             warnings: vec![
-                "Phase 1 context assembly uses candidate discovery and summary-first selection.".to_string(),
-                "Symbol graph and architecture memory are Phase 2/3 features.".to_string(),
+                "Semantic-first context assembly active.".to_string(),
+                "Falls back to summary-first file context when no semantic items are found.".to_string(),
             ],
         };
 
@@ -184,7 +203,7 @@ impl V4Tools {
             "You are operating under a CodeAware v4 task contract.".to_string(),
             "Do not scan the full repository.".to_string(),
             "Do not open files outside allowed paths unless a new contract is created.".to_string(),
-            "Do not re-read files already summarized in the context package.".to_string(),
+            "Prefer semantic symbols/imports/calls/tests over raw file reads.".to_string(),
             "Stop after one implementation step and show the diff.".to_string(),
         ]
     }
