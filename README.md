@@ -32,6 +32,27 @@ CodeAware should.
 
 ---
 
+## 🧠 Why this exists
+
+Modern AI coding tools are powerful, but many of them still work by repeatedly loading repository text into an LLM context window.
+
+That creates five problems:
+
+1. **Token burn** — the same files are read again and again.
+2. **Context drift** — the model forgets why files matter after compaction.
+3. **Weak traceability** — it is hard to know why a file was selected.
+4. **Poor task boundaries** — autonomous agents over-explore instead of executing a bounded patch.
+5. **No persistent repository semantics** — every session rebuilds understanding from raw text.
+
+CodeAware v4 attacks the root problem:
+
+```text
+Do not make the LLM rediscover the repository.
+Compile the repository into reusable semantic intelligence first.
+```
+
+---
+
 ## 🧠 CodeAware v4 Kernel
 
 CodeAware v4 adds a persistent semantic repository layer designed to reduce AI coding token waste, uncontrolled repo scans, and repeated context rehydration.
@@ -225,6 +246,155 @@ Estimates semantic impact for a changed file.
     }
   }
 }
+```
+
+---
+
+## ⚖️ Comparison with AI coding tools
+
+CodeAware is not trying to replace AI coding agents. It is the **semantic context layer beneath them**.
+
+| Tool | Primary role | Strength | Weakness CodeAware addresses |
+|---|---|---|---|
+| Claude Code | Premium coding agent | Strong reasoning and patch execution | Can burn context/tokens on repo exploration |
+| Cursor | AI IDE | Fast inline coding and editor UX | Usage can rise with large contexts and repeated scans |
+| Gemini CLI | Budget-friendly terminal agent | Long-context and broad exploration | Needs bounded, repo-aware context selection |
+| OpenCode | Open agent shell | Flexible local/remote model routing | Still benefits from semantic repository memory |
+| Qwen/Kimi/local models | Cheap execution/review | Low cost for routine tasks | Need curated context to stay accurate |
+| CodeAware v4 | Persistent semantic context runtime | Controls context, budgets, traces and semantic retrieval | Still needs agents/models to execute reasoning and patches |
+
+Best setup:
+
+```text
+Cursor / Claude Code / Gemini CLI / OpenCode
+        ↓
+CodeAware MCP
+        ↓
+SemanticIndex + ContextPackage + Budget + Trace
+        ↓
+Repository
+```
+
+---
+
+## 🧩 Typical use cases
+
+### 1. Reduce Claude Code token burn
+
+Instead of asking an agent to inspect the whole repository, ask CodeAware first:
+
+```text
+codeaware.get_task_context(goal="Fix login session handling")
+```
+
+Then feed the returned context package to the agent.
+
+### 2. Find exactly where a symbol lives
+
+```text
+codeaware.find_symbol(query="ContextPackage")
+```
+
+This avoids loading unrelated files.
+
+### 3. Find callers before editing
+
+```text
+codeaware.find_callers(symbol="build_context")
+```
+
+Useful before refactors, renames and behavior changes.
+
+### 4. Find related tests
+
+```text
+codeaware.find_tests(symbol="ContextPackage")
+```
+
+Useful for minimal test selection.
+
+### 5. Estimate change impact
+
+```text
+codeaware.diff_impact(changed_path="src/v4/tools.rs")
+```
+
+Useful before committing or asking a model to make a risky edit.
+
+---
+
+## 🧱 Design principles
+
+### 1. Context is owned by the runtime
+
+The model should not decide freely how much of the repository to read.
+
+```text
+Agent requests context.
+CodeAware decides what context is allowed.
+```
+
+### 2. Semantic first, file summary second
+
+CodeAware first tries semantic context:
+
+```text
+symbols → imports → calls → tests → impact
+```
+
+Only when no semantic context is available does it fall back to file summaries.
+
+### 3. Bounded execution
+
+Every task should have limits:
+
+```text
+max files read
+max files changed
+max tool calls
+max context tokens
+stop conditions
+```
+
+### 4. Trace everything
+
+Every context package should be explainable:
+
+```text
+Why was this file selected?
+Why was this path excluded?
+How many estimated tokens were used?
+```
+
+### 5. Local-first by default
+
+Repository intelligence should be available without sending the entire codebase to external services.
+
+---
+
+## 🧪 Status honesty
+
+The v4 architecture, runtime modules, semantic APIs and MCP dispatcher wiring are implemented.
+
+However, a repository is only production-ready after CI/build verification.
+
+Current truth:
+
+```text
+Implemented: yes
+Documented: yes
+MCP-dispatch wired: yes
+CI workflow added: yes
+CI green: must be verified from GitHub Actions after workflow execution
+```
+
+Run locally:
+
+```bash
+cargo fmt --all -- --check
+cargo clippy --all-targets --all-features -- -D warnings
+cargo test --all --all-features
+cargo build --release --all-features
 ```
 
 ---
@@ -464,6 +634,32 @@ Remaining production-hardening tasks:
 - add production-grade AST call extraction
 - improve semantic index cache invalidation strategy
 ```
+
+---
+
+## 🛣️ Roadmap
+
+### Near-term
+
+- Confirm GitHub Actions CI is green.
+- Tighten `tools/list` metadata for v4 tools.
+- Improve semantic index persistence and cache invalidation.
+- Add benchmarks for token savings versus raw file reads.
+
+### Mid-term
+
+- Add TypeScript/JavaScript/Python/PHP/Go/Swift/Java extraction.
+- Replace heuristic call graph with AST-aware call extraction.
+- Persist architecture memory and decisions with richer query support.
+- Add semantic diffing across commits.
+
+### Long-term
+
+- Multi-model routing based on semantic complexity.
+- Persistent cross-repository memory.
+- Semantic task planner.
+- Minimal test selection.
+- IDE/LSP integration.
 
 ---
 
