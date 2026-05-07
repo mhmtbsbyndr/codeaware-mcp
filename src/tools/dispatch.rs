@@ -17,6 +17,13 @@ pub fn dispatch_tool(
     metrics: &Arc<Mutex<crate::xray::metrics::MetricsState>>,
 ) -> Value {
     match tool_name {
+        // CodeAware v4 semantic runtime tools
+        "codeaware.get_task_context" => dispatch_v4_get_task_context(tool_input),
+        "codeaware.find_symbol" => dispatch_v4_find_symbol(tool_input),
+        "codeaware.find_callers" => dispatch_v4_find_callers(tool_input),
+        "codeaware.find_tests" => dispatch_v4_find_tests(tool_input),
+        "codeaware.diff_impact" => dispatch_v4_diff_impact(tool_input),
+
         // Foundation runtime tools
         "token_stats" => crate::tools::foundation::handle_token_stats(tool_input),
         "token_savings_report" => {
@@ -76,6 +83,103 @@ pub fn dispatch_tool(
             }]
         }),
     }
+}
+
+fn text_response<T: serde::Serialize>(value: &T) -> Value {
+    json!({"content": [{"type": "text", "text": serde_json::to_string(value).unwrap_or_default()}]})
+}
+
+fn dispatch_v4_get_task_context(tool_input: &Value) -> Value {
+    let repo_root = tool_input
+        .get("repo_root")
+        .and_then(|value| value.as_str())
+        .unwrap_or(".")
+        .to_string();
+
+    let goal = tool_input
+        .get("goal")
+        .and_then(|value| value.as_str())
+        .unwrap_or("Build bounded semantic context")
+        .to_string();
+
+    let req = crate::v4::GetTaskContextRequest {
+        task_id: tool_input
+            .get("task_id")
+            .and_then(|value| value.as_str())
+            .map(|value| value.to_string()),
+        goal,
+        intent: crate::v4::TaskIntent::Unknown,
+    };
+
+    text_response(&crate::v4::V4Tools::get_task_context(req, repo_root))
+}
+
+fn dispatch_v4_find_symbol(tool_input: &Value) -> Value {
+    let req = crate::v4::FindSymbolRequest {
+        repo_root: tool_input
+            .get("repo_root")
+            .and_then(|value| value.as_str())
+            .unwrap_or(".")
+            .to_string(),
+        query: tool_input
+            .get("query")
+            .and_then(|value| value.as_str())
+            .unwrap_or("")
+            .to_string(),
+    };
+
+    text_response(&crate::v4::SemanticTools::find_symbol(req))
+}
+
+fn dispatch_v4_find_callers(tool_input: &Value) -> Value {
+    let req = crate::v4::FindCallersRequest {
+        repo_root: tool_input
+            .get("repo_root")
+            .and_then(|value| value.as_str())
+            .unwrap_or(".")
+            .to_string(),
+        symbol: tool_input
+            .get("symbol")
+            .and_then(|value| value.as_str())
+            .unwrap_or("")
+            .to_string(),
+    };
+
+    text_response(&crate::v4::SemanticTools::find_callers(req))
+}
+
+fn dispatch_v4_find_tests(tool_input: &Value) -> Value {
+    let req = crate::v4::FindTestsRequest {
+        repo_root: tool_input
+            .get("repo_root")
+            .and_then(|value| value.as_str())
+            .unwrap_or(".")
+            .to_string(),
+        symbol: tool_input
+            .get("symbol")
+            .and_then(|value| value.as_str())
+            .unwrap_or("")
+            .to_string(),
+    };
+
+    text_response(&crate::v4::SemanticTools::find_tests(req))
+}
+
+fn dispatch_v4_diff_impact(tool_input: &Value) -> Value {
+    let req = crate::v4::DiffImpactRequest {
+        repo_root: tool_input
+            .get("repo_root")
+            .and_then(|value| value.as_str())
+            .unwrap_or(".")
+            .to_string(),
+        changed_path: tool_input
+            .get("changed_path")
+            .and_then(|value| value.as_str())
+            .unwrap_or("")
+            .to_string(),
+    };
+
+    text_response(&crate::v4::SemanticTools::diff_impact(req))
 }
 
 fn dispatch_memory_tool(
