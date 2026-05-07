@@ -612,6 +612,18 @@ docs/CODEAWARE_V4_MCP_TOOLS.md
 
 ---
 
+## 🧭 About this v4 release
+
+`codeaware-mcp` is now shipped as the `v4` milestone release.
+
+- Semantic context assembly is now the default v4-first runtime path.
+- Context budgets, semantic retrieval, traces, and recovery are connected for safer bounded-agent workflows.
+- v4 MCP tools are fully available through `tools/call`: `get_task_context`, `find_symbol`, `find_callers`, `find_tests`, `diff_impact`.
+- Persistent semantic state and architecture-memory primitives are active in this release.
+- GitHub release target tag: `v4.0.0` (first public v4 milestone).
+
+---
+
 ## 🚦 Current status
 
 CodeAware currently has:

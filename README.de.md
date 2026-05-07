@@ -610,6 +610,18 @@ docs/CODEAWARE_V4_MCP_TOOLS.md
 
 ---
 
+## 🧭 About dieser v4-Release
+
+`codeaware-mcp` wird mit dem `v4`-Milestone als eigenständiger Release-Zweig ausgeliefert.
+
+- Kontextbasierte Paketierung ist der Standardpfad für semantische V4-Workflows.
+- Kontext-Budgets, semantische Suche, Traces und Recovery sind für kontrollierte, leise Agenten-Workflows zusammengeführt.
+- Die v4-MCP-Tools sind über `tools/call` vollständig verfügbar: `get_task_context`, `find_symbol`, `find_callers`, `find_tests`, `diff_impact`.
+- Persistenter semantischer Zustand und Architektur-Memory-Primitiven sind in diesem Release aktiv.
+- GitHub Release-Tag: `v4.0.0` (erstes öffentliches v4-Milestone).
+
+---
+
 ## 🚦 Aktueller Status
 
 CodeAware hat aktuell:

@@ -1,8 +1,8 @@
 [package]
 name = "codeaware-mcp"
-version = "2.1.1"
+version = "4.0.0"
 edition = "2021"
-description = "Context-efficient orchestration and compression layer for Claude Code"
+description = "Local-first MCP runtime for semantic context assembly, budgeted code intelligence, and persistent repository memory"
 license = "MIT"
 
 [lib]

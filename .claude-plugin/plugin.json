@@ -1,7 +1,7 @@
 {
   "name": "codeaware",
-  "version": "1.2.0",
-  "description": "Context-efficient orchestration and compression layer for Claude Code",
+  "version": "4.0.0",
+  "description": "Local-first MCP runtime for semantic context assembly, budgeted code intelligence, and persistent repository memory for bounded coding agents",
   "author": "mhmtbsbyndr",
   "license": "MIT"
 }
