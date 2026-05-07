@@ -13,6 +13,7 @@ pub mod ranking;
 pub mod retrieval;
 pub mod semantic_context;
 pub mod semantic_index;
+pub mod semantic_tools;
 pub mod storage;
 pub mod summaries;
 pub mod symbols;
@@ -35,6 +36,10 @@ pub use ranking::{ContextRanker, RankedPath};
 pub use retrieval::{SemanticRetrieval, SymbolSearchResult, SymbolTestResult};
 pub use semantic_context::{SemanticContextAssembler, SemanticContextOptions};
 pub use semantic_index::SemanticIndex;
+pub use semantic_tools::{
+    DiffImpactRequest, FindCallersRequest, FindCallersResponse, FindSymbolRequest,
+    FindTestsRequest, SemanticTools,
+};
 pub use storage::V4Storage;
 pub use summaries::{GeneratedSummary, SummaryGenerator};
 pub use symbols::{CodeSymbol, SymbolIndex, SymbolKind};
