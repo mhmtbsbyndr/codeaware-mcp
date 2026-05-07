@@ -434,7 +434,7 @@ cargo test
 
 Der Server spricht **JSON-RPC über stdio**, wie von MCP-Clients erwartet.
 
-### 5. Optional: Dashboard auf macOS dauerhaft laufen lassen (LaunchAgent)
+### 5. Optional: Dashboard im Hintergrund betreiben (macOS / Linux)
 
 ```bash
 chmod +x scripts/setup-codeaware-mcp-dashboard-launchd.sh
@@ -446,6 +446,17 @@ Weitere Befehle:
 - `./scripts/setup-codeaware-mcp-dashboard-launchd.sh stop`
 - `./scripts/setup-codeaware-mcp-dashboard-launchd.sh start`
 - `./scripts/setup-codeaware-mcp-dashboard-launchd.sh uninstall`
+
+Unterstützte OS:
+
+- macOS: LaunchAgent (launchd)
+- Linux (benutzerbezogen): systemd User-Service
+
+Linux-Beispiel:
+
+```bash
+./scripts/setup-codeaware-mcp-dashboard-launchd.sh install /home/$USER/.cargo/bin/codeaware-mcp
+```
 
 Zur Prüfung: Rufe im MCP die `xray`-Funktion auf und öffne die angezeigte URL (z. B. `http://127.0.0.1:9847`).
 
