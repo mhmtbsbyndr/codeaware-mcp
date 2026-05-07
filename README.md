@@ -1,5 +1,7 @@
 # 🧠 codeaware-mcp
 
+> 🇩🇪 Deutsche Version: [README.de.md](README.de.md)
+
 <p align="center">
   <strong>Local-first AI Code Intelligence, Token Compression, Progressive Memory, Semantic Repository Runtime & Quality Layer for MCP Agents</strong>
 </p>
