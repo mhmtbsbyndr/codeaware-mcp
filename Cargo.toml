@@ -2,7 +2,7 @@
 name = "codeaware-mcp"
 version = "4.0.0"
 edition = "2021"
-description = "MCP server for Claude Code that compresses file reads by 90-95% via tree-sitter AST analysis, reduces test/build output by 92%, recovers full session state after /compact, and provides impact analysis on edits — all in a single Rust binary"
+description = "Code-aware MCP server runtime."
 license = "MIT"
 
 [lib]

@@ -89,6 +89,22 @@ fn text_response<T: serde::Serialize>(value: &T) -> Value {
     json!({"content": [{"type": "text", "text": serde_json::to_string(value).unwrap_or_default()}]})
 }
 
+fn v4_tool_response<T: serde::Serialize, E: std::fmt::Display>(
+    result: Result<T, E>,
+) -> Value {
+    match result {
+        Ok(value) => {
+            let envelope = Envelope::success(value, TrustLevel::Exact);
+            json!({"content": [{"type": "text", "text": serde_json::to_string(&envelope).unwrap_or_default()}]})
+        }
+        Err(err) => {
+            let envelope =
+                Envelope::<()>::error(ErrorCode::EInternalError, false, Some(err.to_string()));
+            json!({"content": [{"type": "text", "text": serde_json::to_string(&envelope).unwrap_or_default()}]})
+        }
+    }
+}
+
 fn dispatch_v4_get_task_context(tool_input: &Value) -> Value {
     let repo_root = tool_input
         .get("repo_root")
@@ -128,7 +144,7 @@ fn dispatch_v4_find_symbol(tool_input: &Value) -> Value {
             .to_string(),
     };
 
-    text_response(&crate::v4::SemanticTools::find_symbol(req))
+    v4_tool_response(crate::v4::SemanticTools::find_symbol(req))
 }
 
 fn dispatch_v4_find_callers(tool_input: &Value) -> Value {
@@ -145,7 +161,7 @@ fn dispatch_v4_find_callers(tool_input: &Value) -> Value {
             .to_string(),
     };
 
-    text_response(&crate::v4::SemanticTools::find_callers(req))
+    v4_tool_response(crate::v4::SemanticTools::find_callers(req))
 }
 
 fn dispatch_v4_find_tests(tool_input: &Value) -> Value {
@@ -162,7 +178,7 @@ fn dispatch_v4_find_tests(tool_input: &Value) -> Value {
             .to_string(),
     };
 
-    text_response(&crate::v4::SemanticTools::find_tests(req))
+    v4_tool_response(crate::v4::SemanticTools::find_tests(req))
 }
 
 fn dispatch_v4_diff_impact(tool_input: &Value) -> Value {
@@ -179,7 +195,7 @@ fn dispatch_v4_diff_impact(tool_input: &Value) -> Value {
             .to_string(),
     };
 
-    text_response(&crate::v4::SemanticTools::diff_impact(req))
+    v4_tool_response(crate::v4::SemanticTools::diff_impact(req))
 }
 
 fn dispatch_memory_tool(

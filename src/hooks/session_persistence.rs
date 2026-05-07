@@ -20,7 +20,15 @@ pub fn save_session_state(session_id: &str, project: &str, state: &Value) {
         "saved_at": chrono::Utc::now().to_rfc3339(),
         "state": state,
     });
-    if let Err(e) = std::fs::write(&path, serde_json::to_string_pretty(&payload).unwrap_or_default()) {
+    let content = match serde_json::to_string_pretty(&payload) {
+        Ok(content) => content,
+        Err(e) => {
+            eprintln!("CodeAware: failed to serialize session state: {e}");
+            return;
+        }
+    };
+
+    if let Err(e) = std::fs::write(&path, content) {
         eprintln!("CodeAware: failed to save session state: {e}");
     }
 }
@@ -40,8 +48,20 @@ pub fn load_recent_session(project: &str) -> Option<Value> {
         if path.extension().and_then(|e| e.to_str()) != Some("json") {
             continue;
         }
-        let content = std::fs::read_to_string(&path).ok()?;
-        let parsed: Value = serde_json::from_str(&content).ok()?;
+        let content = match std::fs::read_to_string(&path) {
+            Ok(content) => content,
+            Err(err) => {
+                eprintln!("CodeAware: failed to read session file {}: {err}", path.display());
+                continue;
+            }
+        };
+        let parsed: Value = match serde_json::from_str(&content) {
+            Ok(parsed) => parsed,
+            Err(err) => {
+                eprintln!("CodeAware: failed to parse session file {}: {err}", path.display());
+                continue;
+            }
+        };
 
         // Check project match
         if parsed.get("project").and_then(|p| p.as_str()) != Some(project) {

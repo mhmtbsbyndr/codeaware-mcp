@@ -4,6 +4,7 @@ use crate::v4::call_graph::CallEdge;
 use crate::v4::impact::{ImpactAnalyzer, ImpactResult};
 use crate::v4::index_builder::SemanticIndexBuilder;
 use crate::v4::retrieval::{SemanticRetrieval, SymbolSearchResult, SymbolTestResult};
+use crate::v4::errors::V4Result;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct FindSymbolRequest {
@@ -38,26 +39,26 @@ pub struct DiffImpactRequest {
 pub struct SemanticTools;
 
 impl SemanticTools {
-    pub fn find_symbol(req: FindSymbolRequest) -> SymbolSearchResult {
-        let index = SemanticIndexBuilder::build(&req.repo_root).unwrap_or_default();
-        SemanticRetrieval::find_symbol(&index.symbols, &req.query)
+    pub fn find_symbol(req: FindSymbolRequest) -> V4Result<SymbolSearchResult> {
+        let index = SemanticIndexBuilder::build(&req.repo_root)?;
+        Ok(SemanticRetrieval::find_symbol(&index.symbols, &req.query))
     }
 
-    pub fn find_callers(req: FindCallersRequest) -> FindCallersResponse {
-        let index = SemanticIndexBuilder::build(&req.repo_root).unwrap_or_default();
-        FindCallersResponse {
+    pub fn find_callers(req: FindCallersRequest) -> V4Result<FindCallersResponse> {
+        let index = SemanticIndexBuilder::build(&req.repo_root)?;
+        Ok(FindCallersResponse {
             symbol: req.symbol.clone(),
             callers: index.calls.callers_of(&req.symbol),
-        }
+        })
     }
 
-    pub fn find_tests(req: FindTestsRequest) -> SymbolTestResult {
-        let index = SemanticIndexBuilder::build(&req.repo_root).unwrap_or_default();
+    pub fn find_tests(req: FindTestsRequest) -> V4Result<SymbolTestResult> {
+        let index = SemanticIndexBuilder::build(&req.repo_root)?;
         SemanticRetrieval::find_tests(&index.tests, &req.symbol)
     }
 
-    pub fn diff_impact(req: DiffImpactRequest) -> ImpactResult {
-        let index = SemanticIndexBuilder::build(&req.repo_root).unwrap_or_default();
+    pub fn diff_impact(req: DiffImpactRequest) -> V4Result<ImpactResult> {
+        let index = SemanticIndexBuilder::build(&req.repo_root)?;
         let affected_symbols = index
             .symbols
             .symbols
@@ -82,11 +83,11 @@ impl SemanticTools {
             .map(|reference| reference.referenced_symbol.clone())
             .collect::<Vec<_>>();
 
-        ImpactAnalyzer::build_result(
+        Ok(ImpactAnalyzer::build_result(
             req.changed_path,
             affected_symbols,
             affected_imports,
             affected_tests,
-        )
+        ))
     }
 }
