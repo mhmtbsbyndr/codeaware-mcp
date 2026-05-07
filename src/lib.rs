@@ -36,3 +36,6 @@ pub mod browser_awareness;
 // Runtime policy and orchestration
 pub mod security_policy;
 pub mod mcp_router;
+
+// CodeAware v4 kernel
+pub mod v4;
