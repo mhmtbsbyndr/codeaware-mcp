@@ -1,5 +1,9 @@
 # 🧠 codeaware-mcp
 
+## Über
+
+MCP-Server für Claude Code, der Dateilesen durch 90–95% über tree-sitter AST-Analyse komprimiert, Test-/Build-Ausgaben um 92% reduziert, den vollständigen Sessionzustand nach `/compact` wiederherstellt und eine Impact-Analyse für Änderungen liefert — alles in einem einzigen Rust-Binary.
+
 <p align="center">
   <strong>Lokale KI-Code-Intelligenz, Token-Kompression, Progressive Memory, semantische Repository-Runtime & Qualitätslayer für MCP-Agenten</strong>
 </p>

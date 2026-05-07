@@ -2,6 +2,10 @@
 
 > 🇩🇪 Deutsche Version: [README.de.md](README.de.md)
 
+## About
+
+MCP server for Claude Code that compresses file reads by 90-95% via tree-sitter AST analysis, reduces test/build output by 92%, recovers full session state after /compact, and provides impact analysis on edits — all in a single Rust binary.
+
 <p align="center">
   <strong>Local-first AI Code Intelligence, Token Compression, Progressive Memory, Semantic Repository Runtime & Quality Layer for MCP Agents</strong>
 </p>
