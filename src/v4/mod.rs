@@ -4,7 +4,9 @@ pub mod context;
 pub mod context_items;
 pub mod contracts;
 pub mod errors;
+pub mod ranking;
 pub mod storage;
+pub mod tokens;
 pub mod tools;
 pub mod trace;
 
@@ -13,5 +15,7 @@ pub use context::{ContextAssembler, ContextPackage};
 pub use context_items::{ContextItem, ContextItemKind, ExcludedContext};
 pub use contracts::{StopCondition, TaskContract, TaskIntent, TaskScope};
 pub use errors::{V4Error, V4Result};
+pub use ranking::{ContextRanker, RankedPath};
 pub use storage::V4Storage;
-pub use tools::{CheckBudgetRequest, CreateTaskContractRequest, GetTaskContextRequest, V4Tools};
+pub use tokens::{estimate_path_relevance, estimate_tokens};
+pub use tools::{CheckBudgetRequest, CreateTaskContractRequest, GetTaskContextRequest, GetTaskContextResponse, V4Tools};
