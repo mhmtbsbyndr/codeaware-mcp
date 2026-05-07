@@ -4,6 +4,8 @@ use crate::v4::budget::BudgetState;
 use crate::v4::context::ContextPackage;
 use crate::v4::context_items::{ContextItem, ContextItemKind, ExcludedContext};
 use crate::v4::contracts::{TaskContract, TaskIntent, TaskScope};
+use crate::v4::summaries::SummaryGenerator;
+use crate::v4::tokens::estimate_tokens;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct CreateTaskContractRequest {
@@ -63,26 +65,36 @@ impl V4Tools {
             contract.task_id = task_id;
         }
 
+        let summary = SummaryGenerator::summarize_file(
+            "contract://v4",
+            "CodeAware v4 task contract active. Use bounded context only.",
+        );
+
+        let selected_context = vec![ContextItem {
+            kind: ContextItemKind::Contract,
+            path: Some(summary.path.clone()),
+            symbol: None,
+            content: summary.summary.clone(),
+            reason: "Every v4 task starts with a contract before repository exploration.".to_string(),
+            estimated_tokens: summary.estimated_tokens,
+        }];
+
+        let estimated_context_tokens: usize = selected_context
+            .iter()
+            .map(|item| estimate_tokens(&item.content))
+            .sum();
+
         let budget = BudgetState {
             task_id: contract.task_id.clone(),
             files_read: 0,
             files_changed: 0,
             tool_calls: 1,
-            estimated_context_tokens: 900,
+            estimated_context_tokens,
             max_files_read: contract.scope.max_files_read,
             max_files_changed: contract.scope.max_files_changed,
             max_tool_calls: contract.scope.max_tool_calls,
             max_context_tokens: contract.scope.max_context_tokens,
         };
-
-        let selected_context = vec![ContextItem {
-            kind: ContextItemKind::Contract,
-            path: None,
-            symbol: None,
-            content: "CodeAware v4 task contract active. Use bounded context only.".to_string(),
-            reason: "Every v4 task starts with a contract before repository exploration.".to_string(),
-            estimated_tokens: 80,
-        }];
 
         let excluded_context = contract
             .forbidden_paths
@@ -100,7 +112,10 @@ impl V4Tools {
             budget,
             selected_context,
             excluded_context,
-            warnings: vec!["Phase 1 context assembly is conservative and contract-first.".to_string()],
+            warnings: vec![
+                "Phase 1 context assembly is conservative and contract-first.".to_string(),
+                "Summary-first context generation active.".to_string(),
+            ],
         };
 
         GetTaskContextResponse {
