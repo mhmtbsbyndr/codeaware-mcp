@@ -25,6 +25,8 @@ pub struct SessionState {
     pub workspace_slots: WorkspaceSlots,
     /// Memories injected from previous sessions at startup
     injected_context: Option<String>,
+    /// In-memory record of file versions served to this session (smart_read deltas).
+    served: crate::v4::context::ServedMap,
     // These fields are specified in the design and will be used in later phases
     #[allow(dead_code)]
     last_test_result: Option<TestResult>,
@@ -51,6 +53,7 @@ impl SessionState {
             error_signatures: HashMap::new(),
             workspace_slots: WorkspaceSlots::new(),
             injected_context: None,
+            served: crate::v4::context::ServedMap::default(),
             last_test_result: None,
             started_at: Utc::now(),
         }
@@ -114,6 +117,9 @@ impl SessionState {
     pub fn on_post_compact(&mut self) {
         self.phase = self.phase_before_compact.unwrap_or(SessionPhase::Idle);
         self.phase_before_compact = None;
+        // Compaction drops earlier tool results from context, so nothing served before may be
+        // answered with an "unchanged" marker any more.
+        self.served = crate::v4::context::ServedMap::default();
     }
 
     pub fn on_cwd_changed(&mut self, new_path: &str) {
@@ -121,6 +127,12 @@ impl SessionState {
         self.phase = SessionPhase::Idle;
         self.files_read.clear();
         self.files_edited.clear();
+        self.served = crate::v4::context::ServedMap::default();
+    }
+
+    /// Versions of files served to this session (in-memory only).
+    pub fn served_mut(&mut self) -> &mut crate::v4::context::ServedMap {
+        &mut self.served
     }
 
     pub fn record_error_signature(&mut self, sig: &str) {

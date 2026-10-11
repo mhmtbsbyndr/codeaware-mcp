@@ -4,6 +4,8 @@ use std::path::Path;
 use thiserror::Error;
 use crate::intelligence::tree_sitter_provider::TreeSitterProvider;
 use crate::tools::prefetch::PrefetchedFile;
+use crate::v4::context::ServedMap;
+use crate::v4::pack::Representation;
 
 /// Largest file smart_read will load into memory (8 MiB).
 pub const MAX_READ_BYTES: u64 = 8 * 1024 * 1024;
@@ -213,6 +215,36 @@ pub fn smart_read(input: &SmartReadInput, project_root: &Path) -> Result<SmartRe
         suggested_next,
         prefetched: vec![],
     })
+}
+
+/// Session-aware smart_read: the body is compared with the version this session was last served
+/// for the same path and view. Unchanged content becomes a one-line `unchanged since <hash8>`
+/// marker (mode_used "unchanged"); changed content becomes a unified diff (mode_used "diff") when
+/// that is smaller than the body; otherwise the full body is returned.
+pub fn smart_read_in_session(
+    input: &SmartReadInput,
+    project_root: &Path,
+    served: &mut ServedMap,
+) -> Result<SmartReadResult, SmartReadError> {
+    let mut result = smart_read(input, project_root)?;
+    let Some(body) = result.content.take() else {
+        return Ok(result);
+    };
+    let key = format!(
+        "{}|{}|{}|{}",
+        input.path,
+        result.mode_used,
+        input.focus.as_deref().unwrap_or(""),
+        input.lines.as_deref().unwrap_or("")
+    );
+    let (mode_used, text) = match served.serve(&key, &body) {
+        Representation::Unchanged(marker) => ("unchanged".to_string(), marker),
+        Representation::Diff(diff) => ("diff".to_string(), diff),
+        other => (result.mode_used.clone(), other.text().to_string()),
+    };
+    result.mode_used = mode_used;
+    result.content = Some(text);
+    Ok(result)
 }
 
 /// Build a skeleton using tree-sitter symbol information (signature lines only).

@@ -7,7 +7,7 @@ use crate::session::persistence::SessionDb;
 use crate::session::state::SessionState;
 use crate::tools::project_map::{project_map, ProjectMapInput};
 use crate::tools::smart_edit::{smart_edit, EditPair, SmartEditInput};
-use crate::tools::smart_read::{smart_read, ReadMode, SmartReadInput};
+use crate::tools::smart_read::{smart_read, smart_read_in_session, ReadMode, SmartReadInput};
 use crate::tools::smart_run::{smart_run, SmartRunInput};
 use crate::tools::validate_config::{validate_config, ValidateConfigInput};
 use crate::xray::server::XrayServer;
@@ -88,7 +88,7 @@ pub fn dispatch_tool(
 
         // Project-root-aware tools: relative paths resolve against the session's project path.
         "project_map" => dispatch_project_map(tool_input, &project_root(state)),
-        "smart_read" => dispatch_smart_read(tool_input, &project_root(state)),
+        "smart_read" => dispatch_smart_read(tool_input, &project_root(state), state),
         "smart_edit" => dispatch_smart_edit(tool_input, &project_root(state)),
         "smart_run" => dispatch_smart_run(tool_input),
         "validate_config" => dispatch_validate_config(tool_input, &project_root(state)),
@@ -176,7 +176,11 @@ fn dispatch_project_map(tool_input: &Value, project_root: &Path) -> Value {
     }
 }
 
-fn dispatch_smart_read(tool_input: &Value, project_root: &Path) -> Value {
+fn dispatch_smart_read(
+    tool_input: &Value,
+    project_root: &Path,
+    state: &Arc<Mutex<SessionState>>,
+) -> Value {
     let Some(path) = opt_str(tool_input, "path") else {
         return tool_error("smart_read requires 'path'");
     };
@@ -196,7 +200,11 @@ fn dispatch_smart_read(tool_input: &Value, project_root: &Path) -> Value {
         lines: line_range_spec(tool_input.get("lines")),
         scope: opt_str(tool_input, "scope"),
     };
-    match smart_read(&input, project_root) {
+    let outcome = match state.lock() {
+        Ok(mut s) => smart_read_in_session(&input, project_root, s.served_mut()),
+        Err(_) => smart_read(&input, project_root),
+    };
+    match outcome {
         Ok(r) => text_response(&r),
         Err(e) => tool_error(&e.to_string()),
     }
