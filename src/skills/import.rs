@@ -68,6 +68,7 @@ enum Outcome {
 
 struct Accepted {
     id: String,
+    source_path: String,
     skill_md: Vec<u8>,
     files: Vec<(String, Vec<u8>)>,
     license: String,
@@ -166,7 +167,8 @@ fn import_source(
             continue;
         }
         match evaluate(spec, cand, &id) {
-            Outcome::Accepted(acc) => {
+            Outcome::Accepted(mut acc) => {
+                acc.source_path = source_path;
                 if let Some(rel) = &acc.license_rel {
                     if !license_copies.contains_key(rel) {
                         let bytes = fs::read(spec.root.join(rel)).map_err(|s| io_err(&spec.root.join(rel), s))?;
@@ -218,7 +220,7 @@ fn import_source(
         entries.push(SkillEntry {
             id: acc.id.clone(),
             source: spec.id.clone(),
-            source_path: String::new(),
+            source_path: acc.source_path.clone(),
             path: format!("{}/{}/SKILL.md", spec.id, acc.id),
             license: acc.license.clone(),
             license_file: acc
@@ -229,27 +231,7 @@ fn import_source(
             files: acc.files.iter().map(|(rel, _)| rel.clone()).collect(),
         });
     }
-    // Fill source_path after evaluation: the accepted list is keyed by id.
-    for entry in &mut entries {
-        if let Some(cand) = candidates
-            .iter()
-            .find(|c| slug_id_matches(c, &entry.id, &candidates, &name_counts))
-        {
-            entry.source_path = format!("{}/SKILL.md", cand.rel_dir);
-        }
-    }
     Ok((entries, skipped))
-}
-
-/// True when candidate `c` is the one that received `id`.
-fn slug_id_matches(c: &Candidate, id: &str, all: &[Candidate], counts: &BTreeMap<&str, usize>) -> bool {
-    let computed = if counts.get(c.basename()).copied().unwrap_or(0) > 1 && !c.mirror {
-        slug(&c.rel_dir)
-    } else {
-        slug(c.basename())
-    };
-    let _ = all;
-    computed == id
 }
 
 fn evaluate(spec: &SourceSpec, cand: &Candidate, id: &str) -> Outcome {
@@ -309,6 +291,7 @@ fn evaluate(spec: &SourceSpec, cand: &Candidate, id: &str) -> Outcome {
 
     Outcome::Accepted(Accepted {
         id: id.to_string(),
+        source_path: String::new(),
         skill_md,
         files,
         license,

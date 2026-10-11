@@ -39,3 +39,4 @@ pub mod mcp_router;
 
 // CodeAware v4 kernel
 pub mod v4;
+pub mod skills;

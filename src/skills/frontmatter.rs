@@ -241,8 +241,16 @@ mod tests {
     #[test]
     fn first_paragraph_without_heading_uses_top() {
         assert_eq!(
+            first_paragraph("Intro text.\nmore\n\nNext.").as_deref(),
+            Some("Intro text. more")
+        );
+    }
+
+    #[test]
+    fn text_before_first_heading_is_ignored_when_heading_exists() {
+        assert_eq!(
             first_paragraph("Intro text.\n\n# H\nmore").as_deref(),
-            Some("Intro text.")
+            Some("more")
         );
     }
 }
