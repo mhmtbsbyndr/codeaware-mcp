@@ -3,6 +3,7 @@ pub mod ast;
 pub mod bm25;
 pub mod budget;
 pub mod pack;
+pub mod query;
 pub mod cache;
 pub mod cache_invalidation;
 pub mod call_graph;

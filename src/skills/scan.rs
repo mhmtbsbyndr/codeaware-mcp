@@ -102,16 +102,15 @@ pub fn is_pipe_to_shell(raw: &str) -> bool {
         && words(&line).any(|w| SHELLS.contains(&w))
 }
 
-/// Path arguments that make a recursive forced delete unbounded.
+/// Path arguments that make a recursive forced delete unbounded: the current or
+/// parent directory, root, home, a bare variable, or a wildcard at top level.
+/// A wildcard under a named directory (`/var/lib/apt/lists/*`) is specified.
 fn is_unspecified_path(p: &str) -> bool {
-    p.contains('*')
-        || p.starts_with('$')
-        || p == "/"
-        || p == "."
-        || p == ".."
-        || p == "./"
-        || p == "../"
-        || (p.starts_with('~') && p.len() <= 2)
+    if let Some(pos) = p.find('*') {
+        return matches!(&p[..pos], "" | "/" | "~/" | "./");
+    }
+    p.starts_with('$')
+        || matches!(p, "/" | "." | ".." | "./" | "../" | "~" | "~/")
 }
 
 /// `rm -rf` (recursive and forced) with no path, or with a root, home, cwd,
@@ -202,15 +201,64 @@ fn mentions_env_file(line: &str) -> bool {
         })
 }
 
+fn is_template_env(token: &str) -> bool {
+    let base = token
+        .trim_matches(|c: char| "\"'`".contains(c))
+        .rsplit('/')
+        .next()
+        .unwrap_or("");
+    base.starts_with(".env") && ENV_TEMPLATE_SUFFIXES.iter().any(|s| base.ends_with(s))
+}
+
 /// A read-like verb on the same line as a secret path (`~/.ssh`, `.env`,
-/// `credentials.json`, ...). Template files such as `.env.example` are allowed.
+/// `credentials.json`, ...). `source` counts only in command position, so prose
+/// such as "source repo" does not match. Copying a template file such as
+/// `cp .env.example .env.local` reads no secret and is allowed.
 pub fn is_credential_read(raw: &str) -> bool {
     let line = raw.to_lowercase();
     let secret = SENSITIVE_MARKERS.iter().any(|m| line.contains(m)) || mentions_env_file(&line);
-    secret && words(&line).any(|w| READ_VERBS.contains(&w))
+    if !secret {
+        return false;
+    }
+    let toks: Vec<&str> = line.split_whitespace().collect();
+    let reads = toks.iter().enumerate().any(|(i, t)| {
+        let verb = t.trim_matches(|c: char| !c.is_alphanumeric());
+        if verb == "source" {
+            return i == 0 || matches!(toks[i - 1], "&&" | ";" | "(" | "|");
+        }
+        READ_VERBS.contains(&verb)
+    });
+    if !reads {
+        return false;
+    }
+    let template_copy = toks
+        .iter()
+        .position(|t| matches!(t.trim_matches(|c: char| !c.is_alphanumeric()), "cp" | "copy"))
+        .and_then(|i| toks.get(i + 1))
+        .is_some_and(|src| is_template_env(src));
+    !template_copy
 }
 
 const RAW_NET_TOOLS: &[&str] = &["nc", "netcat", "ncat", "socat"];
+
+/// A raw-socket tool used as a command: first token of the line, or the first
+/// token after a pipe, `;`, `&&`, `||` or an opening parenthesis. A bare `nc`
+/// word in prose ("NC type", a dictionary key) does not count.
+fn is_raw_net_command(raw: &str) -> bool {
+    let toks: Vec<&str> = raw.split_whitespace().collect();
+    toks.iter().enumerate().any(|(i, t)| {
+        let cmd = t.trim_start_matches(|c: char| "($`".contains(c)).to_lowercase();
+        if !RAW_NET_TOOLS.contains(&cmd.as_str()) {
+            return false;
+        }
+        i == 0
+            || toks[i - 1]
+                .chars()
+                .last()
+                .is_some_and(|c| matches!(c, '|' | ';' | '&' | '('))
+            || matches!(toks[i - 1], "|" | ";" | "&&" | "||" | "(" | "$(" )
+    })
+}
 const ALLOWED_HOSTS: &[&str] = &[
     "localhost",
     "127.0.0.1",
@@ -272,7 +320,7 @@ fn first_url_host(lower: &str) -> Option<&str> {
 /// Plain downloads (`curl https://example.com/file`) are not flagged.
 pub fn is_exfiltration(raw: &str) -> bool {
     let line = raw.to_lowercase();
-    if words(&line).any(|w| RAW_NET_TOOLS.contains(&w)) {
+    if is_raw_net_command(raw) {
         return true;
     }
     let fetches = words(&line).any(|w| FETCHERS.contains(&w));
@@ -322,28 +370,66 @@ pub fn is_safety_override(raw: &str) -> bool {
     })
 }
 
-const SETTINGS_MARKERS: &[&str] = &[
+/// Home-directory roots of the user's Claude configuration.
+const SETTINGS_ROOTS: &[&str] = &[
     "~/.claude",
     "$home/.claude",
     "${home}/.claude",
     "%userprofile%\\.claude",
     "%userprofile%/.claude",
-    "~/.claude.json",
+];
+/// Entries under the Claude root whose modification changes Claude's behaviour:
+/// settings, hooks, commands, agents, plugins, keybindings, memory and projects.
+const SETTINGS_TARGETS: &[&str] = &[
+    "settings",
+    ".claude.json",
+    "hooks",
+    "commands",
+    "agents",
+    "plugins",
+    "keybindings",
+    "claude.md",
+    "projects",
 ];
 const WRITE_WORDS: &[&str] = &[
-    "write", "edit", "modify", "update", "change", "overwrite", "append", "save", "replace",
-    "create", "patch", "tee", "sed", "set", "add", "delete", "remove", "touch", "mv", "chmod",
-    "rewrite",
+    "write", "edit", "modify", "update", "change", "overwrite", "append", "replace", "create",
+    "patch", "tee", "set", "add", "delete", "remove", "touch", "mv", "chmod", "rewrite", "install",
 ];
 
-/// A write to the user's `~/.claude` configuration: a write verb or a shell
-/// redirection on a line that names that path.
+/// True when `line` contains a redirection (`> file`, `>> file`, `>~/...`).
+/// The arrow `->` and markdown text do not count.
+fn has_redirect(line: &str) -> bool {
+    line.contains(" >") || line.contains(">>") || line.contains(">~") || line.contains(">\"") || line.contains(">$")
+}
+
+/// A write to the user's Claude settings or configuration: a protected entry
+/// under `~/.claude` (settings, hooks, commands, memory, ...) together with a
+/// write verb, a redirection, or `sed -i`. Output directories such as
+/// `~/.claude/decisions/` are not protected.
 pub fn is_claude_settings_write(raw: &str) -> bool {
     let line = raw.to_lowercase();
-    if !SETTINGS_MARKERS.iter().any(|m| line.contains(m)) {
+    let mut touches_config = line.contains("~/.claude.json")
+        || line.contains(".claude.json");
+    for root in SETTINGS_ROOTS {
+        let mut rest = line.as_str();
+        while let Some(pos) = rest.find(root) {
+            let after = &rest[pos + root.len()..];
+            let window: String = after.chars().take(80).collect();
+            if SETTINGS_TARGETS.iter().any(|t| {
+                window
+                    .trim_start_matches(['/', '\\'])
+                    .starts_with(t)
+            }) {
+                touches_config = true;
+            }
+            rest = after;
+        }
+    }
+    if !touches_config {
         return false;
     }
-    line.contains('>') || words(&line).any(|w| WRITE_WORDS.contains(&w))
+    let sed_in_place = words(&line).any(|w| w == "sed") && line.contains(" -i");
+    has_redirect(&line) || sed_in_place || words(&line).any(|w| WRITE_WORDS.contains(&w))
 }
 
 #[cfg(test)]

@@ -243,8 +243,11 @@ fn evaluate(spec: &SourceSpec, cand: &Candidate, id: &str) -> Outcome {
     };
 
     match fs::symlink_metadata(&skill_path) {
+        Ok(meta) if meta.file_type().is_symlink() => {
+            return skip_with("symlink-not-followed", "SKILL.md is a symbolic link".into())
+        }
         Ok(meta) if meta.is_file() && meta.len() <= MAX_SKILL_BYTES => {}
-        Ok(meta) if meta.len() > MAX_SKILL_BYTES => return skip_with("too-large", format!("{} bytes", meta.len())),
+        Ok(meta) if meta.is_file() => return skip_with("too-large", format!("{} bytes", meta.len())),
         _ => return skip_with("unreadable", "SKILL.md is not a regular file".into()),
     }
     let skill_md = match fs::read(&skill_path) {

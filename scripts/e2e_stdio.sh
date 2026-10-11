@@ -86,7 +86,7 @@ fi
 # 3. smart_read: first call serves the full body, second call the unchanged marker.
 check_tool_ok $IDX_READ1 "smart_read #1"
 if [[ "$(text_of $IDX_READ1 | jq -r '.mode_used' 2>/dev/null)" == "full" ]] \
-    && cmp -s <(text_of $IDX_READ1 | jq -r '.content') "$REPO/$READ_FILE"; then
+    && cmp -s <(text_of $IDX_READ1 | jq -j '.content') "$REPO/$READ_FILE"; then
     pass "smart_read #1 is the full body of $READ_FILE"
 else
     fail "smart_read #1 is not the full body of $READ_FILE"
