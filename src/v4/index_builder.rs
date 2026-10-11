@@ -7,6 +7,7 @@ use crate::v4::discovery::{CandidateDiscovery, DiscoveryConfig};
 use crate::v4::errors::{V4Error, V4Result};
 use crate::v4::import_graph::RustImportExtractor;
 use crate::v4::semantic_index::SemanticIndex;
+use crate::v4::summaries::read_capped;
 use crate::v4::tests_graph::RustTestExtractor;
 
 pub struct SemanticIndexBuilder;
@@ -29,7 +30,7 @@ impl SemanticIndexBuilder {
         for candidate in ranked {
             let full_path = repo_root.join(&candidate.path);
 
-            let Ok(content) = fs::read_to_string(&full_path) else {
+            let Some(content) = read_capped(&full_path) else {
                 continue;
             };
 

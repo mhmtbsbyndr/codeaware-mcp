@@ -1,5 +1,4 @@
 use serde::{Deserialize, Serialize};
-use std::fs;
 
 use crate::v4::budget::BudgetState;
 use crate::v4::context::ContextPackage;
@@ -9,7 +8,7 @@ use crate::v4::discovery::{CandidateDiscovery, DiscoveryConfig};
 use crate::v4::index_builder::SemanticIndexBuilder;
 use crate::v4::semantic_context::{SemanticContextAssembler, SemanticContextOptions};
 use crate::v4::storage::V4Storage;
-use crate::v4::summaries::SummaryGenerator;
+use crate::v4::summaries::{read_capped, SummaryGenerator};
 use crate::v4::tokens::estimate_tokens;
 use crate::v4::trace::TraceEntry;
 
@@ -82,6 +81,7 @@ impl V4Tools {
             ));
         }
 
+        // Summary fallback: used only when no goal-relevant semantic item was found.
         if selected_context.is_empty() {
             let ranked_candidates = CandidateDiscovery::discover_ranked(
                 &repo_root,
@@ -92,7 +92,7 @@ impl V4Tools {
 
             for candidate in ranked_candidates.into_iter().take(contract.scope.max_files_read) {
                 let full_path = std::path::Path::new(&repo_root).join(&candidate.path);
-                let Ok(content) = fs::read_to_string(&full_path) else {
+                let Some(content) = read_capped(&full_path) else {
                     continue;
                 };
 
@@ -188,7 +188,9 @@ impl V4Tools {
 
         if let Ok(line) = serde_json::to_string(&trace) {
             let storage = V4Storage::new(&repo_root);
-            let _ = storage.append_jsonl("traces/task_traces.jsonl", &line);
+            if let Err(err) = storage.append_jsonl("traces/task_traces.jsonl", &line) {
+                tracing::warn!(error = %err, "failed to append v4 task trace");
+            }
         }
 
         GetTaskContextResponse {

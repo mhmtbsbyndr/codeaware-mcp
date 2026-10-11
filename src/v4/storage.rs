@@ -27,6 +27,8 @@ impl V4Storage {
         Ok(())
     }
 
+    /// Appends one record as a single newline-terminated write on an append-only handle,
+    /// so concurrent writers do not interleave within a line.
     pub fn append_jsonl(&self, relative_path: &str, line: &str) -> V4Result<()> {
         self.ensure_layout()?;
         let path = self.root.join(relative_path);
@@ -34,13 +36,18 @@ impl V4Storage {
             fs::create_dir_all(parent).map_err(|err| V4Error::Io(err.to_string()))?;
         }
 
+        let mut record = String::with_capacity(line.len() + 1);
+        record.push_str(line);
+        record.push('\n');
+
         let mut file = OpenOptions::new()
             .create(true)
             .append(true)
-            .open(path)
-            .map_err(|err| V4Error::Io(err.to_string()))?;
+            .open(&path)
+            .map_err(|err| V4Error::Io(format!("{}: {}", path.display(), err)))?;
 
-        writeln!(file, "{}", line).map_err(|err| V4Error::Io(err.to_string()))?;
+        file.write_all(record.as_bytes())
+            .map_err(|err| V4Error::Io(format!("{}: {}", path.display(), err)))?;
         Ok(())
     }
 }

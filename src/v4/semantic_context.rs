@@ -2,6 +2,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::v4::context_items::{ContextItem, ContextItemKind};
 use crate::v4::semantic_index::SemanticIndex;
+use crate::v4::symbols::{contains_any_term, query_terms};
 use crate::v4::tokens::estimate_tokens;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -26,8 +27,15 @@ impl Default for SemanticContextOptions {
 pub struct SemanticContextAssembler;
 
 impl SemanticContextAssembler {
+    /// Assembles context items that relate to the goal. Only symbols, imports, calls and
+    /// tests whose names or paths contain a goal term are included, so an unrelated goal
+    /// yields no items and callers can fall back to file summaries.
     pub fn assemble(goal: &str, index: &SemanticIndex, options: SemanticContextOptions) -> Vec<ContextItem> {
         let mut items = Vec::new();
+        let terms = query_terms(goal);
+        if terms.is_empty() {
+            return items;
+        }
 
         for symbol in index.find_symbols(goal).into_iter().take(options.max_symbols) {
             let content = format!(
@@ -44,7 +52,12 @@ impl SemanticContextAssembler {
             });
         }
 
-        for edge in index.imports.edges.iter().take(options.max_imports) {
+        let relevant_imports = index
+            .imports
+            .edges
+            .iter()
+            .filter(|edge| contains_any_term(&edge.from_path, &terms) || contains_any_term(&edge.import, &terms));
+        for edge in relevant_imports.take(options.max_imports) {
             let content = format!("Import: {} -> {}", edge.from_path, edge.import);
             items.push(ContextItem {
                 kind: ContextItemKind::RecentChange,
@@ -56,7 +69,12 @@ impl SemanticContextAssembler {
             });
         }
 
-        for edge in index.calls.edges.iter().take(options.max_calls) {
+        let relevant_calls = index.calls.edges.iter().filter(|edge| {
+            contains_any_term(&edge.path, &terms)
+                || contains_any_term(&edge.from_symbol, &terms)
+                || contains_any_term(&edge.to_symbol, &terms)
+        });
+        for edge in relevant_calls.take(options.max_calls) {
             let content = format!("Call: {} -> {} in {}", edge.from_symbol, edge.to_symbol, edge.path);
             items.push(ContextItem {
                 kind: ContextItemKind::FileExcerpt,
@@ -68,7 +86,10 @@ impl SemanticContextAssembler {
             });
         }
 
-        for test in index.tests.references.iter().take(options.max_tests) {
+        let relevant_tests = index.tests.references.iter().filter(|test| {
+            contains_any_term(&test.test_path, &terms) || contains_any_term(&test.referenced_symbol, &terms)
+        });
+        for test in relevant_tests.take(options.max_tests) {
             let content = format!("Test: {} references {}", test.test_path, test.referenced_symbol);
             items.push(ContextItem {
                 kind: ContextItemKind::TestHint,

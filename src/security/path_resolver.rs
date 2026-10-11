@@ -1,4 +1,4 @@
-use std::path::{Path, PathBuf};
+use std::path::{Component, Path, PathBuf};
 use thiserror::Error;
 
 /// Errors that can occur during path resolution.
@@ -88,9 +88,9 @@ fn resolve_symlinks(
 
     match std::fs::symlink_metadata(path) {
         Err(_) => {
-            // Path does not exist; normalize lexically without resolving symlinks.
-            let normalized = normalize_path(path);
-            Ok(normalized)
+            // Path does not exist: resolve its deepest existing ancestor (following
+            // symlinks) and only append the missing tail lexically.
+            resolve_missing(path, canonical_root, depth)
         }
         Ok(meta) if !meta.file_type().is_symlink() => {
             // Regular file or directory — canonicalize normally.
@@ -137,6 +137,40 @@ fn resolve_symlinks(
             Ok(final_path)
         }
     }
+}
+
+/// Resolve a path whose leaf does not exist. The deepest existing ancestor is
+/// resolved through `resolve_symlinks` (so a symlinked parent directory that
+/// points outside the root is detected); the remaining components are appended
+/// lexically.
+fn resolve_missing(path: &Path, canonical_root: &Path, depth: usize) -> Result<PathBuf, PathError> {
+    let comps: Vec<Component> = path.components().collect();
+    let mut split = 0;
+    for k in (1..=comps.len()).rev() {
+        let prefix: PathBuf = comps[..k].iter().collect();
+        if std::fs::symlink_metadata(&prefix).is_ok() {
+            split = k;
+            break;
+        }
+    }
+
+    let mut base = if split == 0 {
+        PathBuf::new()
+    } else {
+        let existing: PathBuf = comps[..split].iter().collect();
+        resolve_symlinks(&existing, canonical_root, depth + 1)?
+    };
+
+    for comp in &comps[split..] {
+        match comp {
+            Component::CurDir => {}
+            Component::ParentDir => {
+                base.pop();
+            }
+            c => base.push(c.as_os_str()),
+        }
+    }
+    Ok(base)
 }
 
 /// Normalize a path without requiring it to exist (no canonicalize).

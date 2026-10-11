@@ -135,6 +135,17 @@ fn build_coverage_map(
         if is_test {
             test_files.push((rel, content));
         } else {
+            // Inline test code (#[cfg(test)] modules, #[test] fns) is test code,
+            // not production code: it counts as test evidence, not as functions.
+            let regions = if lang == "rust" {
+                inline_test_regions(&content)
+            } else {
+                Vec::new()
+            };
+            if !regions.is_empty() {
+                test_files.push((rel.clone(), lines_in_regions(&content, &regions)));
+            }
+
             // Extract function/method symbols
             let symbols = match provider.extract_symbols(&content, lang) {
                 Ok(s) => s,
@@ -144,6 +155,7 @@ fn build_coverage_map(
             let functions: Vec<(String, usize)> = symbols
                 .into_iter()
                 .filter(|s| matches!(s.kind, SymbolKind::Function | SymbolKind::Method))
+                .filter(|s| !line_in_regions(s.start_line, &regions))
                 .map(|s| (s.name, s.start_line))
                 .collect();
 
@@ -171,7 +183,7 @@ fn build_coverage_map(
             let mut found = false;
 
             for (test_rel, test_content) in &test_files {
-                if test_content.contains(fn_name.as_str()) {
+                if contains_identifier(test_content, fn_name) {
                     found = true;
                     if !matching_test_files.contains(test_rel) {
                         matching_test_files.push(test_rel.clone());
@@ -250,17 +262,10 @@ fn is_test_file(rel_path: &str, language: &str, abs_path: &Path) -> bool {
 
     match language {
         "rust" => {
-            // Rust: files in tests/ dir, or files containing #[test] / #[cfg(test)]
-            if in_tests_dir {
-                return true;
-            }
-            // Check file content for test attributes (only for inline tests)
-            if let Ok(content) = std::fs::read_to_string(abs_path) {
-                if content.contains("#[test]") || content.contains("#[cfg(test)]") {
-                    return true;
-                }
-            }
-            false
+            // Rust: only files in tests/ are test files. Files with inline tests
+            // are handled per item (see inline_test_regions), so their production
+            // functions remain covered by the analysis.
+            in_tests_dir
         }
         "python" => {
             // Python: test_*.py, *_test.py, or in tests/ dir
@@ -288,4 +293,80 @@ fn is_test_file(rel_path: &str, language: &str, abs_path: &Path) -> bool {
         }
         _ => in_tests_dir,
     }
+}
+
+/// Line ranges (1-based, inclusive) of Rust inline test code: `#[test]` items
+/// and `#[cfg(test)]` items such as test modules.
+fn inline_test_regions(content: &str) -> Vec<(usize, usize)> {
+    let lines: Vec<&str> = content.lines().collect();
+    let mut regions = Vec::new();
+    let mut i = 0;
+    while i < lines.len() {
+        let trimmed = lines[i].trim();
+        if trimmed.starts_with("#[test]") || trimmed.starts_with("#[cfg(test)]") {
+            if let Some(end) = item_end_line(&lines, i) {
+                regions.push((i + 1, end + 1));
+                i = end + 1;
+                continue;
+            }
+        }
+        i += 1;
+    }
+    regions
+}
+
+/// Index of the line where the item starting at `start` closes its outermost
+/// brace block. Returns None if the item ends with `;` first (e.g. `use`).
+fn item_end_line(lines: &[&str], start: usize) -> Option<usize> {
+    let mut depth = 0i64;
+    let mut opened = false;
+    for (idx, line) in lines.iter().enumerate().skip(start) {
+        for ch in line.chars() {
+            match ch {
+                '{' => {
+                    depth += 1;
+                    opened = true;
+                }
+                '}' => {
+                    depth -= 1;
+                    if opened && depth == 0 {
+                        return Some(idx);
+                    }
+                }
+                ';' if !opened => return None,
+                _ => {}
+            }
+        }
+    }
+    None
+}
+
+fn line_in_regions(line: usize, regions: &[(usize, usize)]) -> bool {
+    regions.iter().any(|&(start, end)| line >= start && line <= end)
+}
+
+fn lines_in_regions(content: &str, regions: &[(usize, usize)]) -> String {
+    content
+        .lines()
+        .enumerate()
+        .filter(|(idx, _)| line_in_regions(idx + 1, regions))
+        .map(|(_, line)| line)
+        .collect::<Vec<_>>()
+        .join("\n")
+}
+
+fn is_ident_char(c: char) -> bool {
+    c.is_alphanumeric() || c == '_'
+}
+
+/// True if `ident` occurs in `text` as a whole identifier (not as part of a longer name).
+fn contains_identifier(text: &str, ident: &str) -> bool {
+    if ident.is_empty() {
+        return false;
+    }
+    text.match_indices(ident).any(|(pos, _)| {
+        let before = text[..pos].chars().next_back();
+        let after = text[pos + ident.len()..].chars().next();
+        !before.is_some_and(is_ident_char) && !after.is_some_and(is_ident_char)
+    })
 }
