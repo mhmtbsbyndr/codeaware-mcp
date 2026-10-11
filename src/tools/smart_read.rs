@@ -11,6 +11,8 @@ use crate::v4::pack::Representation;
 pub const MAX_READ_BYTES: u64 = 8 * 1024 * 1024;
 /// Skeleton text budget (about 4k tokens). Larger skeletons are cut and flagged.
 pub const MAX_SKELETON_BYTES: usize = 16 * 1024;
+/// Full-text reads above this many lines need an explicit `lines` range.
+pub const FULL_READ_LOC_CAP: usize = 1000;
 /// Symbol entries returned per response.
 pub const MAX_SYMBOLS: usize = 200;
 
@@ -183,6 +185,9 @@ pub fn smart_read(input: &SmartReadInput, project_root: &Path) -> Result<SmartRe
                 ReadMode::Skeleton
             }
         }
+        // Stage 3 of progressive disclosure: full text of a very large file is only
+        // returned with an explicit line range. Otherwise return the skeleton.
+        ReadMode::Full if input.lines.is_none() && loc > FULL_READ_LOC_CAP => ReadMode::Skeleton,
         other => other.clone(),
     };
 

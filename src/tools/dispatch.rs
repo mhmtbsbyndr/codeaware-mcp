@@ -388,7 +388,27 @@ fn dispatch_v4_get_task_context(tool_input: &Value) -> Value {
         intent: crate::v4::TaskIntent::Unknown,
     };
 
-    text_response(&crate::v4::V4Tools::get_task_context(req, repo_root))
+    // Stage 1 of progressive disclosure: the candidate list. Tell the caller the
+    // next step explicitly (stage 2 is a skeleton read), so no full file is read by default.
+    let response = crate::v4::V4Tools::get_task_context(req, repo_root.clone());
+    let mut value = serde_json::to_value(&response).unwrap_or(Value::Null);
+    let top: Vec<String> = response
+        .context_package
+        .selected_context
+        .iter()
+        .filter_map(|item| item.path.clone())
+        .take(3)
+        .collect();
+    if !top.is_empty() {
+        value["next_step"] = json!({
+            "stage": 2,
+            "tool": "smart_read",
+            "arguments": { "mode": "skeleton" },
+            "candidates": top,
+            "note": "One smart_read call per candidate path. Ask for full text only when a skeleton is not enough."
+        });
+    }
+    text_response(&value)
 }
 
 fn dispatch_v4_find_symbol(tool_input: &Value) -> Value {
