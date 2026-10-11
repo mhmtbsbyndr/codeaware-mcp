@@ -53,9 +53,10 @@ pub fn compress(raw: &str, max_lines: usize) -> String {
     let mut result: Vec<String> = Vec::new();
     let mut used = 0usize;
 
+    // Errors are never dropped; warnings and suggestions stop at the budget.
     for issue in &issues {
         let lc = issue.block.lines().count();
-        if used + lc <= max_lines {
+        if issue.severity == Severity::Error || used + lc <= max_lines {
             result.push(issue.block.clone());
             used += lc;
         } else {

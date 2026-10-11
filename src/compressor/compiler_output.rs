@@ -1,81 +1,103 @@
+use super::generic;
+use regex::Regex;
+use std::sync::OnceLock;
+
+#[derive(PartialEq, Eq, Clone, Copy)]
+enum Kind {
+    Error,
+    Warning,
+    Summary,
+}
+
+/// Classify a line that starts a diagnostic. Covers rustc, gcc/clang and tsc header formats.
+fn header_kind(line: &str) -> Option<Kind> {
+    static GCC: OnceLock<Regex> = OnceLock::new();
+    static TSC: OnceLock<Regex> = OnceLock::new();
+    if line.starts_with("error: aborting")
+        || line.starts_with("error: could not compile")
+        || (line.starts_with("warning:") && line.contains("emitted"))
+    {
+        return Some(Kind::Summary);
+    }
+    if line.starts_with("error[") || line.starts_with("error:") {
+        return Some(Kind::Error);
+    }
+    if line.starts_with("warning:") {
+        return Some(Kind::Warning);
+    }
+    let gcc = GCC.get_or_init(|| Regex::new(r"^\S.*?:\d+(?::\d+)?: (?:fatal )?(error|warning)").expect("static regex"));
+    if let Some(caps) = gcc.captures(line) {
+        return Some(if &caps[1] == "error" { Kind::Error } else { Kind::Warning });
+    }
+    let tsc = TSC.get_or_init(|| Regex::new(r"^\S.*?\(\d+,\d+\): (error|warning) ").expect("static regex"));
+    if tsc.is_match(line) {
+        return Some(if line.contains(": error ") { Kind::Error } else { Kind::Warning });
+    }
+    None
+}
+
+/// One diagnostic: header, its `-->` location, and (for errors) the first note only.
+struct Block {
+    kind: Kind,
+    lines: Vec<String>,
+}
+
 pub fn compress(raw: &str, max_lines: usize) -> String {
     let lines: Vec<&str> = raw.lines().collect();
     if lines.len() <= max_lines {
         return raw.to_string();
     }
 
-    // Extract error blocks and warning blocks
-    let mut errors: Vec<String> = Vec::new();
-    let mut warnings: Vec<String> = Vec::new();
-    let mut summary_lines: Vec<String> = Vec::new();
-
+    let mut blocks: Vec<Block> = Vec::new();
     let mut i = 0;
     while i < lines.len() {
-        let line = lines[i];
-
-        // Summary lines (e.g. "error: aborting due to N previous errors")
-        if line.starts_with("error: aborting") || line.starts_with("error: could not compile") {
-            summary_lines.push(line.to_string());
+        let Some(kind) = header_kind(lines[i]) else {
             i += 1;
             continue;
-        }
-
-        // error[EXXXX]: message
-        if line.starts_with("error[") || (line.starts_with("error") && line.contains("]:")) {
-            let mut block = vec![line.to_string()];
-            i += 1;
-            // Grab location line (  --> file:line)
-            if i < lines.len() && lines[i].trim_start().starts_with("-->") {
-                block.push(lines[i].to_string());
-                i += 1;
-            }
-            errors.push(block.join("\n"));
-            continue;
-        }
-
-        // warning: message
-        if line.starts_with("warning:") {
-            let mut block = vec![line.to_string()];
-            i += 1;
-            if i < lines.len() && lines[i].trim_start().starts_with("-->") {
-                block.push(lines[i].to_string());
-                i += 1;
-            }
-            warnings.push(block.join("\n"));
-            continue;
-        }
-
+        };
+        let mut block = vec![lines[i].to_string()];
+        let mut location_seen = false;
+        let mut note_seen = false;
         i += 1;
-    }
-
-    // Budget: errors first, then summary, then warnings if space
-    let mut result: Vec<String> = Vec::new();
-    let mut used = 0usize;
-
-    for e in &errors {
-        let lc = e.lines().count();
-        if used + lc <= max_lines {
-            result.push(e.clone());
-            used += lc;
+        // Rustc blocks end at a blank line; gcc/tsc headers are single lines.
+        while i < lines.len() && !lines[i].trim().is_empty() && header_kind(lines[i]).is_none() {
+            let trimmed = lines[i].trim_start();
+            if !location_seen && trimmed.starts_with("-->") {
+                block.push(lines[i].to_string());
+                location_seen = true;
+            } else if kind == Kind::Error && !note_seen && trimmed.starts_with("= note:") {
+                block.push(lines[i].trim().to_string());
+                note_seen = true;
+            }
+            i += 1;
         }
+        blocks.push(Block { kind, lines: block });
     }
 
-    for s in &summary_lines {
-        if used < max_lines {
-            result.push(s.clone());
-            used += 1;
-        }
+    if blocks.is_empty() {
+        return generic::compress(raw, max_lines);
     }
 
+    // Errors and summaries are never dropped; warnings fill the remaining budget.
+    let mut out: Vec<String> = Vec::new();
+    for block in blocks.iter().filter(|b| b.kind == Kind::Error) {
+        out.extend(block.lines.iter().cloned());
+    }
+    for block in blocks.iter().filter(|b| b.kind == Kind::Summary) {
+        out.extend(block.lines.iter().cloned());
+    }
+    let warnings: Vec<&Block> = blocks.iter().filter(|b| b.kind == Kind::Warning).collect();
+    // One line is kept free for the "more warnings omitted" marker.
+    let mut omitted = 0usize;
     for w in &warnings {
-        let lc = w.lines().count();
-        if used + lc <= max_lines {
-            result.push(w.clone());
-            used += lc;
+        if out.len() + w.lines.len() < max_lines {
+            out.extend(w.lines.iter().cloned());
         } else {
-            break;
+            omitted += 1;
         }
     }
-
-    result.join("\n")
+    if omitted > 0 {
+        out.push(format!("... {} more warnings omitted", omitted));
+    }
+    out.join("\n")
 }

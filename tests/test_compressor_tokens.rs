@@ -16,11 +16,14 @@ fn compressor_fixture_token_report() {
     report("cargo_test_single", &single, &test_output::compress(&single, 20));
 
     let multi = common::read_fixture("sample_cargo_test_multi_failure.txt");
-    report("cargo_test_multi", &multi, &test_output::compress(&multi, 20));
+    let multi_out = report("cargo_test_multi", &multi, &test_output::compress(&multi, 20));
+    assert!(multi_out * 5 < estimate_tokens(&multi), "failure-first output must stay under 20% of raw");
 
     let build = common::read_fixture("sample_cargo_build_errors.txt");
-    report("cargo_build_errors", &build, &compiler_output::compress(&build, 30));
+    let build_out = report("cargo_build_errors", &build, &compiler_output::compress(&build, 30));
+    assert!(build_out * 2 < estimate_tokens(&build), "compile output must stay under 50% of raw");
 
     let log = common::read_fixture("sample_repeated_log.txt");
-    report("repeated_log", &log, &generic::compress(&log, 30));
+    let log_out = report("repeated_log", &log, &generic::compress(&log, 30));
+    assert!(log_out * 10 < estimate_tokens(&log), "repeated lines must collapse to under 10% of raw");
 }

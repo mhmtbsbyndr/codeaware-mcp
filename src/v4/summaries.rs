@@ -121,7 +121,7 @@ pub fn declaration_skeleton(line: &str) -> Option<String> {
     }
     let (signature, has_body) = match trimmed.find('{') {
         Some(pos) => (trimmed[..pos].trim_end(), true),
-        None => (trimmed.trim_end_matches(';').trim_end(), false),
+        None => (trimmed, false),
     };
     let mut out = signature.to_string();
     if has_body {

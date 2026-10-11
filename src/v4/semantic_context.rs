@@ -212,7 +212,7 @@ fn plain_item(item: ContextItem, relevance: f64) -> Scored {
 }
 
 /// Symbols with a relevance score, best first. Legacy: term-hit order with `1/(1+rank)`.
-/// BM25: BM25 score over name, path and signature.
+/// BM25: BM25 score over name, path and signature, normalised to the top hit (1.0).
 fn select_symbols(goal: &str, index: &SemanticIndex, ranking: RankingMode) -> Vec<(CodeSymbol, f64)> {
     match ranking {
         RankingMode::Legacy => index
@@ -230,9 +230,12 @@ fn select_symbols(goal: &str, index: &SemanticIndex, ranking: RankingMode) -> Ve
                     (symbol.signature.as_deref().unwrap_or(""), SYMBOL_SIGNATURE_WEIGHT),
                 ]);
             }
-            bm25.rank(goal)
-                .into_iter()
-                .map(|(id, score)| (index.symbols.symbols[id].clone(), score))
+            // Scores are divided by the top hit so they share the (0, 1] scale of the other
+            // item categories; this keeps a score-gap cut across categories meaningful.
+            let hits = bm25.rank(goal);
+            let top = hits.first().map_or(1.0, |(_, score)| *score);
+            hits.into_iter()
+                .map(|(id, score)| (index.symbols.symbols[id].clone(), score / top))
                 .collect()
         }
     }
