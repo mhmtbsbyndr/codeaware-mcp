@@ -85,3 +85,37 @@ async fn test_denied_command_refused_before_execution() {
         assert!(matches!(err, SmartRunError::Denied(_)), "{cmd}: got {err}");
     }
 }
+
+#[tokio::test]
+async fn test_double_dash_rm_rf_root_refused() {
+    for cmd in ["rm -rf -- /", "rm -fr -- /"] {
+        let input = SmartRunInput {
+            command: cmd.into(),
+            max_output_lines: 50,
+            capture_relevant_code: false,
+            scan_secrets: false,
+        };
+        let err = match smart_run(&input).await {
+            Err(e) => e,
+            Ok(_) => panic!("{cmd} must be refused"),
+        };
+        assert!(matches!(err, SmartRunError::Denied(_)), "{cmd}: got {err}");
+    }
+}
+
+#[tokio::test]
+async fn test_double_dash_operand_not_treated_as_option() {
+    use codeaware_mcp::compressor::classify_command;
+    assert_eq!(classify_command("cat -- -notes.md"), "generic");
+    // `-notes.md` is a file operand: the command runs (and fails only because the
+    // file is absent), it is not refused as an option.
+    let input = SmartRunInput {
+        command: "cat -- -notes.md".into(),
+        max_output_lines: 50,
+        capture_relevant_code: false,
+        scan_secrets: false,
+    };
+    let result = smart_run(&input).await.expect("cat -- -notes.md must not be denied");
+    assert_ne!(result.exit_code, 0);
+    assert!(!result.compressed_output.contains("unknown option"));
+}

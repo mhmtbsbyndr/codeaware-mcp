@@ -198,3 +198,21 @@ fn test_non_utf8_file_is_refused_and_untouched() {
     assert!(smart_edit(&input, dir.path()).is_err());
     assert_eq!(fs::read(&file).unwrap(), original, "non-UTF-8 bytes must not be rewritten");
 }
+
+#[test]
+fn test_edit_denied_lock_file_leaves_file_unchanged() {
+    use codeaware_mcp::tools::smart_edit::SmartEditError;
+    let dir = TempDir::new().unwrap();
+    let file = dir.path().join("Cargo.lock");
+    let original = "# lock\nversion = 3\n";
+    fs::write(&file, original).unwrap();
+    let input = SmartEditInput {
+        path: file.to_string_lossy().to_string(),
+        strategy: "text".into(),
+        edits: Some(vec![EditPair { old: "version = 3".into(), new: "version = 4".into() }]),
+        ..Default::default()
+    };
+    let err = smart_edit(&input, dir.path()).expect_err("Cargo.lock must be refused");
+    assert!(matches!(err, SmartEditError::Denied(_)), "got {err}");
+    assert_eq!(fs::read_to_string(&file).unwrap(), original);
+}

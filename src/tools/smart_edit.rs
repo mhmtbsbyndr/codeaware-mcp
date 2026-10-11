@@ -2,6 +2,7 @@ use serde::{Deserialize, Serialize};
 use std::path::Path;
 use thiserror::Error;
 
+use crate::security::deny_list::check_edit_allowed;
 use crate::tools::confidence::ConfidenceScore;
 use crate::tools::semantic_diff::SemanticChange;
 use crate::tools::test_selector::TestSelection;
@@ -104,6 +105,9 @@ pub enum SmartEditError {
     #[error("file is not valid UTF-8, refusing to edit: {0}")]
     NotUtf8(String),
 
+    #[error("Access denied: {0}")]
+    Denied(String),
+
     #[error(transparent)]
     Io(#[from] std::io::Error),
 }
@@ -197,12 +201,8 @@ pub fn smart_edit(
     input: &SmartEditInput,
     project_root: &Path,
 ) -> Result<SmartEditResult, SmartEditError> {
-    // Resolve absolute path
-    let abs_path = if Path::new(&input.path).is_absolute() {
-        std::path::PathBuf::from(&input.path)
-    } else {
-        project_root.join(&input.path)
-    };
+    // Deny-Edit policy and project-root containment, checked before anything is read or written.
+    let abs_path = check_edit_allowed(&input.path, project_root).map_err(SmartEditError::Denied)?;
 
     if !abs_path.exists() {
         return Err(SmartEditError::FileNotFound(input.path.clone()));

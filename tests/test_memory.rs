@@ -419,3 +419,241 @@ fn test_text_size_limit() {
     let result = handle_save_memory(&params, &db);
     assert_eq!(result["ok"], false, "Huge text should be rejected");
 }
+
+// ── update_memory (PATCH semantics) ───────────────────────────────
+
+use codeaware_mcp::tools::memory::handle_update_memory;
+
+fn save_full(db: &SessionDb) -> i64 {
+    db.save_observation(&SaveObservationOpts {
+        title: Some("Cache layer"),
+        text: "Cache eviction runs on every write path",
+        observation_type: "decision",
+        concepts: Some("trade-off"),
+        project: Some("/proj/a"),
+        files: Some("src/cache.rs"),
+        facts: Some("eviction is O(n) on purpose"),
+    })
+    .unwrap()
+}
+
+#[test]
+fn test_update_memory_omitted_fields_are_kept() {
+    let (_dir, db) = test_db();
+    let id = save_full(&db);
+
+    let out = handle_update_memory(&serde_json::json!({"id": id, "text": "Eviction now batched"}), &db);
+    assert_eq!(out["ok"], true, "{out}");
+
+    let rec = db.get_observation_by_id(id).unwrap().unwrap();
+    assert_eq!(rec.text, "Eviction now batched");
+    assert_eq!(rec.title.as_deref(), Some("Cache layer"));
+    assert_eq!(rec.observation_type, "decision");
+    assert_eq!(rec.concepts.as_deref(), Some("trade-off"));
+    assert_eq!(rec.project.as_deref(), Some("/proj/a"));
+    assert_eq!(rec.files.as_deref(), Some("src/cache.rs"));
+    assert_eq!(rec.facts.as_deref(), Some("eviction is O(n) on purpose"));
+}
+
+#[test]
+fn test_update_memory_explicit_null_clears_field() {
+    let (_dir, db) = test_db();
+    let id = save_full(&db);
+
+    let out = handle_update_memory(
+        &serde_json::json!({"id": id, "title": null, "facts": null, "files": null}),
+        &db,
+    );
+    assert_eq!(out["ok"], true, "{out}");
+
+    let rec = db.get_observation_by_id(id).unwrap().unwrap();
+    assert_eq!(rec.title, None);
+    assert_eq!(rec.facts, None);
+    assert_eq!(rec.files, None);
+    assert_eq!(rec.text, "Cache eviction runs on every write path");
+}
+
+#[test]
+fn test_update_memory_null_text_is_rejected() {
+    let (_dir, db) = test_db();
+    let id = save_full(&db);
+
+    let out = handle_update_memory(&serde_json::json!({"id": id, "text": null}), &db);
+    assert_eq!(out["ok"], false, "{out}");
+
+    let rec = db.get_observation_by_id(id).unwrap().unwrap();
+    assert_eq!(rec.text, "Cache eviction runs on every write path");
+}
+
+#[test]
+fn test_update_memory_rejects_update_without_searchable_text() {
+    let (_dir, db) = test_db();
+    let id = db
+        .save_observation(&SaveObservationOpts {
+            title: None,
+            text: "plain words here",
+            observation_type: "discovery",
+            concepts: None,
+            project: None,
+            files: None,
+            facts: None,
+        })
+        .unwrap();
+
+    // Only FTS-stripped characters left: nothing searchable remains.
+    let out = handle_update_memory(&serde_json::json!({"id": id, "text": "::\"\""}), &db);
+    assert_eq!(out["ok"], false, "{out}");
+    assert!(out["fallback_suggestion"].to_string().to_lowercase().contains("searchable"), "{out}");
+
+    let rec = db.get_observation_by_id(id).unwrap().unwrap();
+    assert_eq!(rec.text, "plain words here");
+}
+
+#[test]
+fn test_update_memory_searchable_via_title_when_text_unsearchable() {
+    let (_dir, db) = test_db();
+    let id = save_full(&db);
+
+    // Text has no searchable term, but the title still does: accepted.
+    let out = handle_update_memory(&serde_json::json!({"id": id, "text": "::"}), &db);
+    assert_eq!(out["ok"], true, "{out}");
+}
+
+#[test]
+fn test_update_memory_missing_id_is_error() {
+    let (_dir, db) = test_db();
+    let out = handle_update_memory(&serde_json::json!({"id": 999, "text": "x"}), &db);
+    assert_eq!(out["ok"], false, "{out}");
+}
+
+#[test]
+fn test_update_memory_rejects_invalid_type() {
+    let (_dir, db) = test_db();
+    let id = save_full(&db);
+    let out = handle_update_memory(&serde_json::json!({"id": id, "type": "nonsense"}), &db);
+    assert_eq!(out["ok"], false, "{out}");
+}
+
+#[test]
+fn test_update_memory_refreshes_fts_index() {
+    let (_dir, db) = test_db();
+    let id = save_full(&db);
+
+    let out = handle_update_memory(&serde_json::json!({"id": id, "text": "Quasar telemetry bridge"}), &db);
+    assert_eq!(out["ok"], true, "{out}");
+
+    let new_hits = db
+        .search_observations(&SearchObservationsOpts {
+            query: "\"quasar\"",
+            project: None,
+            observation_type: None,
+            limit: 10,
+            offset: 0,
+            date_start: None,
+            date_end: None,
+        })
+        .unwrap();
+    assert_eq!(new_hits.len(), 1);
+    assert_eq!(new_hits[0].id, id);
+
+    let old_hits = db
+        .search_observations(&SearchObservationsOpts {
+            query: "\"eviction\"",
+            project: None,
+            observation_type: None,
+            limit: 10,
+            offset: 0,
+            date_start: None,
+            date_end: None,
+        })
+        .unwrap();
+    // "eviction" still lives in facts, so it must match exactly once, not via stale text.
+    assert_eq!(old_hits.len(), 1);
+    let stale = db
+        .search_observations(&SearchObservationsOpts {
+            query: "\"batched\"",
+            project: None,
+            observation_type: None,
+            limit: 10,
+            offset: 0,
+            date_start: None,
+            date_end: None,
+        })
+        .unwrap();
+    assert!(stale.is_empty());
+}
+
+// ── literal wildcards in LIKE lookups ─────────────────────────────
+
+#[test]
+fn test_recent_observations_treats_like_wildcards_literally() {
+    let (_dir, db) = test_db();
+    let literal = db
+        .save_observation(&SaveObservationOpts {
+            title: None,
+            text: "100%_done report",
+            observation_type: "discovery",
+            concepts: None,
+            project: Some("/proj/x"),
+            files: Some("reports/100%_done.md"),
+            facts: None,
+        })
+        .unwrap();
+    db.save_observation(&SaveObservationOpts {
+        title: None,
+        text: "unrelated note",
+        observation_type: "discovery",
+        concepts: None,
+        project: Some("/proj/y"),
+        files: Some("plain/notes.md"),
+        facts: None,
+    })
+    .unwrap();
+
+    let hits = db.get_recent_observations_for_project("%_", 10).unwrap();
+    let ids: Vec<i64> = hits.iter().map(|r| r.id).collect();
+    assert_eq!(ids, vec![literal], "wildcards must match only literal characters");
+}
+
+// ── paging over search results ────────────────────────────────────
+
+#[test]
+fn test_search_paging_has_no_repeats_or_gaps_on_equal_ranks() {
+    let (_dir, db) = test_db();
+    let mut expected = Vec::new();
+    for _ in 0..5 {
+        expected.push(
+            db.save_observation(&SaveObservationOpts {
+                title: None,
+                text: "identical paging marker",
+                observation_type: "discovery",
+                concepts: None,
+                project: Some("/proj/page"),
+                files: None,
+                facts: None,
+            })
+            .unwrap(),
+        );
+    }
+    let mut seen = Vec::new();
+    for offset in [0usize, 2, 4] {
+        let page = db
+            .search_observations(&SearchObservationsOpts {
+                query: "\"paging\"",
+                project: Some("/proj/page"),
+                observation_type: None,
+                limit: 2,
+                offset,
+                date_start: None,
+                date_end: None,
+            })
+            .unwrap();
+        seen.extend(page.into_iter().map(|r| r.id));
+    }
+    let mut seen_sorted = seen.clone();
+    seen_sorted.sort();
+    seen_sorted.dedup();
+    expected.sort();
+    assert_eq!(seen.len(), 5, "no repeats across pages");
+    assert_eq!(seen_sorted, expected, "no gaps across pages");
+}

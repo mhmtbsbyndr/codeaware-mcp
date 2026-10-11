@@ -194,3 +194,45 @@ fn test_symlink_escape_for_missing_child_rejected() {
     let result = smart_read(&read_input("link/new.conf"), &project);
     assert!(result.is_err());
 }
+
+#[test]
+fn test_read_over_size_limit_is_refused() {
+    use codeaware_mcp::tools::smart_read::{SmartReadError, MAX_READ_BYTES};
+    let dir = TempDir::new().unwrap();
+    let file = dir.path().join("huge.txt");
+    let f = fs::File::create(&file).unwrap();
+    f.set_len(MAX_READ_BYTES + 1).unwrap();
+    drop(f);
+
+    let input = SmartReadInput {
+        path: file.to_string_lossy().to_string(),
+        mode: ReadMode::Full,
+        focus: None,
+        lines: None,
+        scope: None,
+    };
+    let err = smart_read(&input, dir.path()).expect_err("oversized file must be refused");
+    assert!(matches!(err, SmartReadError::TooLarge { .. }), "got {err}");
+    assert!(err.to_string().contains("focused"), "message should suggest a focused read: {err}");
+}
+
+#[test]
+fn test_read_at_size_limit_is_not_refused_for_size() {
+    use codeaware_mcp::tools::smart_read::{SmartReadError, MAX_READ_BYTES};
+    let dir = TempDir::new().unwrap();
+    let file = dir.path().join("edge.txt");
+    let f = fs::File::create(&file).unwrap();
+    f.set_len(MAX_READ_BYTES).unwrap();
+    drop(f);
+
+    let input = SmartReadInput {
+        path: file.to_string_lossy().to_string(),
+        mode: ReadMode::Full,
+        focus: None,
+        lines: None,
+        scope: None,
+    };
+    // All-zero content is detected as binary, which proves the size check let it through.
+    let err = smart_read(&input, dir.path()).expect_err("zero-filled file is binary");
+    assert!(!matches!(err, SmartReadError::TooLarge { .. }), "limit itself must be allowed: {err}");
+}

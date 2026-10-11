@@ -1,8 +1,12 @@
 use serde::{Deserialize, Serialize};
+use std::io::Read;
 use std::path::Path;
 use thiserror::Error;
 use crate::intelligence::tree_sitter_provider::TreeSitterProvider;
 use crate::tools::prefetch::PrefetchedFile;
+
+/// Largest file smart_read will load into memory (8 MiB).
+pub const MAX_READ_BYTES: u64 = 8 * 1024 * 1024;
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Default)]
 #[serde(rename_all = "lowercase")]
@@ -69,6 +73,17 @@ pub enum SmartReadError {
     InvalidRange(String),
     #[error("Access denied: {0}")]
     Denied(String),
+    #[error("File too large (limit {limit} bytes): {path}. Read a part instead with mode \"focused\" and lines (e.g. \"1-200\") or focus (symbol or search term).")]
+    TooLarge { path: String, limit: u64 },
+}
+
+/// Reads at most `limit + 1` bytes so a file that grows during the read cannot exhaust memory.
+fn read_bounded(path: &Path, limit: u64) -> Result<Vec<u8>, std::io::Error> {
+    let mut buf = Vec::new();
+    std::fs::File::open(path)?
+        .take(limit + 1)
+        .read_to_end(&mut buf)?;
+    Ok(buf)
 }
 
 pub fn detect_language(path: &str) -> Option<&str> {
@@ -92,7 +107,14 @@ pub fn smart_read(input: &SmartReadInput, project_root: &Path) -> Result<SmartRe
     // Resolve against the project root, reject escapes, and apply the Deny-Read policy.
     let resolved = crate::security::deny_list::check_read_allowed(&input.path, project_root)
         .map_err(SmartReadError::Denied)?;
-    let raw = std::fs::read(&resolved)?;
+    if std::fs::metadata(&resolved)?.len() > MAX_READ_BYTES {
+        return Err(SmartReadError::TooLarge { path: input.path.clone(), limit: MAX_READ_BYTES });
+    }
+    let raw = read_bounded(&resolved, MAX_READ_BYTES)?;
+    if raw.len() as u64 > MAX_READ_BYTES {
+        // The file grew between the metadata check and the read.
+        return Err(SmartReadError::TooLarge { path: input.path.clone(), limit: MAX_READ_BYTES });
+    }
 
     // Binary detection: check first 8KB for null bytes
     let check_len = raw.len().min(8192);

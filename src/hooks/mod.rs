@@ -1,12 +1,16 @@
 pub mod auto_observe;
 pub mod compact;
+pub mod context_cache;
 pub mod context_injection;
 pub mod governance;
 pub mod post_tool_use;
 pub mod profiles;
 pub mod session_persistence;
 pub mod session_stop;
+pub mod spool;
+pub mod stdin_utf8;
 pub mod subagent_stop;
+pub mod tail_reader;
 pub mod tool_failure;
 
 /// Dispatch hook by event name. Called from main.rs CLI.

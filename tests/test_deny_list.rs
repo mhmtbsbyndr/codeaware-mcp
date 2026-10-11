@@ -117,3 +117,23 @@ fn test_check_edit_allowed_function() {
     assert!(check_edit_allowed("lib.rs", dir.path()).is_ok());
     assert!(check_edit_allowed("../escape.rs", dir.path()).is_err());
 }
+
+#[test]
+fn test_double_dash_rm_rf_root_still_denied() {
+    let deny = DenyList::default();
+    assert!(deny.is_command_denied("rm -rf -- /"));
+    assert!(deny.is_command_denied("rm -fr -- /"));
+    assert!(deny.is_command_denied("rm -rf -- ~"));
+    assert!(deny.is_command_denied("rm -rf -- -notes.md"), "bare name after -- has no explicit path");
+}
+
+#[test]
+fn test_double_dash_makes_following_args_operands() {
+    let deny = DenyList::default();
+    // After `--`, `-rf` is a file name, not the recursive/force flags.
+    assert!(!deny.is_command_denied("rm -- -rf file.txt"));
+    assert!(!deny.is_command_denied("rm -- -rf target/x"));
+    // Non-rm commands: `--` operands are not parsed as options.
+    assert!(!deny.is_command_denied("cat -- -notes.md"));
+    assert!(!deny.is_command_denied("cat -- -notes.md | grep todo"));
+}

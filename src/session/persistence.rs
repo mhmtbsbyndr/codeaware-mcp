@@ -50,6 +50,18 @@ pub struct SearchObservationsOpts<'a> {
     pub date_end: Option<&'a str>,
 }
 
+/// Complete field set for rewriting one observation. The caller resolves
+/// PATCH semantics first; `None` here means the stored value becomes NULL.
+pub struct ObservationFields<'a> {
+    pub title: Option<&'a str>,
+    pub text: &'a str,
+    pub observation_type: &'a str,
+    pub concepts: Option<&'a str>,
+    pub project: Option<&'a str>,
+    pub files: Option<&'a str>,
+    pub facts: Option<&'a str>,
+}
+
 pub struct SessionRecord {
     pub id: String,
     pub project_path: String,
@@ -117,6 +129,10 @@ impl SessionDb {
 
         let summaries_schema = include_str!("../../migrations/005_summaries.sql");
         self.conn.execute_batch(summaries_schema)?;
+
+        // Lookup indexes (CREATE INDEX IF NOT EXISTS, safe to re-run on every open)
+        let indexes_schema = include_str!("../../migrations/006_indexes.sql");
+        self.conn.execute_batch(indexes_schema)?;
 
         Ok(())
     }
@@ -346,6 +362,32 @@ impl SessionDb {
         Ok(self.conn.last_insert_rowid())
     }
 
+    /// Overwrite all editable fields of an observation. The FTS index is kept
+    /// in sync by the `observations_au` trigger. Returns false if the id is unknown.
+    pub fn update_observation_fields(
+        &self,
+        id: i64,
+        fields: &ObservationFields<'_>,
+    ) -> Result<bool, PersistenceError> {
+        let changed = self.conn.execute(
+            "UPDATE observations
+             SET title = ?2, text = ?3, observation_type = ?4, concepts = ?5,
+                 project = ?6, files = ?7, facts = ?8, updated_at = datetime('now')
+             WHERE id = ?1",
+            params![
+                id,
+                fields.title,
+                fields.text,
+                fields.observation_type,
+                fields.concepts,
+                fields.project,
+                fields.files,
+                fields.facts,
+            ],
+        )?;
+        Ok(changed > 0)
+    }
+
     pub fn search_observations(
         &self,
         opts: &SearchObservationsOpts<'_>,
@@ -384,7 +426,7 @@ impl SessionDb {
              FROM observations_fts f
              INNER JOIN observations c ON c.id = f.rowid
              WHERE {where_clause}
-             ORDER BY rank
+             ORDER BY rank, c.id
              LIMIT ?{param_idx} OFFSET ?{}",
             param_idx + 1
         );
@@ -540,11 +582,12 @@ impl SessionDb {
     ) -> Result<Vec<ObservationRecord>, PersistenceError> {
         let mut stmt = self.conn.prepare(
             "SELECT id, title, text, observation_type, concepts, project, files, facts, created_at, updated_at
-             FROM observations WHERE project = ?1 OR files LIKE '%' || ?1 || '%'
-             ORDER BY created_at DESC LIMIT ?2",
+             FROM observations WHERE project = ?1 OR files LIKE ?2 ESCAPE '\\'
+             ORDER BY created_at DESC LIMIT ?3",
         )?;
+        let pattern = format!("%{}%", escape_like(project));
         let records = stmt
-            .query_map(params![project, limit as i64], |row| {
+            .query_map(params![project, pattern, limit as i64], |row| {
                 Self::row_to_observation(row)
             })?
             .collect::<Result<Vec<_>, _>>()?;
@@ -639,6 +682,19 @@ impl SessionDb {
         .map(|rows| rows.flatten().collect())
         .unwrap_or_default()
     }
+}
+
+/// Escape LIKE metacharacters so user input matches literally.
+/// Pair with `ESCAPE '\\'` in the SQL.
+pub(crate) fn escape_like(input: &str) -> String {
+    let mut out = String::with_capacity(input.len());
+    for c in input.chars() {
+        if matches!(c, '\\' | '%' | '_') {
+            out.push('\\');
+        }
+        out.push(c);
+    }
+    out
 }
 
 pub struct SessionEventRow {

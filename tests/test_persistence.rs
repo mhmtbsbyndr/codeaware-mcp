@@ -117,3 +117,29 @@ fn test_fts5_bad_query_does_not_crash() {
     let _result = db.search_session_events("sess-001", "\"unterminated");
     // Just ensure no panic
 }
+
+#[test]
+fn test_migration_006_indexes_created_on_fresh_db() {
+    let dir = TempDir::new().unwrap();
+    let db_path = dir.path().join("fresh.db");
+    let db = SessionDb::open(&db_path).unwrap();
+    drop(db);
+    // Reopening runs migrations again: must stay idempotent.
+    let db = SessionDb::open(&db_path).unwrap();
+    drop(db);
+
+    let conn = rusqlite::Connection::open(&db_path).unwrap();
+    for name in [
+        "idx_session_events_content_session_id",
+        "idx_sessions_project_path",
+    ] {
+        let count: i64 = conn
+            .query_row(
+                "SELECT COUNT(*) FROM sqlite_master WHERE type = 'index' AND name = ?1",
+                [name],
+                |row| row.get(0),
+            )
+            .unwrap();
+        assert_eq!(count, 1, "index {name} missing");
+    }
+}

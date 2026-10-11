@@ -127,3 +127,23 @@ fn test_identity_endpoint_identifies_service() {
     let json: serde_json::Value = serde_json::from_str(body).unwrap();
     assert_eq!(json["service"], "codeaware-xray");
 }
+
+#[test]
+fn test_ready_endpoint_reports_ready_after_start() {
+    let (_server, port) = start_server();
+    let resp = raw_request(port, "GET /api/ready HTTP/1.1\r\nHost: 127.0.0.1\r\n\r\n");
+    assert!(resp.starts_with("HTTP/1.1 200"), "got: {resp}");
+    let body = resp.split_once("\r\n\r\n").unwrap().1;
+    let json: serde_json::Value = serde_json::from_str(body).unwrap();
+    assert_eq!(json["ready"], true);
+    assert_eq!(json["phase"], "ready");
+    assert_eq!(json["service"], "codeaware-xray");
+    assert!(json["elapsed_ms"].is_u64(), "elapsed_ms missing: {body}");
+}
+
+#[test]
+fn test_ready_endpoint_respects_host_check() {
+    let (_server, port) = start_server();
+    let resp = raw_request(port, "GET /api/ready HTTP/1.1\r\nHost: evil.example.com\r\n\r\n");
+    assert!(resp.starts_with("HTTP/1.1 403"), "got: {resp}");
+}

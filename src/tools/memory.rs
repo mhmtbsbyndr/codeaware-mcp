@@ -1,7 +1,9 @@
 use serde::Serialize;
 use serde_json::{json, Value};
 use crate::envelope::{Envelope, ErrorCode, TrustLevel};
-use crate::session::persistence::{SessionDb, SaveObservationOpts, SearchObservationsOpts};
+use crate::session::persistence::{
+    ObservationFields, SaveObservationOpts, SearchObservationsOpts, SessionDb,
+};
 
 const VALID_TYPES: &[&str] = &[
     "bugfix", "feature", "refactor", "change", "discovery", "decision",
@@ -308,5 +310,168 @@ pub fn handle_memory_timeline(params: &Value, db: &SessionDb) -> Value {
             );
             serde_json::to_value(env).unwrap_or(json!({"ok": false}))
         }
+    }
+}
+
+#[derive(Debug, Serialize)]
+struct UpdateMemoryResult {
+    id: i64,
+    message: String,
+}
+
+fn error_value(code: ErrorCode, retryable: bool, message: impl Into<String>) -> Value {
+    let env = Envelope::<()>::error(code, retryable, Some(message.into()));
+    serde_json::to_value(env).unwrap_or(json!({"ok": false}))
+}
+
+/// PATCH rule for a nullable text field: absent keeps the stored value,
+/// explicit null clears it, a string replaces it.
+fn patch_scalar(params: &Value, key: &str, current: Option<String>) -> Result<Option<String>, String> {
+    match params.get(key) {
+        None => Ok(current),
+        Some(Value::Null) => Ok(None),
+        Some(Value::String(s)) => Ok(Some(s.clone())),
+        Some(_) => Err(format!("'{key}' must be a string or null")),
+    }
+}
+
+/// PATCH rule for a list field, stored comma-joined like save_memory does.
+/// An empty list counts as cleared.
+fn patch_list(params: &Value, key: &str, current: Option<String>) -> Result<Option<String>, String> {
+    match params.get(key) {
+        None => Ok(current),
+        Some(Value::Null) => Ok(None),
+        Some(Value::Array(items)) => {
+            let mut parts = Vec::with_capacity(items.len());
+            for item in items {
+                match item.as_str() {
+                    Some(s) => parts.push(s),
+                    None => return Err(format!("'{key}' must contain only strings")),
+                }
+            }
+            let joined = parts.join(",");
+            Ok(if joined.is_empty() { None } else { Some(joined) })
+        }
+        Some(_) => Err(format!("'{key}' must be an array of strings or null")),
+    }
+}
+
+/// Partial update of an observation with PATCH semantics:
+/// - omitted fields keep their stored value
+/// - explicit null clears a nullable field (title, project, facts, files, concepts)
+/// - `text` and `type` are required columns, so null is rejected
+/// - the result must keep at least one searchable term in title, text, facts or concepts
+pub fn handle_update_memory(params: &Value, db: &SessionDb) -> Value {
+    let id = match params.get("id").and_then(|v| v.as_i64()) {
+        Some(id) => id,
+        None => return error_value(ErrorCode::EParseFailed, false, "'id' is required (integer)"),
+    };
+    let current = match db.get_observation_by_id(id) {
+        Ok(Some(rec)) => rec,
+        Ok(None) => {
+            return error_value(ErrorCode::EParseFailed, false, format!("No observation with id {id}"))
+        }
+        Err(e) => {
+            return error_value(ErrorCode::EInternalError, true, format!("Failed to load observation: {e}"))
+        }
+    };
+
+    let text: String = match params.get("text") {
+        None => current.text.clone(),
+        Some(Value::String(s)) if !s.is_empty() => s.clone(),
+        Some(Value::String(_)) => {
+            return error_value(ErrorCode::EParseFailed, false, "'text' must be non-empty")
+        }
+        Some(Value::Null) => {
+            return error_value(ErrorCode::EParseFailed, false, "'text' cannot be cleared")
+        }
+        Some(_) => return error_value(ErrorCode::EParseFailed, false, "'text' must be a string"),
+    };
+    if text.len() > MAX_TEXT_SIZE {
+        return error_value(
+            ErrorCode::EParseFailed,
+            false,
+            format!("'text' exceeds maximum size of {} bytes", MAX_TEXT_SIZE),
+        );
+    }
+
+    let obs_type: String = match params.get("type") {
+        None => current.observation_type.clone(),
+        Some(Value::String(t)) if VALID_TYPES.contains(&t.as_str()) => t.clone(),
+        Some(Value::String(t)) => {
+            return error_value(
+                ErrorCode::EParseFailed,
+                false,
+                format!("Invalid type '{}'. Valid: {:?}", t, VALID_TYPES),
+            )
+        }
+        Some(_) => return error_value(ErrorCode::EParseFailed, false, "'type' must be a string"),
+    };
+
+    let title = match patch_scalar(params, "title", current.title.clone()) {
+        Ok(v) => v,
+        Err(m) => return error_value(ErrorCode::EParseFailed, false, m),
+    };
+    let project = match patch_scalar(params, "project", current.project.clone()) {
+        Ok(v) => v,
+        Err(m) => return error_value(ErrorCode::EParseFailed, false, m),
+    };
+    let facts = match patch_list(params, "facts", current.facts.clone()) {
+        Ok(v) => v,
+        Err(m) => return error_value(ErrorCode::EParseFailed, false, m),
+    };
+    let files = match patch_list(params, "files", current.files.clone()) {
+        Ok(v) => v,
+        Err(m) => return error_value(ErrorCode::EParseFailed, false, m),
+    };
+    let concepts = match patch_list(params, "concepts", current.concepts.clone()) {
+        Ok(v) => v,
+        Err(m) => return error_value(ErrorCode::EParseFailed, false, m),
+    };
+    if let Some(ref c) = concepts {
+        for concept in c.split(',') {
+            if !VALID_CONCEPTS.contains(&concept) {
+                return error_value(
+                    ErrorCode::EParseFailed,
+                    false,
+                    format!("Invalid concept '{}'. Valid: {:?}", concept, VALID_CONCEPTS),
+                );
+            }
+        }
+    }
+
+    // The type is an enum value, not user text, so it does not count as searchable content.
+    let has_searchable_text = [title.as_deref(), Some(text.as_str()), facts.as_deref(), concepts.as_deref()]
+        .into_iter()
+        .flatten()
+        .any(|s| sanitize_fts5_query(s).is_some());
+    if !has_searchable_text {
+        return error_value(
+            ErrorCode::EParseFailed,
+            false,
+            "Update would leave no searchable text in title, text, facts or concepts",
+        );
+    }
+
+    let fields = ObservationFields {
+        title: title.as_deref(),
+        text: &text,
+        observation_type: &obs_type,
+        concepts: concepts.as_deref(),
+        project: project.as_deref(),
+        files: files.as_deref(),
+        facts: facts.as_deref(),
+    };
+    match db.update_observation_fields(id, &fields) {
+        Ok(true) => {
+            let result = UpdateMemoryResult {
+                id,
+                message: format!("Observation updated (id: {})", id),
+            };
+            let env = Envelope::success(result, TrustLevel::Exact);
+            serde_json::to_value(env).unwrap_or(json!({"ok": false}))
+        }
+        Ok(false) => error_value(ErrorCode::EParseFailed, false, format!("No observation with id {id}")),
+        Err(e) => error_value(ErrorCode::EInternalError, true, format!("Failed to update: {e}")),
     }
 }
