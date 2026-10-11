@@ -15,14 +15,13 @@
 //!   returned to the pending set.
 
 use serde_json::{json, Value};
-use std::fs::{self, File, OpenOptions};
+use std::fs::{self, OpenOptions};
 use std::io::Write;
 use std::path::{Path, PathBuf};
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
 const SPOOL_DIR_NAME: &str = "hook-spool";
 const JSON_EXT: &str = ".json";
-const CLAIMED_EXT: &str = ".json.claimed";
 const CLAIM_TTL: Duration = Duration::from_secs(60);
 
 /// Event kinds accepted by the spool.
@@ -65,7 +64,67 @@ where
 
 /// Write one event atomically into `dir` and return its final path.
 pub fn enqueue_in(dir: &Path, kind: &str, payload: &Value) -> Result<PathBuf, String> {
-    todo!("stub")
+    if !KINDS.contains(&kind) {
+        return Err(format!("unknown spool kind: {kind}"));
+    }
+    let ts = SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .map(|d| d.as_nanos() as u64)
+        .unwrap_or(0);
+    let body = json!({ "kind": kind, "enqueued_at_ns": ts, "payload": payload });
+    let bytes = serde_json::to_vec(&body).map_err(|e| format!("cannot serialize event: {e}"))?;
+    let name = format!("{ts:020}-{}{JSON_EXT}", uuid::Uuid::new_v4().simple());
+    write_private_atomic(dir, &name, &bytes).map_err(|e| format!("cannot spool event: {e}"))
+}
+
+/// Create `dir` (and parents) with owner-only permissions where supported.
+pub(crate) fn ensure_private_dir(dir: &Path) -> std::io::Result<()> {
+    let mut b = fs::DirBuilder::new();
+    b.recursive(true);
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::DirBuilderExt;
+        b.mode(0o700);
+    }
+    b.create(dir)
+}
+
+/// Write `bytes` to `dir/name` via a temp file and a rename, so readers only
+/// ever see a complete file. Returns the final path.
+pub(crate) fn write_private_atomic(dir: &Path, name: &str, bytes: &[u8]) -> std::io::Result<PathBuf> {
+    ensure_private_dir(dir)?;
+    let final_path = dir.join(name);
+    let tmp = dir.join(format!(".{name}.{}.tmp", uuid::Uuid::new_v4().simple()));
+    let result = (|| {
+        let mut opts = OpenOptions::new();
+        opts.write(true).create_new(true);
+        #[cfg(unix)]
+        {
+            use std::os::unix::fs::OpenOptionsExt;
+            opts.mode(0o600);
+        }
+        let mut file = opts.open(&tmp)?;
+        file.write_all(bytes)?;
+        file.sync_data()?;
+        drop(file);
+        fs::rename(&tmp, &final_path)
+    })();
+    match result {
+        Ok(()) => Ok(final_path),
+        Err(e) => {
+            let _ = fs::remove_file(&tmp);
+            Err(e)
+        }
+    }
+}
+
+fn is_claim_stale(path: &Path) -> bool {
+    fs::metadata(path)
+        .and_then(|m| m.modified())
+        .ok()
+        .and_then(|t| SystemTime::now().duration_since(t).ok())
+        .map(|age| age > CLAIM_TTL)
+        .unwrap_or(false)
 }
 
 /// Process pending events in `dir`, oldest first.
@@ -73,7 +132,63 @@ pub fn drain_in<F>(dir: &Path, mut handler: F) -> DrainReport
 where
     F: FnMut(&str, &Value) -> Result<(), String>,
 {
-    todo!("stub")
+    let mut report = DrainReport::default();
+    let Ok(entries) = fs::read_dir(dir) else {
+        return report;
+    };
+    let mut pending = Vec::new();
+    for entry in entries.flatten() {
+        let name = entry.file_name().to_string_lossy().into_owned();
+        let path = entry.path();
+        if name.starts_with('.') {
+            continue;
+        }
+        if let Some(base) = name.strip_suffix(".claimed") {
+            // Left behind by a drain that died mid-event: return it to the queue.
+            if is_claim_stale(&path) && fs::rename(&path, dir.join(base)).is_ok() {
+                pending.push(base.to_string());
+            }
+        } else if name.ends_with(JSON_EXT) {
+            pending.push(name);
+        }
+    }
+    pending.sort();
+
+    for name in pending {
+        let path = dir.join(&name);
+        let claimed = dir.join(format!("{name}.claimed"));
+        // Only one process can win this rename; the loser skips the event.
+        if fs::rename(&path, &claimed).is_err() {
+            continue;
+        }
+        let parsed = fs::read(&claimed)
+            .ok()
+            .and_then(|b| serde_json::from_slice::<Value>(&b).ok())
+            .and_then(|v| {
+                let kind = v.get("kind")?.as_str()?.to_string();
+                KINDS.contains(&kind.as_str()).then(|| (kind, v.get("payload").cloned().unwrap_or(Value::Null)))
+            });
+        let Some((kind, payload)) = parsed else {
+            // Unreadable or unknown event: move it aside so it does not block the queue.
+            report.skipped_invalid += 1;
+            let quarantine = dir.join("invalid");
+            let _ = ensure_private_dir(&quarantine);
+            let _ = fs::rename(&claimed, quarantine.join(&name));
+            continue;
+        };
+        match handler(&kind, &payload) {
+            Ok(()) => {
+                let _ = fs::remove_file(&claimed);
+                report.processed += 1;
+            }
+            Err(_) => {
+                // Keep the event for the next drain.
+                let _ = fs::rename(&claimed, &path);
+                report.failed += 1;
+            }
+        }
+    }
+    report
 }
 
 #[cfg(test)]
@@ -162,7 +277,7 @@ mod tests {
         fs::rename(&path, &claimed).unwrap();
         // Make the claim look old.
         let old = SystemTime::now() - Duration::from_secs(3600);
-        File::options().write(true).open(&claimed).unwrap().set_modified(old).unwrap();
+        std::fs::File::options().write(true).open(&claimed).unwrap().set_modified(old).unwrap();
 
         let report = drain_in(&dir, |_, _| Ok(()));
         assert_eq!(report.processed, 1);

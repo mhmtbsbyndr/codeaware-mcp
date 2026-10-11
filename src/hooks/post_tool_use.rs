@@ -1,5 +1,7 @@
+use crate::hooks::spool;
 use crate::xray::metrics::MetricsState;
 use crate::xray::shared;
+use serde_json::{json, Value};
 use std::sync::{Arc, Mutex};
 use thiserror::Error;
 
@@ -11,10 +13,17 @@ pub enum HookError {
     Other(String),
 }
 
+/// Edit-like tools: a file changed, so the cached context must be rebuilt.
+pub fn is_file_edit_tool(tool_name: &str) -> bool {
+    let lower = tool_name.to_ascii_lowercase();
+    lower.contains("edit") || lower == "write" || lower.ends_with("__write")
+}
+
 /// Called from CLI hook path where no MetricsState exists.
-/// Writes to shared metrics file so xray dashboard can pick it up.
+/// The event is spooled and recorded by the next drain (next hook call or
+/// session stop). If the spool is unavailable, metrics are written directly.
 pub fn handle_post_tool_use(input: &str) -> Result<String, HookError> {
-    let parsed: serde_json::Value = serde_json::from_str(input)?;
+    let parsed: Value = serde_json::from_str(input)?;
     let tool_name = parsed["tool_name"].as_str().unwrap_or("unknown");
     let output_size = parsed["tool_output_size"].as_u64().unwrap_or(0);
     let file_path = parsed["file_path"].as_str();
@@ -22,8 +31,18 @@ pub fn handle_post_tool_use(input: &str) -> Result<String, HookError> {
     let estimated_tokens = output_size / 4;
     let compressed_estimate = estimated_tokens * 10 / 100;
 
-    // Write to shared file so xray server can read it
-    shared::append_tool_call(tool_name, file_path, estimated_tokens, compressed_estimate);
+    let kind = if is_file_edit_tool(tool_name) { "file_edit" } else { "observation" };
+    let payload = json!({
+        "tool_name": tool_name,
+        "file_path": file_path,
+        "estimated_tokens": estimated_tokens,
+        "compressed_estimate": compressed_estimate,
+        "project": parsed["project"].as_str().unwrap_or("."),
+    });
+    if let Err(e) = spool::enqueue(kind, &payload) {
+        eprintln!("CodeAware: spool unavailable ({e}); recording metrics directly");
+        shared::append_tool_call(tool_name, file_path, estimated_tokens, compressed_estimate);
+    }
 
     Ok(serde_json::json!({
         "decision": "approve",

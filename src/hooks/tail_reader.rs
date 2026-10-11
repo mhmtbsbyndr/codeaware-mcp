@@ -46,7 +46,71 @@ impl<R: Read + Seek> BackwardLines<R> {
 
     /// Next line (newest first), without its terminating `\n`.
     pub fn next_line(&mut self) -> io::Result<Option<Vec<u8>>> {
-        todo!("stub")
+        loop {
+            // A complete line exists in the buffer: split it off the end.
+            if let Some(i) = self.buf.iter().rposition(|&b| b == b'\n') {
+                let line = self.buf.split_off(i + 1);
+                self.buf.truncate(i);
+                if std::mem::replace(&mut self.at_eof, false) && line.is_empty() {
+                    // The file ended with '\n': that is not an extra empty line.
+                    continue;
+                }
+                if line.len() > self.max_line_len {
+                    self.skipped_oversize += 1;
+                    continue;
+                }
+                return Ok(Some(line));
+            }
+
+            if self.finished {
+                return Ok(None);
+            }
+
+            if self.pos == 0 {
+                // Start of file reached: whatever remains is the first line.
+                self.finished = true;
+                if self.discarding {
+                    self.discarding = false;
+                    self.skipped_oversize += 1;
+                    return Ok(None);
+                }
+                let line = std::mem::take(&mut self.buf);
+                if std::mem::replace(&mut self.at_eof, false) && line.is_empty() {
+                    return Ok(None);
+                }
+                if line.len() > self.max_line_len {
+                    self.skipped_oversize += 1;
+                    return Ok(None);
+                }
+                return Ok(Some(line));
+            }
+
+            // No complete line yet: read the previous chunk from the file.
+            let n = self.pos.min(self.chunk_size as u64) as usize;
+            self.pos -= n as u64;
+            self.reader.seek(SeekFrom::Start(self.pos))?;
+            let mut chunk = vec![0u8; n];
+            self.reader.read_exact(&mut chunk)?;
+
+            if self.discarding {
+                // Still inside an oversized line. Drop bytes until its start.
+                if let Some(i) = chunk.iter().rposition(|&b| b == b'\n') {
+                    self.buf = chunk[..i].to_vec();
+                    self.discarding = false;
+                    self.skipped_oversize += 1;
+                }
+                continue;
+            }
+
+            self.peak_buffer = self.peak_buffer.max(self.buf.len() + chunk.len());
+            chunk.append(&mut self.buf);
+            self.buf = chunk;
+
+            if !self.buf.contains(&b'\n') && self.buf.len() > self.max_line_len {
+                self.discarding = true;
+                self.buf = Vec::new();
+            }
+        }
     }
 
     /// Number of lines dropped because they exceeded `max_line_len`.

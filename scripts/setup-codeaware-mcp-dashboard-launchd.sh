@@ -3,6 +3,34 @@ set -euo pipefail
 
 OS="$(uname -s)"
 LABEL="com.mhmtbsbyndr.codeaware-mcp"
+READY_URL="http://127.0.0.1:9847/api/ready"
+READY_TIMEOUT_SECS="${CODEAWARE_XRAY_READY_TIMEOUT:-15}"
+
+# Poll the xray readiness endpoint until it reports ready or the timeout passes.
+# Succeeds only when the responder identifies itself as codeaware-xray.
+wait_for_xray_ready() {
+  local deadline resp code body
+  local last="no response"
+  if ! command -v curl >/dev/null 2>&1; then
+    echo "curl not found; cannot verify xray readiness."
+    return 1
+  fi
+  deadline=$(( $(date +%s) + READY_TIMEOUT_SECS ))
+  while [ "$(date +%s)" -lt "$deadline" ]; do
+    resp="$(curl -sS --max-time 1 -w '\n%{http_code}' "$READY_URL" 2>/dev/null || true)"
+    code="${resp##*$'\n'}"
+    body="${resp%$'\n'*}"
+    if [ "$code" = "200" ] && [[ "$body" == *'"service":"codeaware-xray"'* ]]; then
+      echo "xray ready: $body"
+      return 0
+    fi
+    [ -n "$body" ] && last="$body"
+    sleep 0.2
+  done
+  echo "xray not ready after ${READY_TIMEOUT_SECS}s (last: $last)"
+  return 1
+}
+
 resolve_wrapper_dir() {
   for dir in "$HOME/.local/bin" "$HOME/.cache/codeaware-mcp" "/tmp/codeaware-mcp-dashboard"; do
     if mkdir -p "$dir" 2>/dev/null && touch "$dir/.codeaware-mcp-dashboard-test-write" 2>/dev/null; then
@@ -123,6 +151,9 @@ EOF
     cat > "$SERVICE_FILE" <<EOF
 [Unit]
 Description=CodeAware MCP dashboard daemon
+# Stop restart loops: more than 5 starts within 60 s puts the unit in failed state.
+StartLimitIntervalSec=60
+StartLimitBurst=5
 
 [Service]
 Type=simple
@@ -152,10 +183,12 @@ if [ "$ACTION" = "start" ]; then
     fi
     launchctl kickstart -k "gui/$(id -u)/$LABEL"
     echo "Started $LABEL"
+    wait_for_xray_ready || { echo "Check logs in $LOG_DIR"; exit 1; }
   else
     systemctl --user daemon-reload
     systemctl --user start "$LABEL.service"
     echo "Started $LABEL.service"
+    wait_for_xray_ready || { echo "Check: journalctl --user -u $LABEL.service"; exit 1; }
   fi
   exit 0
 fi

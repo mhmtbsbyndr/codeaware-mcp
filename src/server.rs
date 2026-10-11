@@ -198,148 +198,73 @@ impl McpServer {
             "tools": [
                 {
                     "name": "project_map",
-                    "description": "Generate a structural map of the project directory",
+                    "description": "Map the project directory structure.",
                     "inputSchema": {
                         "type": "object",
                         "properties": {
-                            "path": {
-                                "type": "string",
-                                "description": "Root path to map"
-                            },
-                            "depth": {
-                                "type": "integer",
-                                "description": "Maximum directory depth"
-                            },
-                            "include_symbols": {
-                                "type": "boolean",
-                                "description": "Include symbol definitions"
-                            },
-                            "filter_language": {
-                                "type": "string",
-                                "description": "Filter by programming language"
-                            },
-                            "task_context": {
-                                "type": "string",
-                                "description": "Context hint for the task"
-                            }
+                            "path": { "type": "string" },
+                            "depth": { "type": "integer" },
+                            "include_symbols": { "type": "boolean" },
+                            "filter_language": { "type": "string" },
+                            "task_context": { "type": "string" }
                         }
                     }
                 },
                 {
                     "name": "smart_read",
-                    "description": "Read a file with intelligent focus and context extraction",
+                    "description": "Read a file with focused context.",
                     "inputSchema": {
                         "type": "object",
                         "required": ["path"],
                         "properties": {
-                            "path": {
-                                "type": "string",
-                                "description": "File path to read"
-                            },
-                            "mode": {
-                                "type": "string",
-                                "description": "Read mode (auto, skeleton, focused, full, diff)"
-                            },
-                            "focus": {
-                                "type": "string",
-                                "description": "Focus area or symbol name"
-                            },
-                            "lines": {
-                                "type": "array",
-                                "items": { "type": "integer" },
-                                "description": "Specific line numbers to read"
-                            },
-                            "scope": {
-                                "type": "string",
-                                "description": "Scope of reading context"
-                            }
+                            "path": { "type": "string" },
+                            "mode": { "type": "string", "description": "auto, skeleton, focused, full or diff" },
+                            "focus": { "type": "string" },
+                            "lines": { "type": "array", "items": { "type": "integer" } },
+                            "scope": { "type": "string" }
                         }
                     }
                 },
                 {
                     "name": "smart_edit",
-                    "description": "Edit a file using intelligent strategies",
+                    "description": "Edit a file using intelligent strategies.",
                     "inputSchema": {
                         "type": "object",
                         "required": ["path"],
                         "properties": {
-                            "path": {
-                                "type": "string",
-                                "description": "File path to edit"
-                            },
-                            "strategy": {
-                                "type": "string",
-                                "description": "Edit strategy (text, lines). 'symbol' is not yet supported."
-                            },
-                            "symbol": {
-                                "type": "string",
-                                "description": "Symbol to edit"
-                            },
-                            "line_range": {
-                                "type": "array",
-                                "items": { "type": "integer" },
-                                "description": "Line range [start, end]"
-                            },
-                            "edits": {
-                                "type": "array",
-                                "description": "Array of edit operations",
-                                "items": {
-                                    "type": "object"
-                                }
-                            },
-                            "new_content": {
-                                "type": "string",
-                                "description": "New content to write"
-                            },
-                            "dry_run": {
-                                "type": "boolean",
-                                "description": "Preview changes without applying"
-                            },
-                            "expected_hash": {
-                                "type": "string",
-                                "description": "Expected hash for conflict detection"
-                            }
+                            "path": { "type": "string" },
+                            "strategy": { "type": "string", "description": "text or lines ('symbol' unsupported)" },
+                            "symbol": { "type": "string" },
+                            "line_range": { "type": "array", "items": { "type": "integer" } },
+                            "edits": { "type": "array", "items": { "type": "object" } },
+                            "new_content": { "type": "string" },
+                            "dry_run": { "type": "boolean" },
+                            "expected_hash": { "type": "string" }
                         }
                     }
                 },
                 {
                     "name": "smart_run",
-                    "description": "Execute a command with intelligent output capture",
+                    "description": "Run a command with compressed output capture.",
                     "inputSchema": {
                         "type": "object",
                         "required": ["command"],
                         "properties": {
-                            "command": {
-                                "type": "string",
-                                "description": "Command to execute"
-                            },
-                            "max_output_lines": {
-                                "type": "integer",
-                                "description": "Maximum number of output lines to capture"
-                            },
-                            "capture_relevant_code": {
-                                "type": "boolean",
-                                "description": "Include relevant code context in output"
-                            },
-                            "scan_secrets": {
-                                "type": "boolean",
-                                "description": "Scan output for accidental secret exposure"
-                            }
+                            "command": { "type": "string" },
+                            "max_output_lines": { "type": "integer" },
+                            "capture_relevant_code": { "type": "boolean" },
+                            "scan_secrets": { "type": "boolean" }
                         }
                     }
                 },
                 {
                     "name": "workspace_state",
-                    "description": "Manage typed workspace state slots (recent_targets, error_signatures, co_access_candidates, verification_state, active_task)",
+                    "description": "Read, write or clear typed workspace state slots.",
                     "inputSchema": {
                         "type": "object",
                         "required": ["action", "slot"],
                         "properties": {
-                            "action": {
-                                "type": "string",
-                                "enum": ["read", "write", "clear"],
-                                "description": "Action to perform"
-                            },
+                            "action": { "type": "string", "enum": ["read", "write", "clear"] },
                             "slot": {
                                 "type": "string",
                                 "enum": [
@@ -348,32 +273,25 @@ impl McpServer {
                                     "co_access_candidates",
                                     "verification_state",
                                     "active_task"
-                                ],
-                                "description": "Slot name"
+                                ]
                             },
-                            "value": {
-                                "type": "object",
-                                "description": "Only for action=write. Typed per slot."
-                            }
+                            "value": { "type": "object", "description": "Only for action=write" }
                         }
                     }
                 },
                 {
                     "name": "validate_config",
-                    "description": "Validate CodeAware configuration files",
+                    "description": "Validate CodeAware configuration files.",
                     "inputSchema": {
                         "type": "object",
                         "properties": {
-                            "scope": {
-                                "type": "string",
-                                "description": "Scope of validation (local, global, all)"
-                            }
+                            "scope": { "type": "string" }
                         }
                     }
                 },
                 {
                     "name": "xray",
-                    "description": "Open a live browser dashboard showing token consumption, compression savings, file heatmap, edit confidence scores, and session metrics in real-time",
+                    "description": "Open a live browser dashboard of token and session metrics.",
                     "inputSchema": {
                         "type": "object",
                         "properties": {}
@@ -381,168 +299,122 @@ impl McpServer {
                 },
                 {
                     "name": "save_memory",
-                    "description": "Save a semantic observation to persistent memory. Memories survive across sessions and are searchable via FTS5 full-text search.",
+                    "description": "Save an observation to persistent, FTS5-searchable memory.",
                     "inputSchema": {
                         "type": "object",
                         "required": ["text"],
                         "properties": {
-                            "text": { "type": "string", "description": "The observation text" },
-                            "title": { "type": "string", "description": "Short title" },
-                            "type": { "type": "string", "enum": ["bugfix","feature","refactor","change","discovery","decision"], "description": "Observation type (default: discovery)" },
-                            "concepts": { "type": "array", "items": { "type": "string" }, "description": "Concept tags: how-it-works, why-it-exists, what-changed, problem-solution, gotcha, pattern, trade-off" },
-                            "project": { "type": "string", "description": "Project name or path" },
-                            "files": { "type": "array", "items": { "type": "string" }, "description": "Related file paths" },
-                            "facts": { "type": "array", "items": { "type": "string" }, "description": "Extracted facts" }
+                            "text": { "type": "string" },
+                            "title": { "type": "string" },
+                            "type": { "type": "string", "enum": ["bugfix","feature","refactor","change","discovery","decision"], "description": "Default discovery" },
+                            "concepts": { "type": "array", "items": { "type": "string" } },
+                            "project": { "type": "string" },
+                            "files": { "type": "array", "items": { "type": "string" } },
+                            "facts": { "type": "array", "items": { "type": "string" } }
                         }
                     }
                 },
                 {
                     "name": "search_memory",
-                    "description": "Search persistent memories using FTS5 full-text search with BM25 ranking. Returns observations matching the query, filterable by project, type, and date range.",
+                    "description": "Full-text search memories (FTS5, BM25-ranked).",
                     "inputSchema": {
                         "type": "object",
                         "required": ["query"],
                         "properties": {
-                            "query": { "type": "string", "description": "Search query (FTS5 syntax supported)" },
-                            "project": { "type": "string", "description": "Filter by project" },
-                            "type": { "type": "string", "description": "Filter by observation type" },
-                            "limit": { "type": "integer", "description": "Max results (default 10, max 50)" },
-                            "offset": { "type": "integer", "description": "Pagination offset" },
-                            "date_start": { "type": "string", "description": "ISO 8601 date filter start" },
-                            "date_end": { "type": "string", "description": "ISO 8601 date filter end" }
+                            "query": { "type": "string" },
+                            "project": { "type": "string" },
+                            "type": { "type": "string" },
+                            "limit": { "type": "integer", "description": "Default 10, max 50" },
+                            "offset": { "type": "integer" },
+                            "date_start": { "type": "string" },
+                            "date_end": { "type": "string" }
                         }
                     }
                 },
                 {
                     "name": "memory_timeline",
-                    "description": "Retrieve observations chronologically around an anchor observation. Use search_memory first to find the anchor ID.",
+                    "description": "Observations chronologically around an anchor. Use search_memory first.",
                     "inputSchema": {
                         "type": "object",
                         "required": ["anchor_id"],
                         "properties": {
-                            "anchor_id": { "type": "integer", "description": "ID of the anchor observation" },
-                            "depth_before": { "type": "integer", "description": "Observations before anchor (default 5)" },
-                            "depth_after": { "type": "integer", "description": "Observations after anchor (default 5)" },
-                            "project": { "type": "string", "description": "Filter by project" }
+                            "anchor_id": { "type": "integer" },
+                            "depth_before": { "type": "integer" },
+                            "depth_after": { "type": "integer" },
+                            "project": { "type": "string" }
                         }
                     }
                 },
                 {
                     "name": "git_diff",
-                    "description": "Structured git diff between two refs. Returns file changes with additions/deletions counts.",
+                    "description": "Git diff between two refs with add/delete counts.",
                     "inputSchema": {
                         "type": "object",
                         "properties": {
-                            "base": {
-                                "type": "string",
-                                "description": "Base ref (default: HEAD~1)"
-                            },
-                            "head": {
-                                "type": "string",
-                                "description": "Head ref (default: HEAD)"
-                            }
+                            "base": { "type": "string", "description": "Default HEAD~1" },
+                            "head": { "type": "string", "description": "Default HEAD" }
                         }
                     }
                 },
                 {
                     "name": "git_blame",
-                    "description": "Structured git blame for a file or line range. Returns author, date, and content per line.",
+                    "description": "Git blame for a file or line range.",
                     "inputSchema": {
                         "type": "object",
                         "required": ["file"],
                         "properties": {
-                            "file": {
-                                "type": "string",
-                                "description": "File path to blame"
-                            },
-                            "start_line": {
-                                "type": "integer",
-                                "description": "Start line number"
-                            },
-                            "end_line": {
-                                "type": "integer",
-                                "description": "End line number"
-                            }
+                            "file": { "type": "string" },
+                            "start_line": { "type": "integer" },
+                            "end_line": { "type": "integer" }
                         }
                     }
                 },
                 {
                     "name": "git_changelog",
-                    "description": "Structured git changelog with conventional commit categorization. Returns commits with affected files.",
+                    "description": "Changelog grouped by conventional commit type.",
                     "inputSchema": {
                         "type": "object",
                         "properties": {
-                            "base": {
-                                "type": "string",
-                                "description": "Base ref for range (e.g. v1.0.0)"
-                            },
-                            "head": {
-                                "type": "string",
-                                "description": "Head ref (default: HEAD)"
-                            },
-                            "limit": {
-                                "type": "integer",
-                                "description": "Maximum number of commits (default: 50)"
-                            }
+                            "base": { "type": "string", "description": "Base ref, e.g. v1.0.0" },
+                            "head": { "type": "string", "description": "Default HEAD" },
+                            "limit": { "type": "integer", "description": "Default 50" }
                         }
                     }
                 },
                 {
                     "name": "summarize_memory",
-                    "description": "Cluster observations by shared files/concepts, deduplicate near-identical entries, and generate compact summaries using local heuristics.",
+                    "description": "Cluster and dedupe memories into summaries.",
                     "inputSchema": {
                         "type": "object",
                         "properties": {
-                            "project": { "type": "string", "description": "Project name or path (default: '.')" },
-                            "force": { "type": "boolean", "description": "Force re-summarization even if summaries exist (default: false)" }
+                            "project": { "type": "string" },
+                            "force": { "type": "boolean" }
                         }
                     }
                 },
                 {
                     "name": "smart_refactor",
-                    "description": "Project-wide symbol rename with AST-aware matching. Respects .gitignore, skips strings/comments. Dry-run by default.",
+                    "description": "AST-aware project-wide rename. Dry-run by default.",
                     "inputSchema": {
                         "type": "object",
                         "required": ["old_name", "new_name"],
                         "properties": {
-                            "operation": {
-                                "type": "string",
-                                "description": "Refactor operation (currently only 'rename')",
-                                "default": "rename"
-                            },
-                            "old_name": {
-                                "type": "string",
-                                "description": "Current symbol name to rename"
-                            },
-                            "new_name": {
-                                "type": "string",
-                                "description": "New symbol name"
-                            },
-                            "path": {
-                                "type": "string",
-                                "description": "Root path to search (default: current directory)"
-                            },
-                            "dry_run": {
-                                "type": "boolean",
-                                "description": "Preview changes without applying (default: true)"
-                            }
+                            "operation": { "type": "string", "default": "rename" },
+                            "old_name": { "type": "string" },
+                            "new_name": { "type": "string" },
+                            "path": { "type": "string" },
+                            "dry_run": { "type": "boolean", "description": "Default true" }
                         }
                     }
                 },
                 {
                     "name": "test_coverage_map",
-                    "description": "Analyze which functions have tests and which don't. Uses tree-sitter symbol extraction and test file scanning to build a heuristic coverage map.",
+                    "description": "Heuristic map of functions with and without tests.",
                     "inputSchema": {
                         "type": "object",
                         "properties": {
-                            "path": {
-                                "type": "string",
-                                "description": "Root path to analyze (default: current directory)"
-                            },
-                            "language": {
-                                "type": "string",
-                                "description": "Filter by programming language (e.g. rust, python, typescript)"
-                            }
+                            "path": { "type": "string" },
+                            "language": { "type": "string" }
                         }
                     }
                 }

@@ -10,8 +10,6 @@
 
 use std::io::{self, Read};
 
-/// Size of the read buffer used by [`read_hook_input`].
-const READ_CHUNK: usize = 8 * 1024;
 
 /// Read all of `reader` and decode it as UTF-8, replacing invalid sequences.
 pub fn read_hook_input<R: Read>(mut reader: R) -> io::Result<String> {
@@ -45,7 +43,7 @@ impl Utf8ChunkDecoder {
                 }
                 Err(e) => {
                     let valid = e.valid_up_to();
-                    // SAFETY-free: the prefix up to valid_up_to is valid by definition.
+                    // The prefix up to valid_up_to() is valid UTF-8 by definition.
                     out.push_str(std::str::from_utf8(&rest[..valid]).unwrap_or_default());
                     match e.error_len() {
                         Some(bad) => {

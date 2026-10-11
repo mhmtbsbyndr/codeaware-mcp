@@ -10,10 +10,10 @@
 //!
 //! Otherwise the caller computes the block live and writes it back.
 
+use super::spool;
 use blake3::Hasher;
 use serde_json::{json, Value};
-use std::fs::{self, OpenOptions};
-use std::io::Write;
+use std::fs;
 use std::path::{Path, PathBuf};
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
@@ -74,7 +74,20 @@ pub fn read_fresh_in(
     ttl: Duration,
     now: u64,
 ) -> Option<String> {
-    todo!("stub")
+    let key = project_key(project);
+    if dir.join(format!("{key}.stale")).exists() {
+        return None;
+    }
+    let bytes = fs::read(dir.join(format!("{key}.json"))).ok()?;
+    let entry: Value = serde_json::from_slice(&bytes).ok()?;
+    if entry.get("fingerprint")?.as_str()? != fingerprint {
+        return None;
+    }
+    let generated_at = entry.get("generated_at")?.as_u64()?;
+    if now < generated_at || now - generated_at > ttl.as_secs() {
+        return None;
+    }
+    Some(entry.get("text")?.as_str()?.to_string())
 }
 
 /// Atomically write an entry into `dir` and clear any stale marker.
@@ -85,12 +98,21 @@ pub fn write_in(
     text: &str,
     now: u64,
 ) -> Result<PathBuf, String> {
-    todo!("stub")
+    let key = project_key(project);
+    let entry = json!({ "generated_at": now, "fingerprint": fingerprint, "text": text });
+    let bytes = serde_json::to_vec(&entry).map_err(|e| format!("cannot serialize context: {e}"))?;
+    let path = spool::write_private_atomic(dir, &format!("{key}.json"), &bytes)
+        .map_err(|e| format!("cannot write context cache: {e}"))?;
+    let _ = fs::remove_file(dir.join(format!("{key}.stale")));
+    Ok(path)
 }
 
 /// Write a stale marker so the next read falls back to live computation.
 pub fn mark_stale_in(dir: &Path, project: &str) -> Result<(), String> {
-    todo!("stub")
+    let key = project_key(project);
+    spool::ensure_private_dir(dir).map_err(|e| format!("cannot create cache dir: {e}"))?;
+    fs::write(dir.join(format!("{key}.stale")), b"")
+        .map_err(|e| format!("cannot mark context cache stale: {e}"))
 }
 
 fn now_secs() -> u64 {

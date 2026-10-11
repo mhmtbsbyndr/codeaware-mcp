@@ -4,7 +4,19 @@ use std::io::{Read, Write};
 use std::net::TcpStream;
 use std::sync::{Arc, Mutex};
 
+
+/// Keep the restart log out of the real per-user directory during tests.
+fn isolate_state_dir() {
+    static STATE: std::sync::OnceLock<tempfile::TempDir> = std::sync::OnceLock::new();
+    STATE.get_or_init(|| {
+        let dir = tempfile::TempDir::new().expect("temp state dir");
+        std::env::set_var("XDG_RUNTIME_DIR", dir.path());
+        dir
+    });
+}
+
 fn start_server() -> (XrayServer, u16) {
+    isolate_state_dir();
     let metrics = Arc::new(Mutex::new(MetricsState::new()));
     let server = XrayServer::start(metrics, None).expect("server should start");
     let port = server.port();

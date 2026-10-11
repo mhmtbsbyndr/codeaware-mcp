@@ -1,0 +1,305 @@
+{
+  "schema_version": 1,
+  "source": "git history: relevant = modified .rs files; index input = parent tree; commit excluded",
+  "tasks": [
+    {
+      "id": "T01",
+      "commit": "fc1e59c1890373997f05ed52f9c0b1f703b1f80d",
+      "parent": "3f1b8e294e45060afb4a4953cbabc047597f14f2",
+      "subject": "Make get_task_context semantic-first",
+      "goal": "Make get_task_context semantic-first so goal-relevant symbols come before file summaries",
+      "relevant_files": [
+        "src/v4/tools.rs"
+      ],
+      "excluded_added_files": []
+    },
+    {
+      "id": "T02",
+      "commit": "d9c5c6ab9d286d5275cf277f622c16248765e662",
+      "parent": "82262caa647f8ae492387e189f56acc1ffbed7d8",
+      "subject": "Complete phase 1 get_task_context with discovery and trace persistence",
+      "goal": "Complete phase 1 of get_task_context with candidate discovery and task trace persistence",
+      "relevant_files": [
+        "src/v4/tools.rs"
+      ],
+      "excluded_added_files": []
+    },
+    {
+      "id": "T03",
+      "commit": "e838f133f8421d7e9ea8ea2acd018c637a44d27c",
+      "parent": "e3661d3d13fe1511c8f11e7cf5baf282ab2bdeab",
+      "subject": "chore: harden v4 tool error handling and remove stale about text",
+      "goal": "Harden v4 tool error handling",
+      "relevant_files": [
+        "src/hooks/session_persistence.rs",
+        "src/tools/dispatch.rs",
+        "src/v4/semantic_tools.rs"
+      ],
+      "excluded_added_files": []
+    },
+    {
+      "id": "T04",
+      "commit": "b6e6f3122e796059d340946fe9f7c64b1c6f192c",
+      "parent": "d31b945c4ce96f307f0dfdd120d174bce3b0eb13",
+      "subject": "Wire v4 semantic tools into MCP dispatcher",
+      "goal": "Wire the v4 semantic tools into the MCP tool dispatcher",
+      "relevant_files": [
+        "src/tools/dispatch.rs"
+      ],
+      "excluded_added_files": []
+    },
+    {
+      "id": "T05",
+      "commit": "d31b945c4ce96f307f0dfdd120d174bce3b0eb13",
+      "parent": "514cf4d638319a6527e00fb0ebcc8959d8676d70",
+      "subject": "Export final production-hardening runtime modules",
+      "goal": "Export the final production-hardening runtime modules",
+      "relevant_files": [
+        "src/v4/mod.rs"
+      ],
+      "excluded_added_files": []
+    },
+    {
+      "id": "T06",
+      "commit": "977950c69058d07fb17656e232d6f40951e8250b",
+      "parent": "cb845822dab823c56620152f1bd956cad8e15633",
+      "subject": "chore(release): prepare v4.0.0 metadata and docs",
+      "goal": "Prepare v4.0.0 release metadata",
+      "relevant_files": [
+        "src/v4/mod.rs"
+      ],
+      "excluded_added_files": []
+    },
+    {
+      "id": "T07",
+      "commit": "57e59776748736ca8f4a49e1254a00f90437eda1",
+      "parent": "76a684f35625a278832f3246812ce068805450ef",
+      "subject": "Export architecture memory and semantic runtime layers",
+      "goal": "Export architecture memory and semantic runtime layers",
+      "relevant_files": [
+        "src/v4/mod.rs"
+      ],
+      "excluded_added_files": []
+    },
+    {
+      "id": "T08",
+      "commit": "b8617407799689603cb96d59a8ac07d64ed89671",
+      "parent": "752529a4e04b11b468444769dbb817b92b22c880",
+      "subject": "Export semantic MCP-style APIs",
+      "goal": "Export semantic MCP-style APIs",
+      "relevant_files": [
+        "src/v4/mod.rs"
+      ],
+      "excluded_added_files": []
+    },
+    {
+      "id": "T09",
+      "commit": "3f1b8e294e45060afb4a4953cbabc047597f14f2",
+      "parent": "587322a91ba9f185e42160b42b45c993587733a1",
+      "subject": "Export semantic context assembler",
+      "goal": "Export the semantic context assembler",
+      "relevant_files": [
+        "src/v4/mod.rs"
+      ],
+      "excluded_added_files": []
+    },
+    {
+      "id": "T10",
+      "commit": "09e5d0acde0f335dd3a6aac04266ef567129e20d",
+      "parent": "95f250a980c4904efc85f9ee0ce43782b720ec56",
+      "subject": "Export semantic index runtime",
+      "goal": "Export the semantic index runtime",
+      "relevant_files": [
+        "src/v4/mod.rs"
+      ],
+      "excluded_added_files": []
+    },
+    {
+      "id": "T11",
+      "commit": "043e5c7a611ee6195bfb8d4f21b30ac26bdcca3d",
+      "parent": "4cbfd9b8f8d09bc6c708c2bbaa11da68ac79f1f0",
+      "subject": "Export call graph and semantic retrieval",
+      "goal": "Export call graph and semantic retrieval",
+      "relevant_files": [
+        "src/v4/mod.rs"
+      ],
+      "excluded_added_files": []
+    },
+    {
+      "id": "T12",
+      "commit": "06c2cf8738ddda540c6c23e8301fcae065adcc06",
+      "parent": "3a3c7cd4339f521cede8a87ed282129cc5b43df1",
+      "subject": "Export phase 2 semantic graph modules",
+      "goal": "Export phase 2 semantic graph modules",
+      "relevant_files": [
+        "src/v4/mod.rs"
+      ],
+      "excluded_added_files": []
+    },
+    {
+      "id": "T13",
+      "commit": "f9e001d7a16d589cda88ee602ef88c4a54c2dc2b",
+      "parent": "7afd12b887125c0d91e5344c04f17e31c9320891",
+      "subject": "Export v4 symbol models",
+      "goal": "Export v4 symbol models",
+      "relevant_files": [
+        "src/v4/mod.rs"
+      ],
+      "excluded_added_files": []
+    },
+    {
+      "id": "T14",
+      "commit": "b4f37c85f9efdb1159c79ddf3c01906966363bad",
+      "parent": "df26480ac260a4f4787e8a6154b6b796b08d4bb5",
+      "subject": "Export v4 discovery module",
+      "goal": "Export the v4 discovery module",
+      "relevant_files": [
+        "src/v4/mod.rs"
+      ],
+      "excluded_added_files": []
+    },
+    {
+      "id": "T15",
+      "commit": "2ef656a55a729336246b2d520ca08bca1b329799",
+      "parent": "627e54775dfd44b7741f98908cd8111ab2fa4ffb",
+      "subject": "wip: token-saving work and remaining port items (snapshot)",
+      "goal": "Continue token-saving work: trim tool schemas and compressor output, port hooks and memory",
+      "relevant_files": [
+        "src/hooks/mod.rs",
+        "src/session/persistence.rs",
+        "src/tools/memory.rs",
+        "src/tools/smart_edit.rs",
+        "src/tools/smart_read.rs",
+        "src/xray/mod.rs",
+        "tests/test_deny_list.rs",
+        "tests/test_memory.rs",
+        "tests/test_persistence.rs",
+        "tests/test_smart_edit.rs",
+        "tests/test_smart_read.rs",
+        "tests/test_smart_run.rs",
+        "tests/test_xray_server.rs"
+      ],
+      "excluded_added_files": [
+        "src/hooks/context_cache.rs",
+        "src/hooks/spool.rs",
+        "src/hooks/stdin_utf8.rs",
+        "src/hooks/tail_reader.rs",
+        "src/xray/lifecycle.rs"
+      ]
+    },
+    {
+      "id": "T16",
+      "commit": "627e54775dfd44b7741f98908cd8111ab2fa4ffb",
+      "parent": "3679e5465f714b4a90ad71527ca1b1c1fe8b4c0e",
+      "subject": "wip: review fixes, claude-mem port and token work (snapshot)",
+      "goal": "Fix smart_edit and smart_refactor issues, harden xray and validate session ids",
+      "relevant_files": [
+        "src/xray/shared.rs"
+      ],
+      "excluded_added_files": []
+    },
+    {
+      "id": "T17",
+      "commit": "3679e5465f714b4a90ad71527ca1b1c1fe8b4c0e",
+      "parent": "52c155ac257c36fde0fd34516279b54ac2d5dc4c",
+      "subject": "wip: review fixes and claude-mem port in progress (snapshot)",
+      "goal": "Fix v4 discovery and call graph, enforce deny-list and path checks, fix git option injection and blame",
+      "relevant_files": [
+        "src/config/project_detect.rs",
+        "src/hooks/session_persistence.rs",
+        "src/security/deny_list.rs",
+        "src/security/path_resolver.rs",
+        "src/security/secret_scanner.rs",
+        "src/tools/foundation.rs",
+        "src/tools/smart_read.rs",
+        "src/tools/smart_run.rs",
+        "src/v4/ranking.rs",
+        "src/v4/semantic_tools.rs",
+        "src/v4/symbols.rs",
+        "src/v4/tools.rs",
+        "src/xray/server.rs",
+        "src/xray/shared.rs",
+        "tests/test_xray_server.rs"
+      ],
+      "excluded_added_files": []
+    },
+    {
+      "id": "T18",
+      "commit": "52c155ac257c36fde0fd34516279b54ac2d5dc4c",
+      "parent": "402f070d8492af701e92623d76dc45a74cfb404b",
+      "subject": "wip: review fixes in progress (snapshot)",
+      "goal": "Apply review fixes to deny-list path enforcement, path resolution and v4 semantic context and storage",
+      "relevant_files": [
+        "src/security/deny_list.rs",
+        "src/security/path_resolver.rs",
+        "src/tools/test_coverage_map.rs",
+        "src/v4/index_builder.rs",
+        "src/v4/semantic_context.rs",
+        "src/v4/storage.rs",
+        "src/v4/tools.rs"
+      ],
+      "excluded_added_files": []
+    },
+    {
+      "id": "T19",
+      "commit": "402f070d8492af701e92623d76dc45a74cfb404b",
+      "parent": "8c7e7d97b54584b2f4c87f57757c21c8bb5788be",
+      "subject": "wip: review fixes in progress (snapshot)",
+      "goal": "Review fixes across git output compression, auto-observe hook, tool dispatch, git intelligence and v4 call graph",
+      "relevant_files": [
+        "src/compressor/git_output.rs",
+        "src/hooks/auto_observe.rs",
+        "src/server.rs",
+        "src/tools/dispatch.rs",
+        "src/tools/git_intelligence.rs",
+        "src/tools/smart_refactor.rs",
+        "src/v4/call_graph.rs",
+        "src/v4/discovery.rs",
+        "src/v4/import_graph.rs",
+        "src/v4/summaries.rs",
+        "src/v4/symbols.rs",
+        "src/v4/tests_graph.rs",
+        "tests/acceptance_tests.rs",
+        "tests/test_compressor_all.rs",
+        "tests/test_coverage_map.rs",
+        "tests/test_server.rs",
+        "tests/test_smart_refactor.rs",
+        "tests/v4_bugfix_tests.rs"
+      ],
+      "excluded_added_files": []
+    },
+    {
+      "id": "T20",
+      "commit": "8c7e7d97b54584b2f4c87f57757c21c8bb5788be",
+      "parent": "9c9d4f8bcd9eb8b4e6f3ab084c22aaa2556bcc1f",
+      "subject": "wip: review fixes in progress (parallel agents)",
+      "goal": "Fix test compile errors, UTF-8 truncation panic, git option injection, dispatch wiring and deny-list enforcement",
+      "relevant_files": [
+        "src/compressor/mod.rs",
+        "src/context_optimizer.rs",
+        "src/hooks/auto_observe.rs",
+        "src/token_stats.rs",
+        "src/tools/smart_edit.rs",
+        "tests/acceptance_tests.rs",
+        "tests/common/mod.rs",
+        "tests/test_compressor_all.rs",
+        "tests/test_deny_list.rs",
+        "tests/test_git_intelligence.rs",
+        "tests/test_path_resolver.rs",
+        "tests/test_patterns.rs",
+        "tests/test_secret_scanner.rs",
+        "tests/test_server.rs",
+        "tests/test_smart_edit.rs",
+        "tests/test_smart_read.rs",
+        "tests/test_smart_run.rs",
+        "tests/test_tree_sitter.rs",
+        "tests/v4_semantic_context_tests.rs",
+        "tests/v4_semantic_tools_tests.rs",
+        "tests/v4_symbols_tests.rs"
+      ],
+      "excluded_added_files": [
+        "tests/v4_bugfix_tests.rs"
+      ]
+    }
+  ]
+}

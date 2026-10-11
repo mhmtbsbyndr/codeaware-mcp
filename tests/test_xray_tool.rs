@@ -1,8 +1,20 @@
 use codeaware_mcp::server::McpServer;
 use serde_json::Value;
 
+
+/// Keep the restart log out of the real per-user directory during tests.
+fn isolate_state_dir() {
+    static STATE: std::sync::OnceLock<tempfile::TempDir> = std::sync::OnceLock::new();
+    STATE.get_or_init(|| {
+        let dir = tempfile::TempDir::new().expect("temp state dir");
+        std::env::set_var("XDG_RUNTIME_DIR", dir.path());
+        dir
+    });
+}
+
 #[test]
 fn test_xray_tool_in_tools_list() {
+    isolate_state_dir();
     let server = McpServer::new();
     let msg = r#"{"jsonrpc":"2.0","id":1,"method":"tools/list","params":{}}"#;
     let response = server.handle_message(msg).unwrap();
@@ -14,6 +26,7 @@ fn test_xray_tool_in_tools_list() {
 
 #[test]
 fn test_xray_tool_returns_url() {
+    isolate_state_dir();
     let server = McpServer::new();
     let msg = r#"{"jsonrpc":"2.0","id":2,"method":"tools/call","params":{"name":"xray","arguments":{}}}"#;
     let response = server.handle_message(msg).unwrap();

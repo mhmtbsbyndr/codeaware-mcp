@@ -30,6 +30,12 @@ pub struct Lifecycle {
     ready_after: Mutex<Option<Duration>>,
 }
 
+impl Default for Lifecycle {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl Lifecycle {
     pub fn new() -> Self {
         Lifecycle {

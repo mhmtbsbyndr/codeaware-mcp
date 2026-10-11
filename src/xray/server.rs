@@ -10,6 +10,7 @@ use std::time::Duration;
 const DASHBOARD_HTML: &str = include_str!("dashboard.html");
 const DEFAULT_PORT: u16 = 9847;
 const SERVICE_NAME: &str = "codeaware-xray";
+static START_LOCK: Mutex<()> = Mutex::new(());
 
 pub struct XrayServer {
     port: u16,
@@ -89,6 +90,9 @@ impl XrayServer {
         metrics: Arc<Mutex<MetricsState>>,
         db: Option<Arc<Mutex<SessionDb>>>,
     ) -> Result<Self, std::io::Error> {
+        // Serialize starts within this process: a concurrent start must see the
+        // listener another thread just bound and reuse it, not count as a restart.
+        let _start_guard = START_LOCK.lock().unwrap_or_else(|e| e.into_inner());
         let lifecycle = Arc::new(Lifecycle::new());
 
         // If there's already a server on DEFAULT_PORT, reuse it (no new tab)
@@ -101,8 +105,7 @@ impl XrayServer {
 
         // Refuse a new listener when starts are looping (launchd/systemd restarts).
         if let RestartDecision::Refuse { starts_in_window } = check_and_record_start() {
-            return Err(std::io::Error::new(
-                std::io::ErrorKind::Other,
+            return Err(std::io::Error::other(
                 format!(
                     "xray restart rate limit: {starts_in_window} starts within {RESTART_WINDOW_SECS} s \
                      (max {RESTART_MAX_IN_WINDOW}); refusing to start, check for a restart loop"
