@@ -1,0 +1,2 @@
+Copyright (c) 2025 Example Corp. All rights reserved.
+Redistribution of these materials is prohibited.

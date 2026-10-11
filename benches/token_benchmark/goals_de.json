@@ -1,0 +1,87 @@
+{
+  "schema_version": 1,
+  "language": "de",
+  "note": "German paraphrases of tasks.json goals, written by hand for the goal-normalization benchmark. Same ids and ground truth as tasks.json.",
+  "goals": [
+    {
+      "id": "T01",
+      "goal": "Mach get_task_context semantisch zuerst, damit zielrelevante Symbole vor den Datei-Zusammenfassungen kommen"
+    },
+    {
+      "id": "T02",
+      "goal": "Phase 1 von get_task_context fertig bauen: Kandidatensuche und das Speichern der Task-Traces ergänzen"
+    },
+    {
+      "id": "T03",
+      "goal": "Fehlerbehandlung in den v4-Tools robuster machen"
+    },
+    {
+      "id": "T04",
+      "goal": "Die v4-Semantik-Tools im MCP-Dispatcher einbinden"
+    },
+    {
+      "id": "T05",
+      "goal": "Die finalen Laufzeitmodule für die Produktionshärtung im v4-Modul exportieren"
+    },
+    {
+      "id": "T06",
+      "goal": "Release-Metadaten für v4.0.0 vorbereiten"
+    },
+    {
+      "id": "T07",
+      "goal": "Architektur-Gedächtnis und die semantischen Laufzeitschichten exportieren"
+    },
+    {
+      "id": "T08",
+      "goal": "Semantische MCP-Schnittstellen nach außen exportieren"
+    },
+    {
+      "id": "T09",
+      "goal": "Den semantischen Context-Assembler exportieren"
+    },
+    {
+      "id": "T10",
+      "goal": "Die Laufzeit des semantischen Index exportieren"
+    },
+    {
+      "id": "T11",
+      "goal": "Call-Graph und semantische Suche exportieren"
+    },
+    {
+      "id": "T12",
+      "goal": "Module der Phase-2-Graphen für die semantische Analyse exportieren"
+    },
+    {
+      "id": "T13",
+      "goal": "Die Symbol-Modelle von v4 exportieren"
+    },
+    {
+      "id": "T14",
+      "goal": "Das Discovery-Modul von v4 exportieren"
+    },
+    {
+      "id": "T15",
+      "goal": "Token-Einsparung weiter vorantreiben: Tool-Schemata und Compressor-Ausgabe kürzen, Hooks und Speicher übernehmen"
+    },
+    {
+      "id": "T16",
+      "goal": "Probleme in smart_edit und smart_refactor beheben, xray härten und Session-IDs prüfen"
+    },
+    {
+      "id": "T17",
+      "goal": "Discovery und Call-Graph in v4 reparieren, Deny-Liste und Pfadprüfungen durchsetzen, Git-Optionsinjektion und Blame beheben"
+    },
+    {
+      "id": "T18",
+      "goal": "Review-Fixes an Deny-Liste, Pfadauflösung und dem Semantic-Context sowie der Speicherung in v4 anwenden"
+    },
+    {
+      "id": "T19",
+      "goal": "Review-Fixes bei der Git-Ausgabe-Kompression, dem Auto-Observe-Hook, dem Tool-Dispatch, der Git-Intelligence und dem v4-Call-Graph"
+    },
+    {
+      "id": "T20",
+      "goal": "Testkompilierfehler, den UTF-8-Abschneide-Panic, Git-Optionsinjektion, die Dispatch-Verdrahtung und die Deny-Liste beheben"
+    }
+  ]
+}
