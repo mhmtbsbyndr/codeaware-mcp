@@ -19,7 +19,7 @@ use crate::tools::smart_read::{smart_read, ReadMode, SmartReadInput};
 use crate::v4::contracts::TaskIntent;
 use crate::v4::index_builder::SemanticIndexBuilder;
 use crate::v4::cochange::{CoChangeHistory, COCHANGE_DEPTH};
-use crate::v4::semantic_context::{rank_candidates, SemanticContextAssembler, SemanticContextOptions, CANDIDATE_LIMIT};
+use crate::v4::semantic_context::{rank_candidates, SemanticContextAssembler, SemanticContextOptions};
 use crate::v4::tools::{ContextOutput, GetTaskContextRequest, V4Tools};
 use serde::{Deserialize, Serialize};
 use std::collections::BTreeSet;
