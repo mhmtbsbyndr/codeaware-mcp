@@ -254,8 +254,8 @@ fn pack_knapsack(eligible: &[&PackCandidate], budget: usize) -> PackResult {
     }
 
     // Pass 2: upgrade in relevance order (candidates are already sorted that way).
-    for ci in 0..eligible.len() {
-        let Some(current) = chosen[ci] else {
+    for (ci, slot) in chosen.iter_mut().enumerate() {
+        let Some(current) = *slot else {
             continue;
         };
         let current_tokens = options[current].item.tokens;
@@ -268,7 +268,7 @@ fn pack_knapsack(eligible: &[&PackCandidate], budget: usize) -> PackResult {
             let tokens = options[oi].item.tokens;
             if used - current_tokens + tokens <= budget {
                 used = used - current_tokens + tokens;
-                chosen[ci] = Some(oi);
+                *slot = Some(oi);
                 break;
             }
         }
