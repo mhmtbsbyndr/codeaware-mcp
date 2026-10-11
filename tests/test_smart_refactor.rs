@@ -238,3 +238,48 @@ fn test_unsupported_operation() {
         .unwrap()
         .contains("Unsupported operation"));
 }
+
+fn rename_apply(dir: &std::path::Path, old: &str, new: &str) -> serde_json::Value {
+    let params = serde_json::json!({
+        "operation": "rename",
+        "old_name": old,
+        "new_name": new,
+        "path": dir.to_str().unwrap(),
+        "dry_run": false
+    });
+    extract_data(&handle_smart_refactor(&params))
+}
+
+#[test]
+fn test_rename_keeps_string_literal_on_same_line() {
+    let dir = setup_temp_project(&[("main.rs", "let s = \"foo\"; foo();\n")]);
+    let envelope = rename_apply(dir.path(), "foo", "bar");
+    assert!(envelope["ok"].as_bool().unwrap());
+    let content = fs::read_to_string(dir.path().join("main.rs")).unwrap();
+    assert_eq!(content, "let s = \"foo\"; bar();\n");
+}
+
+#[test]
+fn test_rename_skips_trailing_line_comment() {
+    let dir = setup_temp_project(&[("main.rs", "let a = foo(); // foo is old\n")]);
+    rename_apply(dir.path(), "foo", "bar");
+    let content = fs::read_to_string(dir.path().join("main.rs")).unwrap();
+    assert_eq!(content, "let a = bar(); // foo is old\n");
+}
+
+#[test]
+fn test_rename_keeps_lifetimes_and_renames_types() {
+    // A lifetime such as 'a must not be mistaken for an opening quote.
+    let dir = setup_temp_project(&[("main.rs", "fn f<'a>(x: &'a Foo) -> Foo { todo!() }\n")]);
+    rename_apply(dir.path(), "Foo", "Bar");
+    let content = fs::read_to_string(dir.path().join("main.rs")).unwrap();
+    assert_eq!(content, "fn f<'a>(x: &'a Bar) -> Bar { todo!() }\n");
+}
+
+#[test]
+fn test_rename_preserves_crlf_line_endings() {
+    let dir = setup_temp_project(&[("main.rs", "fn foo() {}\r\nfn c() { foo(); }\r\n")]);
+    rename_apply(dir.path(), "foo", "bar");
+    let bytes = fs::read(dir.path().join("main.rs")).unwrap();
+    assert_eq!(bytes, b"fn bar() {}\r\nfn c() { bar(); }\r\n");
+}

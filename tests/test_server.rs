@@ -190,3 +190,11 @@ fn test_unknown_method_returns_error() {
     assert!(parsed.get("error").is_some());
     assert_eq!(parsed["error"]["code"], -32601);
 }
+
+#[test]
+fn test_smart_run_dispatches_command() {
+    let server = McpServer::new();
+    let result = call_tool(&server, "smart_run", json!({"command": "echo codeaware_probe"}));
+    assert!(result.get("isError").is_none() || result["isError"] == false, "{result}");
+    assert!(result_text(&result).contains("codeaware_probe"));
+}

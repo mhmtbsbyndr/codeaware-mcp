@@ -124,7 +124,7 @@ fn call_edges_require_exact_identifier_match() {
 
     assert!(graph.callers_of("run").is_empty());
     assert_eq!(graph.callers_of("run_all").len(), 1);
-    assert!(!graph.edges.iter().any(|e| e.to_symbol == "xtotal"));
+    assert!(graph.edges.iter().any(|e| e.from_symbol == "caller" && e.to_symbol == "xtotal"));
 }
 
 // ---- item 6: function declarations with modifiers / generics ----

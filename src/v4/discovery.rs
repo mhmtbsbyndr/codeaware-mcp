@@ -1,7 +1,9 @@
-use std::fs;
-use std::path::{Path, PathBuf};
+use std::path::Path;
+
+use ignore::WalkBuilder;
 
 use crate::v4::errors::{V4Error, V4Result};
+use crate::v4::language_support::LanguageDetector;
 use crate::v4::ranking::{ContextRanker, RankedPath};
 
 #[derive(Debug, Clone)]
@@ -30,42 +32,53 @@ impl Default for DiscoveryConfig {
 pub struct CandidateDiscovery;
 
 impl CandidateDiscovery {
+    /// Ranks source files under `repo_root` against `goal`.
+    ///
+    /// The walk does not follow symlinks, honours `.gitignore` (even outside a git
+    /// checkout), skips the configured directories and unreadable entries, and
+    /// only considers files with a supported source extension. The candidate cap
+    /// is applied after filtering and ranking, so the result is deterministic.
     pub fn discover_ranked(repo_root: impl AsRef<Path>, goal: &str, config: DiscoveryConfig) -> V4Result<Vec<RankedPath>> {
+        let root = repo_root.as_ref();
+        if !root.is_dir() {
+            return Err(V4Error::Io(format!("not a directory: {}", root.display())));
+        }
+
+        let ignored_dirs = config.ignored_dirs.clone();
+        let walker = WalkBuilder::new(root)
+            .hidden(false)
+            .parents(false)
+            .require_git(false)
+            .git_global(false)
+            .git_exclude(false)
+            .follow_links(false)
+            .sort_by_file_path(|a, b| a.cmp(b))
+            .filter_entry(move |entry| {
+                let is_dir = entry.file_type().is_some_and(|ft| ft.is_dir());
+                entry.depth() == 0 || !(is_dir && ignored_dirs.iter().any(|ignored| entry.file_name() == ignored.as_str()))
+            })
+            .build();
+
         let mut paths = Vec::new();
-        Self::walk(repo_root.as_ref(), repo_root.as_ref(), &config, &mut paths)?;
-        paths.truncate(config.max_candidates);
-        Ok(ContextRanker::rank_paths(goal, paths))
-    }
-
-    fn walk(root: &Path, current: &Path, config: &DiscoveryConfig, out: &mut Vec<String>) -> V4Result<()> {
-        let entries = match fs::read_dir(current) {
-            Ok(entries) => entries,
-            Err(err) => return Err(V4Error::Io(err.to_string())),
-        };
-
-        for entry in entries.flatten() {
-            let path: PathBuf = entry.path();
-            let name = entry.file_name().to_string_lossy().to_string();
-
-            if path.is_dir() {
-                if config.ignored_dirs.iter().any(|ignored| ignored == &name) {
-                    continue;
-                }
-                Self::walk(root, &path, config, out)?;
+        for result in walker {
+            // Unreadable or vanished entries are skipped rather than failing the whole walk.
+            let Ok(entry) = result else {
+                continue;
+            };
+            if !entry.file_type().is_some_and(|ft| ft.is_file()) {
                 continue;
             }
-
-            if path.is_file() {
-                if let Ok(relative) = path.strip_prefix(root) {
-                    out.push(relative.to_string_lossy().to_string());
-                }
-            }
-
-            if out.len() >= config.max_candidates {
-                break;
+            let Ok(relative) = entry.path().strip_prefix(root) else {
+                continue;
+            };
+            let relative = relative.to_string_lossy().replace('\\', "/");
+            if LanguageDetector::is_supported(&relative) {
+                paths.push(relative);
             }
         }
 
-        Ok(())
+        let mut ranked = ContextRanker::rank_paths(goal, paths);
+        ranked.truncate(config.max_candidates);
+        Ok(ranked)
     }
 }

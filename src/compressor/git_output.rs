@@ -30,12 +30,17 @@ fn compress_diff(raw: &str, max_lines: usize) -> String {
 
     let mut files: Vec<FileDiff> = Vec::new();
     let mut current: Option<FileDiff> = None;
+    // True between an "@@" hunk header and the next "diff --git". Only lines
+    // outside hunks can be "--- a/..." / "+++ b/..." file headers; inside a
+    // hunk, "---"/"+++" prefixes are real content (e.g. "-- foo" -> "--- foo").
+    let mut in_hunk = false;
 
     for line in raw.lines() {
         if line.starts_with("diff --git ") {
             if let Some(fd) = current.take() {
                 files.push(fd);
             }
+            in_hunk = false;
             // Extract path: "diff --git a/src/foo.rs b/src/foo.rs" -> "src/foo.rs"
             let path = line
                 .split_whitespace()
@@ -45,14 +50,17 @@ fn compress_diff(raw: &str, max_lines: usize) -> String {
                 .to_string();
             current = Some(FileDiff { path, added: 0, removed: 0, hunks: 0 });
         } else if line.starts_with("@@") {
+            in_hunk = true;
             if let Some(ref mut fd) = current {
                 fd.hunks += 1;
             }
-        } else if line.starts_with('+') && !line.starts_with("+++") {
+        } else if !in_hunk {
+            // File header lines (---, +++, index, mode, ...): not counted.
+        } else if line.starts_with('+') {
             if let Some(ref mut fd) = current {
                 fd.added += 1;
             }
-        } else if line.starts_with('-') && !line.starts_with("---") {
+        } else if line.starts_with('-') {
             if let Some(ref mut fd) = current {
                 fd.removed += 1;
             }

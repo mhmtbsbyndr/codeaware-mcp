@@ -67,9 +67,14 @@ fn truncate_at_word(s: &str, max: usize) -> String {
     if s.len() <= max {
         return s.to_string();
     }
-    match s[..max].rfind(' ') {
+    // Back off to the nearest char boundary so a multibyte char is never split.
+    let mut end = max;
+    while !s.is_char_boundary(end) {
+        end -= 1;
+    }
+    match s[..end].rfind(' ') {
         Some(pos) => format!("{}…", &s[..pos]),
-        None => format!("{}…", &s[..max]),
+        None => format!("{}…", &s[..end]),
     }
 }
 

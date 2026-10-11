@@ -28,6 +28,23 @@ impl ImportGraph {
     }
 }
 
+/// Matches `use`, `mod`, and their visibility-qualified forms
+/// (`pub use`, `pub(crate) use`, `pub(super) mod`, ...).
+fn is_import_line(trimmed: &str) -> bool {
+    let mut rest = trimmed;
+    if let Some(after) = rest.strip_prefix("pub") {
+        if let Some(inner) = after.strip_prefix('(') {
+            match inner.find(')') {
+                Some(end) => rest = inner[end + 1..].trim_start(),
+                None => return false,
+            }
+        } else if after.starts_with(char::is_whitespace) {
+            rest = after.trim_start();
+        }
+    }
+    rest.starts_with("use ") || rest.starts_with("mod ")
+}
+
 pub struct RustImportExtractor;
 
 impl RustImportExtractor {
@@ -36,7 +53,7 @@ impl RustImportExtractor {
 
         for line in source.lines() {
             let trimmed = line.trim();
-            if trimmed.starts_with("use ") || trimmed.starts_with("pub use ") || trimmed.starts_with("mod ") {
+            if is_import_line(trimmed) {
                 graph.add(path, trimmed.trim_end_matches(';'));
             }
         }

@@ -46,13 +46,72 @@ fn is_source_file(path: &Path) -> bool {
 
 // ── Comment / string heuristic ───────────────────────────────────
 
+/// Byte ranges of string literals in a line, plus the byte offset where a
+/// trailing `//` line comment starts (if any). Heuristic, not a parser.
+struct LineMask {
+    strings: Vec<(usize, usize)>,
+    comment_start: Option<usize>,
+}
+
+impl LineMask {
+    fn new(line: &str) -> Self {
+        let bytes = line.as_bytes();
+        let mut strings = Vec::new();
+        let mut comment_start = None;
+        let mut i = 0;
+        while i < bytes.len() {
+            match bytes[i] {
+                b'/' if bytes.get(i + 1) == Some(&b'/') => {
+                    comment_start = Some(i);
+                    break;
+                }
+                q @ (b'"' | b'\'' | b'`') => {
+                    // Find the closing quote, honoring backslash escapes.
+                    let mut j = i + 1;
+                    let mut closed = None;
+                    while j < bytes.len() {
+                        if bytes[j] == b'\\' {
+                            j += 2;
+                            continue;
+                        }
+                        if bytes[j] == q {
+                            closed = Some(j);
+                            break;
+                        }
+                        j += 1;
+                    }
+                    match closed {
+                        Some(end) => {
+                            strings.push((i, end + 1));
+                            i = end + 1;
+                        }
+                        // Unclosed `"` or backtick: treat the rest of the line as string.
+                        None if q != b'\'' => {
+                            strings.push((i, bytes.len()));
+                            break;
+                        }
+                        // Unclosed `'` is a lifetime or similar, not a string.
+                        None => i += 1,
+                    }
+                }
+                _ => i += 1,
+            }
+        }
+        LineMask { strings, comment_start }
+    }
+
+    fn contains(&self, offset: usize) -> bool {
+        self.comment_start.is_some_and(|c| offset >= c)
+            || self.strings.iter().any(|&(s, e)| offset >= s && offset < e)
+    }
+}
+
 /// Returns true if the match at `byte_offset` in `line` appears to be inside
-/// a string literal or a comment. This is a simple heuristic that covers the
-/// vast majority of cases without needing a full parser.
+/// a string literal or a comment.
 fn is_in_string_or_comment(line: &str, byte_offset: usize) -> bool {
     let trimmed = line.trim_start();
 
-    // Line-level comment detection (covers //, #, --, ;;, %)
+    // Whole-line comment detection (covers //, #, --, ;;, %)
     if trimmed.starts_with("//")
         || trimmed.starts_with('#')
         || trimmed.starts_with("--")
@@ -67,35 +126,35 @@ fn is_in_string_or_comment(line: &str, byte_offset: usize) -> bool {
         return true;
     }
 
-    // Check if the match falls inside quotes by counting unescaped quotes
-    // before the match position.
-    let prefix = &line[..byte_offset];
-    let single_quotes = count_unescaped_quotes(prefix, b'\'');
-    let double_quotes = count_unescaped_quotes(prefix, b'"');
-    let backtick_quotes = count_unescaped_quotes(prefix, b'`');
-
-    // Odd count means we're inside quotes
-    !single_quotes.is_multiple_of(2) || !double_quotes.is_multiple_of(2) || !backtick_quotes.is_multiple_of(2)
+    LineMask::new(line).contains(byte_offset)
 }
 
-fn count_unescaped_quotes(s: &str, quote_char: u8) -> usize {
-    let bytes = s.as_bytes();
+/// Rename every whole-word match on `line` that is not inside a string literal
+/// or comment. Returns the new line and the number of replaced matches, or
+/// None if nothing on the line was replaced.
+fn rename_line(line: &str, pattern: &regex::Regex, new_name: &str) -> Option<(String, usize)> {
+    let mut out = String::with_capacity(line.len());
+    let mut last = 0;
     let mut count = 0;
-    let mut i = 0;
-    while i < bytes.len() {
-        if bytes[i] == quote_char {
-            // Check for preceding backslash
-            if i == 0 || bytes[i - 1] != b'\\' {
-                count += 1;
-            }
+    for mat in pattern.find_iter(line) {
+        if is_in_string_or_comment(line, mat.start()) {
+            continue;
         }
-        i += 1;
+        out.push_str(&line[last..mat.start()]);
+        out.push_str(new_name);
+        last = mat.end();
+        count += 1;
     }
-    count
+    if count == 0 {
+        return None;
+    }
+    out.push_str(&line[last..]);
+    Some((out, count))
 }
 
 // ── Core rename logic ────────────────────────────────────────────
 
+/// Find the lines that `rename` would change, across all source files under `root`.
 fn find_renames(
     root: &Path,
     old_name: &str,
@@ -130,19 +189,16 @@ fn find_renames(
         };
 
         let mut line_changes = Vec::new();
+        let mut occurrences = 0;
 
         for (line_idx, line) in content.lines().enumerate() {
-            for mat in pattern.find_iter(line) {
-                if is_in_string_or_comment(line, mat.start()) {
-                    continue;
-                }
-                let new_line = pattern.replace_all(line, new_name).to_string();
+            if let Some((new_line, count)) = rename_line(line, &pattern, new_name) {
+                occurrences += count;
                 line_changes.push(LineChange {
                     line_number: line_idx + 1,
                     old_text: line.to_string(),
                     new_text: new_line,
                 });
-                break; // one LineChange per line is sufficient
             }
         }
 
@@ -152,10 +208,9 @@ fn find_renames(
                 .unwrap_or(path)
                 .to_string_lossy()
                 .to_string();
-            let occ = line_changes.len();
             file_renames.push(FileRename {
                 path: rel_path,
-                occurrences: occ,
+                occurrences,
                 lines: line_changes,
             });
         }
@@ -164,6 +219,8 @@ fn find_renames(
     Ok(file_renames)
 }
 
+/// Write the renames to disk. Line terminators (LF or CRLF) and the final
+/// newline are kept byte-for-byte; only the replaced identifiers change.
 fn apply_renames(root: &Path, old_name: &str, new_name: &str, renames: &[FileRename]) -> Result<(), String> {
     let pattern = regex::Regex::new(&format!(r"\b{}\b", regex::escape(old_name)))
         .map_err(|e| format!("Invalid symbol name for regex: {e}"))?;
@@ -173,26 +230,20 @@ fn apply_renames(root: &Path, old_name: &str, new_name: &str, renames: &[FileRen
         let content = std::fs::read_to_string(&abs_path)
             .map_err(|e| format!("Failed to read {}: {e}", file_rename.path))?;
 
-        let mut new_lines: Vec<String> = Vec::new();
-        for (line_idx, line) in content.lines().enumerate() {
-            let has_match = file_rename.lines.iter().any(|lc| lc.line_number == line_idx + 1);
-            if has_match && !is_in_string_or_comment(line, 0) {
-                // Re-check: only replace word-boundary matches not in strings/comments
-                // We do a per-match check to be safe
-                let mut result_line = line.to_string();
-                // Replace all word-boundary matches on this line that aren't in strings/comments
-                // Since we already validated in find_renames, just do the replacement
-                result_line = pattern.replace_all(&result_line, new_name).to_string();
-                new_lines.push(result_line);
-            } else {
-                new_lines.push(line.to_string());
+        let mut output = String::with_capacity(content.len());
+        for segment in content.split_inclusive('\n') {
+            let body = segment.strip_suffix('\n').unwrap_or(segment);
+            let (body, cr) = match body.strip_suffix('\r') {
+                Some(b) => (b, "\r"),
+                None => (body, ""),
+            };
+            let terminator = &segment[body.len() + cr.len()..];
+            match rename_line(body, &pattern, new_name) {
+                Some((new_body, _)) => output.push_str(&new_body),
+                None => output.push_str(body),
             }
-        }
-
-        // Preserve trailing newline if original had one
-        let mut output = new_lines.join("\n");
-        if content.ends_with('\n') {
-            output.push('\n');
+            output.push_str(cr);
+            output.push_str(terminator);
         }
 
         std::fs::write(&abs_path, &output)
@@ -223,6 +274,13 @@ pub fn handle_smart_refactor(params: &Value) -> Value {
     }
 }
 
+/// Rename a symbol (whole-word matches only).
+///
+/// There is no `replace_all` flag: every whole-word occurrence is renamed,
+/// except occurrences inside string literals or comments (line comments and
+/// `//` trailing comments are recognized; `#`, `--`, `%` comments only when
+/// they start the line). `dry_run` defaults to true and only reports changes.
+/// `occurrences` counts matches; `lines` lists each changed line.
 fn handle_rename(params: &Value) -> Value {
     let old_name = match params.get("old_name").and_then(|v| v.as_str()) {
         Some(name) => name,

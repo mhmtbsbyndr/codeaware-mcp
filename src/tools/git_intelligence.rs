@@ -1,5 +1,6 @@
 use serde::Serialize;
 use serde_json::{json, Value};
+use std::collections::HashMap;
 use std::path::Path;
 use std::process::Command;
 
@@ -80,6 +81,46 @@ fn extract_cwd(params: &Value) -> Option<std::path::PathBuf> {
         .map(std::path::PathBuf::from)
 }
 
+/// Build an error envelope response for invalid input or git failures.
+fn git_error_response(msg: String) -> Value {
+    let envelope = Envelope::<()>::error(ErrorCode::EGitError, false, Some(msg));
+    json!({"content": [{"type": "text", "text": serde_json::to_string(&envelope).unwrap_or_default()}]})
+}
+
+/// Validate a user-supplied git revision before it reaches git.
+/// Rejects option-like values (leading '-'), range syntax, and characters
+/// that cannot appear in a ref name (e.g. whitespace, ':', '=').
+fn validate_rev(rev: &str) -> Result<(), String> {
+    if rev.is_empty() {
+        return Err("Invalid revision: empty".to_string());
+    }
+    if rev.starts_with('-') {
+        return Err(format!("Invalid revision '{rev}': must not start with '-'"));
+    }
+    if rev.contains("..") {
+        return Err(format!("Invalid revision '{rev}': pass base and head separately"));
+    }
+    let allowed = rev
+        .chars()
+        .all(|c| c.is_ascii_alphanumeric() || matches!(c, '_' | '.' | '/' | '-' | '~' | '^' | '@' | '{' | '}'));
+    if !allowed {
+        return Err(format!("Invalid revision '{rev}': contains disallowed characters"));
+    }
+    Ok(())
+}
+
+/// Validate a user-supplied path. Paths are additionally passed after `--`,
+/// so this only needs to stop option-like values.
+fn validate_path(path: &str) -> Result<(), String> {
+    if path.is_empty() {
+        return Err("Invalid path: empty".to_string());
+    }
+    if path.starts_with('-') {
+        return Err(format!("Invalid path '{path}': must not start with '-'"));
+    }
+    Ok(())
+}
+
 fn categorize_commit(message: &str) -> String {
     let lower = message.to_lowercase();
     if lower.starts_with("feat") {
@@ -118,7 +159,11 @@ pub fn handle_git_diff(params: &Value) -> Value {
         .unwrap_or("HEAD");
     let cwd = extract_cwd(params);
 
-    let numstat = match run_git(&["diff", "--numstat", base, head], cwd.as_deref()) {
+    if let Err(e) = validate_rev(base).and_then(|_| validate_rev(head)) {
+        return git_error_response(e);
+    }
+
+    let numstat = match run_git(&["diff", "--numstat", base, head, "--"], cwd.as_deref()) {
         Ok(output) => output,
         Err(e) => {
             let envelope =
@@ -191,6 +236,10 @@ pub fn handle_git_blame(params: &Value) -> Value {
     };
     let cwd = extract_cwd(params);
 
+    if let Err(e) = validate_path(file) {
+        return git_error_response(e);
+    }
+
     let start_line = params
         .get("start_line")
         .and_then(|v| v.as_u64())
@@ -210,6 +259,7 @@ pub fn handle_git_blame(params: &Value) -> Value {
         args.push(&line_range);
     }
 
+    args.push("--");
     args.push(file);
 
     let output = match run_git(&args, cwd.as_deref()) {
@@ -233,7 +283,12 @@ pub fn handle_git_blame(params: &Value) -> Value {
 }
 
 fn parse_blame_porcelain(output: &str) -> Vec<BlameLine> {
+    // Porcelain output only emits author/author-time for the first line of each
+    // commit; later lines of the same commit carry just the hash header and the
+    // content. Cache per-hash metadata so every line gets its own commit's author.
     let mut lines = Vec::new();
+    let mut meta: HashMap<String, (String, String)> = HashMap::new(); // hash -> (author, date)
+    let mut current_hash = String::new();
     let mut current_author = String::new();
     let mut current_date = String::new();
     let mut current_line_number: u32 = 0;
@@ -241,24 +296,31 @@ fn parse_blame_porcelain(output: &str) -> Vec<BlameLine> {
     for line in output.lines() {
         if line.starts_with("author ") {
             current_author = line.strip_prefix("author ").unwrap_or("").to_string();
+            meta.entry(current_hash.clone()).or_default().0 = current_author.clone();
         } else if line.starts_with("author-time ") {
             let timestamp = line
                 .strip_prefix("author-time ")
                 .unwrap_or("")
                 .trim();
             // Convert Unix timestamp to ISO date
-            if let Ok(ts) = timestamp.parse::<i64>() {
-                current_date = chrono::DateTime::from_timestamp(ts, 0)
+            current_date = if let Ok(ts) = timestamp.parse::<i64>() {
+                chrono::DateTime::from_timestamp(ts, 0)
                     .map(|dt| dt.format("%Y-%m-%d").to_string())
-                    .unwrap_or_else(|| timestamp.to_string());
+                    .unwrap_or_else(|| timestamp.to_string())
             } else {
-                current_date = timestamp.to_string();
-            }
+                timestamp.to_string()
+            };
+            meta.entry(current_hash.clone()).or_default().1 = current_date.clone();
         } else if line.len() >= 40
             && line.chars().take(40).all(|c| c.is_ascii_hexdigit())
         {
             // This is a commit hash line: <hash> <orig_line> <final_line> [<num_lines>]
             let parts: Vec<&str> = line.split_whitespace().collect();
+            current_hash = line[..40].to_string();
+            // Restore metadata for a commit seen before (no author lines follow).
+            let (author, date) = meta.get(&current_hash).cloned().unwrap_or_default();
+            current_author = author;
+            current_date = date;
             if parts.len() >= 3 {
                 current_line_number = parts[2].parse::<u32>().unwrap_or(0);
             }
@@ -290,6 +352,15 @@ pub fn handle_git_changelog(params: &Value) -> Value {
         .unwrap_or(50) as usize;
     let cwd = extract_cwd(params);
 
+    if let Some(b) = base {
+        if let Err(e) = validate_rev(b) {
+            return git_error_response(e);
+        }
+    }
+    if let Err(e) = validate_rev(head) {
+        return git_error_response(e);
+    }
+
     let range = match base {
         Some(b) => format!("{b}..{head}"),
         None => head.to_string(),
@@ -304,6 +375,7 @@ pub fn handle_git_changelog(params: &Value) -> Value {
             "--name-only",
             &limit_str,
             &range,
+            "--",
         ]
     } else {
         vec![
@@ -311,6 +383,7 @@ pub fn handle_git_changelog(params: &Value) -> Value {
             "--pretty=format:COMMIT:%H|%an|%s",
             "--name-only",
             &limit_str,
+            "--",
         ]
     };
 

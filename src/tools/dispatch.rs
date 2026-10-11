@@ -1,13 +1,22 @@
 use serde_json::{json, Value};
+use std::path::Path;
 use std::sync::{Arc, Mutex};
 
 use crate::envelope::{Envelope, ErrorCode, TrustLevel};
 use crate::session::persistence::SessionDb;
 use crate::session::state::SessionState;
+use crate::tools::project_map::{project_map, ProjectMapInput};
+use crate::tools::smart_edit::{smart_edit, EditPair, SmartEditInput};
+use crate::tools::smart_read::{smart_read, ReadMode, SmartReadInput};
+use crate::tools::smart_run::{smart_run, SmartRunInput};
+use crate::tools::validate_config::{validate_config, ValidateConfigInput};
 use crate::xray::server::XrayServer;
 
 /// Route a tool call to the appropriate handler and return the MCP result.
 /// This keeps the dispatch logic separate from metrics/hooks in server.rs.
+///
+/// Every name advertised in `tools/list` (server.rs) must have an arm here.
+/// Unknown names return a tool result with `isError: true`.
 pub fn dispatch_tool(
     tool_name: &str,
     tool_input: &Value,
@@ -76,12 +85,212 @@ pub fn dispatch_tool(
         "test_coverage_map" => {
             crate::tools::test_coverage_map::handle_test_coverage_map(tool_input)
         }
-        _ => json!({
-            "content": [{
-                "type": "text",
-                "text": "Tool not yet implemented"
-            }]
-        }),
+
+        // Project-root-aware tools: relative paths resolve against the session's project path.
+        "project_map" => dispatch_project_map(tool_input, &project_root(state)),
+        "smart_read" => dispatch_smart_read(tool_input, &project_root(state)),
+        "smart_edit" => dispatch_smart_edit(tool_input, &project_root(state)),
+        "smart_run" => dispatch_smart_run(tool_input),
+        "validate_config" => dispatch_validate_config(tool_input, &project_root(state)),
+
+        _ => tool_error(&format!("Unknown tool: '{tool_name}' is not registered")),
+    }
+}
+
+/// Error result per MCP tools/call convention: a normal result with `isError: true`.
+fn tool_error(message: &str) -> Value {
+    json!({
+        "content": [{"type": "text", "text": message}],
+        "isError": true
+    })
+}
+
+fn project_root(state: &Arc<Mutex<SessionState>>) -> std::path::PathBuf {
+    let path = state
+        .lock()
+        .map(|s| s.project_path().to_string())
+        .unwrap_or_else(|_| ".".to_string());
+    std::path::PathBuf::from(path)
+}
+
+fn opt_str(input: &Value, key: &str) -> Option<String> {
+    input.get(key).and_then(|v| v.as_str()).map(|s| s.to_string())
+}
+
+/// Accepts either a "a-b" string or an integer array `[a, b]` (schema form) and
+/// returns the "a-b" string the handlers expect.
+fn line_range_spec(value: Option<&Value>) -> Option<String> {
+    match value? {
+        Value::String(s) => Some(s.clone()),
+        Value::Array(items) => {
+            let nums: Vec<u64> = items.iter().filter_map(|v| v.as_u64()).collect();
+            match nums.as_slice() {
+                [a, b, ..] => Some(format!("{a}-{b}")),
+                [a] => Some(format!("{a}-{a}")),
+                [] => None,
+            }
+        }
+        _ => None,
+    }
+}
+
+fn dispatch_project_map(tool_input: &Value, project_root: &Path) -> Value {
+    let input = ProjectMapInput {
+        path: opt_str(tool_input, "path")
+            .unwrap_or_else(|| project_root.to_string_lossy().to_string()),
+        depth: tool_input.get("depth").and_then(|v| v.as_u64()).unwrap_or(3) as usize,
+        include_symbols: tool_input
+            .get("include_symbols")
+            .and_then(|v| v.as_bool())
+            .unwrap_or(false),
+        filter_language: opt_str(tool_input, "filter_language"),
+        task_context: opt_str(tool_input, "task_context"),
+    };
+    match project_map(&input) {
+        Ok(r) => {
+            let tree: Vec<Value> = r
+                .tree
+                .iter()
+                .map(|e| {
+                    json!({
+                        "path": e.path,
+                        "loc": e.loc,
+                        "access_frequency": e.access_frequency,
+                        "symbols": e.symbols,
+                        "last_modified": e.last_modified,
+                    })
+                })
+                .collect();
+            text_response(&json!({
+                "project_name": r.project_name,
+                "total_files": r.total_files,
+                "total_loc": r.total_loc,
+                "total_symbols": r.total_symbols,
+                "intelligence_level": r.intelligence_level,
+                "tree": tree,
+                "dependencies": r.dependencies,
+                "suggested_start": r.suggested_start,
+            }))
+        }
+        Err(e) => tool_error(&e.to_string()),
+    }
+}
+
+fn dispatch_smart_read(tool_input: &Value, project_root: &Path) -> Value {
+    let Some(path) = opt_str(tool_input, "path") else {
+        return tool_error("smart_read requires 'path'");
+    };
+    let mode_str = opt_str(tool_input, "mode").unwrap_or_else(|| "auto".to_string());
+    let mode: ReadMode = match serde_json::from_value(Value::String(mode_str.clone())) {
+        Ok(m) => m,
+        Err(_) => {
+            return tool_error(&format!(
+                "smart_read: invalid mode '{mode_str}' (expected auto, skeleton, focused, full, diff)"
+            ))
+        }
+    };
+    let input = SmartReadInput {
+        path,
+        mode,
+        focus: opt_str(tool_input, "focus"),
+        lines: line_range_spec(tool_input.get("lines")),
+        scope: opt_str(tool_input, "scope"),
+    };
+    match smart_read(&input, project_root) {
+        Ok(r) => text_response(&r),
+        Err(e) => tool_error(&e.to_string()),
+    }
+}
+
+fn dispatch_smart_edit(tool_input: &Value, project_root: &Path) -> Value {
+    let Some(path) = opt_str(tool_input, "path") else {
+        return tool_error("smart_edit requires 'path'");
+    };
+    let edits: Option<Vec<EditPair>> = match tool_input.get("edits") {
+        None | Some(Value::Null) => None,
+        Some(v) => match serde_json::from_value(v.clone()) {
+            Ok(e) => Some(e),
+            Err(e) => return tool_error(&format!("smart_edit: invalid 'edits': {e}")),
+        },
+    };
+    let input = SmartEditInput {
+        path,
+        strategy: opt_str(tool_input, "strategy").unwrap_or_else(|| "text".to_string()),
+        symbol: opt_str(tool_input, "symbol"),
+        line_range: line_range_spec(tool_input.get("line_range")),
+        edits,
+        new_content: opt_str(tool_input, "new_content"),
+        dry_run: tool_input
+            .get("dry_run")
+            .and_then(|v| v.as_bool())
+            .unwrap_or(false),
+        expected_hash: opt_str(tool_input, "expected_hash"),
+    };
+    match smart_edit(&input, project_root) {
+        Ok(r) => text_response(&r),
+        Err(e) => tool_error(&e.to_string()),
+    }
+}
+
+/// Runs the async `smart_run` on a private current-thread runtime. The MCP server
+/// is synchronous (main.rs reads stdin line by line) and has no runtime, so
+/// `block_on` is safe here. It must not be called from inside an existing runtime.
+fn dispatch_smart_run(tool_input: &Value) -> Value {
+    let Some(command) = opt_str(tool_input, "command") else {
+        return tool_error("smart_run requires 'command'");
+    };
+    let defaults = SmartRunInput::default();
+    let input = SmartRunInput {
+        command,
+        max_output_lines: tool_input
+            .get("max_output_lines")
+            .and_then(|v| v.as_u64())
+            .map(|n| n as usize)
+            .unwrap_or(defaults.max_output_lines),
+        capture_relevant_code: tool_input
+            .get("capture_relevant_code")
+            .and_then(|v| v.as_bool())
+            .unwrap_or(defaults.capture_relevant_code),
+        scan_secrets: tool_input
+            .get("scan_secrets")
+            .and_then(|v| v.as_bool())
+            .unwrap_or(defaults.scan_secrets),
+    };
+    let runtime = match tokio::runtime::Builder::new_current_thread()
+        .enable_all()
+        .build()
+    {
+        Ok(rt) => rt,
+        Err(e) => return tool_error(&format!("smart_run: runtime error: {e}")),
+    };
+    match runtime.block_on(smart_run(&input)) {
+        Ok(r) => text_response(&json!({
+            "command": r.command,
+            "command_type": r.command_type,
+            "exit_code": r.exit_code,
+            "duration_ms": r.duration_ms,
+            "raw_lines": r.raw_lines,
+            "compressed_lines": r.compressed_lines,
+            "compression_ratio": r.compression_ratio,
+            "summary": r.summary,
+            "compressed_output": r.compressed_output,
+            "failures": r.failures,
+            "warnings": r.warnings,
+            "secrets_detected": r.secrets_detected,
+            "error_recurrence": r.error_recurrence,
+            "suggested_next": r.suggested_next,
+        })),
+        Err(e) => tool_error(&e.to_string()),
+    }
+}
+
+fn dispatch_validate_config(tool_input: &Value, project_root: &Path) -> Value {
+    let input = ValidateConfigInput {
+        scope: opt_str(tool_input, "scope").unwrap_or_else(|| "all".to_string()),
+    };
+    match validate_config(&input, project_root) {
+        Ok(r) => text_response(&r),
+        Err(e) => tool_error(&e.to_string()),
     }
 }
 

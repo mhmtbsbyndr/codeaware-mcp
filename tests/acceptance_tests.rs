@@ -419,8 +419,8 @@ fn n01_malformed_utf8_no_crash() {
             );
         }
         Ok(r) => {
-            // Graceful: returned ok, which is also acceptable
-            assert!(r.loc > 0 || r.loc == 0);
+            // Graceful: returning Ok is also acceptable; reaching this arm without a panic is the check.
+            let _ = r.loc;
         }
     }
 }

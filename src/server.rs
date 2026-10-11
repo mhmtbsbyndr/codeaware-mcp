@@ -119,34 +119,63 @@ impl McpServer {
         }
     }
 
+    /// Handle one incoming line (a JSON-RPC message or batch) and return the reply line.
+    ///
+    /// Rules:
+    /// - Unparseable input: -32700 with id null.
+    /// - Batch arrays: each element is handled independently. The replies are returned
+    ///   as one JSON array in request order; elements that need no reply are omitted.
+    ///   If no element needs a reply, nothing is returned. An empty batch is -32600 (id null).
+    /// - Messages without an `id` (notifications, including `notifications/*`) get no reply.
+    /// - Client responses (`id` + `result`/`error`, no `method`) get no reply.
+    /// - `ping` returns an empty result object `{}`.
     pub fn handle_message(&self, message: &str) -> Option<String> {
         let parsed: Value = match serde_json::from_str(message) {
             Ok(v) => v,
-            Err(_) => return Some(self.respond_error(Value::Null, -32700, "Parse error")),
+            Err(_) => return Some(self.respond_error(Value::Null, -32700, "Parse error").to_string()),
         };
 
-        let method = match parsed.get("method").and_then(|m| m.as_str()) {
+        if let Value::Array(items) = &parsed {
+            if items.is_empty() {
+                return Some(self.respond_error(Value::Null, -32600, "Invalid Request: empty batch").to_string());
+            }
+            let replies: Vec<Value> = items.iter().filter_map(|item| self.handle_single(item)).collect();
+            if replies.is_empty() {
+                return None;
+            }
+            return Some(Value::Array(replies).to_string());
+        }
+
+        self.handle_single(&parsed).map(|reply| reply.to_string())
+    }
+
+    /// Handle a single JSON-RPC message object. Returns `None` when no reply is due.
+    fn handle_single(&self, msg: &Value) -> Option<Value> {
+        if !msg.is_object() {
+            return Some(self.respond_error(Value::Null, -32600, "Invalid Request: not an object"));
+        }
+
+        let method = match msg.get("method").and_then(|m| m.as_str()) {
             Some(m) => m,
             None => {
-                let id = parsed.get("id").cloned().unwrap_or(Value::Null);
-                return Some(self.respond_error(id, -32600, "Invalid Request: missing method"));
+                // Client response to a server-initiated request: never answered.
+                // Any other message without an id is a notification: never answered.
+                let id = msg.get("id")?;
+                if msg.get("result").is_some() || msg.get("error").is_some() {
+                    return None;
+                }
+                return Some(self.respond_error(id.clone(), -32600, "Invalid Request: missing method"));
             }
         };
 
-        // Notifications have no id and expect no response
-        if method.starts_with("notifications/") {
-            return None;
-        }
-
-        let id = match parsed.get("id").cloned() {
-            Some(id) => id,
-            None => return Some(self.respond_error(Value::Null, -32600, "Invalid Request: missing id")),
-        };
+        // Requests without an id are notifications and expect no response.
+        let id = msg.get("id").cloned()?;
 
         match method {
             "initialize" => Some(self.respond(id, self.handle_initialize())),
+            "ping" => Some(self.respond(id, json!({}))),
             "tools/list" => Some(self.respond(id, self.handle_tools_list())),
-            "tools/call" => Some(self.respond(id, self.handle_tools_call(&parsed))),
+            "tools/call" => Some(self.respond(id, self.handle_tools_call(msg))),
             _ => Some(self.respond_error(id, -32601, "Method not found")),
         }
     }
@@ -209,7 +238,7 @@ impl McpServer {
                             },
                             "mode": {
                                 "type": "string",
-                                "description": "Read mode (full, summary, symbol)"
+                                "description": "Read mode (auto, skeleton, focused, full, diff)"
                             },
                             "focus": {
                                 "type": "string",
@@ -240,7 +269,7 @@ impl McpServer {
                             },
                             "strategy": {
                                 "type": "string",
-                                "description": "Edit strategy (symbol, line_range, full)"
+                                "description": "Edit strategy (text, lines). 'symbol' is not yet supported."
                             },
                             "symbol": {
                                 "type": "string",
@@ -295,23 +324,6 @@ impl McpServer {
                             "scan_secrets": {
                                 "type": "boolean",
                                 "description": "Scan output for accidental secret exposure"
-                            }
-                        }
-                    }
-                },
-                {
-                    "name": "session_status",
-                    "description": "Get the current session and workspace status",
-                    "inputSchema": {
-                        "type": "object",
-                        "properties": {
-                            "scope": {
-                                "type": "string",
-                                "description": "Scope of the status report"
-                            },
-                            "include_verification": {
-                                "type": "boolean",
-                                "description": "Include verification checks"
                             }
                         }
                     }
@@ -648,16 +660,15 @@ impl McpServer {
         }
     }
 
-    fn respond(&self, id: Value, result: Value) -> String {
+    fn respond(&self, id: Value, result: Value) -> Value {
         json!({
             "jsonrpc": "2.0",
             "id": id,
             "result": result
         })
-        .to_string()
     }
 
-    fn respond_error(&self, id: Value, code: i32, message: &str) -> String {
+    fn respond_error(&self, id: Value, code: i32, message: &str) -> Value {
         json!({
             "jsonrpc": "2.0",
             "id": id,
@@ -666,6 +677,5 @@ impl McpServer {
                 "message": message
             }
         })
-        .to_string()
     }
 }

@@ -139,18 +139,19 @@ fn test_formatter_compression() {
 // --- Git diff stats: content lines that start with "---" / "+++" ---
 #[test]
 fn test_git_diff_counts_content_lines_starting_with_dashes() {
-    let raw = "diff --git a/db/schema.sql b/db/schema.sql\n\
-index 111..222 100644\n\
---- a/db/schema.sql\n\
-+++ b/db/schema.sql\n\
-@@ -1,3 +1,3 @@\n\
- CREATE TABLE t (id INT);\n\
---- foo\n\
-++ bar\n\
- SELECT 1;\n\
- -- keep\n\
- SELECT 2;\n\
- SELECT 3;\n";
+    // Removed SQL comment "-- foo" appears as "--- foo"; added "++ bar" as "+++ bar".
+    let raw = r#"diff --git a/db/schema.sql b/db/schema.sql
+index 111..222 100644
+--- a/db/schema.sql
++++ b/db/schema.sql
+@@ -1,3 +1,3 @@
+ CREATE TABLE t (id INT);
+--- foo
++++ bar
+ SELECT 1;
+ -- keep
+ SELECT 2;
+"#;
     // max_lines below line count so the diff compressor runs
     let compressed = git_output::compress(raw, 5);
     assert!(
