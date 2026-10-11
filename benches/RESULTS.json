@@ -1,0 +1,1289 @@
+{
+  "schema_version": 1,
+  "estimator": "token_stats::estimate_tokens: max(ceil(chars/4), ceil(words*4/3)); heuristic, not a tokenizer",
+  "repo_head": "d7ed321",
+  "top_k": 5,
+  "budget": 4000,
+  "task_count": 20,
+  "summaries": [
+    {
+      "variant": "baseline_full_relevant",
+      "role": "reference",
+      "tasks": 20,
+      "mean_tokens": 6766.65,
+      "total_tokens": 135333,
+      "mean_returned_files": 4.55,
+      "mean_recall": 1.0,
+      "covered_within_budget": 15
+    },
+    {
+      "variant": "naive_full_topk",
+      "role": "achievable",
+      "tasks": 20,
+      "mean_tokens": 13243.45,
+      "total_tokens": 264869,
+      "mean_returned_files": 5.0,
+      "mean_recall": 0.2058730158730159,
+      "covered_within_budget": 0
+    },
+    {
+      "variant": "v4_get_task_context",
+      "role": "achievable",
+      "tasks": 20,
+      "mean_tokens": 2960.1,
+      "total_tokens": 59202,
+      "mean_returned_files": 11.65,
+      "mean_recall": 0.16777777777777775,
+      "covered_within_budget": 2
+    },
+    {
+      "variant": "v4_semantic_only",
+      "role": "achievable",
+      "tasks": 20,
+      "mean_tokens": 2476.8,
+      "total_tokens": 49536,
+      "mean_returned_files": 11.25,
+      "mean_recall": 0.16777777777777775,
+      "covered_within_budget": 2
+    },
+    {
+      "variant": "smart_read_skeleton_topk",
+      "role": "achievable",
+      "tasks": 20,
+      "mean_tokens": 3156.55,
+      "total_tokens": 63131,
+      "mean_returned_files": 5.0,
+      "mean_recall": 0.2058730158730159,
+      "covered_within_budget": 2
+    },
+    {
+      "variant": "smart_read_skeleton_relevant",
+      "role": "reference",
+      "tasks": 20,
+      "mean_tokens": 2119.75,
+      "total_tokens": 42395,
+      "mean_returned_files": 4.55,
+      "mean_recall": 1.0,
+      "covered_within_budget": 16
+    }
+  ],
+  "rows": [
+    {
+      "task_id": "T01",
+      "variant": "baseline_full_relevant",
+      "role": "reference",
+      "tokens": 1744,
+      "returned_files": 1,
+      "relevant_files": 1,
+      "recall": 1.0,
+      "covered_within_budget": true
+    },
+    {
+      "task_id": "T01",
+      "variant": "naive_full_topk",
+      "role": "achievable",
+      "tokens": 34637,
+      "returned_files": 5,
+      "relevant_files": 1,
+      "recall": 1.0,
+      "covered_within_budget": false
+    },
+    {
+      "task_id": "T01",
+      "variant": "v4_get_task_context",
+      "role": "achievable",
+      "tokens": 3213,
+      "returned_files": 10,
+      "relevant_files": 1,
+      "recall": 0.0,
+      "covered_within_budget": false
+    },
+    {
+      "task_id": "T01",
+      "variant": "v4_semantic_only",
+      "role": "achievable",
+      "tokens": 2780,
+      "returned_files": 10,
+      "relevant_files": 1,
+      "recall": 0.0,
+      "covered_within_budget": false
+    },
+    {
+      "task_id": "T01",
+      "variant": "smart_read_skeleton_topk",
+      "role": "achievable",
+      "tokens": 5677,
+      "returned_files": 5,
+      "relevant_files": 1,
+      "recall": 1.0,
+      "covered_within_budget": false
+    },
+    {
+      "task_id": "T01",
+      "variant": "smart_read_skeleton_relevant",
+      "role": "reference",
+      "tokens": 387,
+      "returned_files": 1,
+      "relevant_files": 1,
+      "recall": 1.0,
+      "covered_within_budget": true
+    },
+    {
+      "task_id": "T02",
+      "variant": "baseline_full_relevant",
+      "role": "reference",
+      "tokens": 1191,
+      "returned_files": 1,
+      "relevant_files": 1,
+      "recall": 1.0,
+      "covered_within_budget": true
+    },
+    {
+      "task_id": "T02",
+      "variant": "naive_full_topk",
+      "role": "achievable",
+      "tokens": 15297,
+      "returned_files": 5,
+      "relevant_files": 1,
+      "recall": 1.0,
+      "covered_within_budget": false
+    },
+    {
+      "task_id": "T02",
+      "variant": "v4_get_task_context",
+      "role": "achievable",
+      "tokens": 3311,
+      "returned_files": 20,
+      "relevant_files": 1,
+      "recall": 1.0,
+      "covered_within_budget": true
+    },
+    {
+      "task_id": "T02",
+      "variant": "v4_semantic_only",
+      "role": "achievable",
+      "tokens": 2879,
+      "returned_files": 20,
+      "relevant_files": 1,
+      "recall": 1.0,
+      "covered_within_budget": true
+    },
+    {
+      "task_id": "T02",
+      "variant": "smart_read_skeleton_topk",
+      "role": "achievable",
+      "tokens": 2842,
+      "returned_files": 5,
+      "relevant_files": 1,
+      "recall": 1.0,
+      "covered_within_budget": true
+    },
+    {
+      "task_id": "T02",
+      "variant": "smart_read_skeleton_relevant",
+      "role": "reference",
+      "tokens": 387,
+      "returned_files": 1,
+      "relevant_files": 1,
+      "recall": 1.0,
+      "covered_within_budget": true
+    },
+    {
+      "task_id": "T03",
+      "variant": "baseline_full_relevant",
+      "role": "reference",
+      "tokens": 3474,
+      "returned_files": 3,
+      "relevant_files": 3,
+      "recall": 1.0,
+      "covered_within_budget": true
+    },
+    {
+      "task_id": "T03",
+      "variant": "naive_full_topk",
+      "role": "achievable",
+      "tokens": 15197,
+      "returned_files": 5,
+      "relevant_files": 3,
+      "recall": 0.3333333333333333,
+      "covered_within_budget": false
+    },
+    {
+      "task_id": "T03",
+      "variant": "v4_get_task_context",
+      "role": "achievable",
+      "tokens": 3357,
+      "returned_files": 11,
+      "relevant_files": 3,
+      "recall": 0.3333333333333333,
+      "covered_within_budget": false
+    },
+    {
+      "task_id": "T03",
+      "variant": "v4_semantic_only",
+      "role": "achievable",
+      "tokens": 2940,
+      "returned_files": 11,
+      "relevant_files": 3,
+      "recall": 0.3333333333333333,
+      "covered_within_budget": false
+    },
+    {
+      "task_id": "T03",
+      "variant": "smart_read_skeleton_topk",
+      "role": "achievable",
+      "tokens": 3533,
+      "returned_files": 5,
+      "relevant_files": 3,
+      "recall": 0.3333333333333333,
+      "covered_within_budget": false
+    },
+    {
+      "task_id": "T03",
+      "variant": "smart_read_skeleton_relevant",
+      "role": "reference",
+      "tokens": 1092,
+      "returned_files": 3,
+      "relevant_files": 3,
+      "recall": 1.0,
+      "covered_within_budget": true
+    },
+    {
+      "task_id": "T04",
+      "variant": "baseline_full_relevant",
+      "role": "reference",
+      "tokens": 1269,
+      "returned_files": 1,
+      "relevant_files": 1,
+      "recall": 1.0,
+      "covered_within_budget": true
+    },
+    {
+      "task_id": "T04",
+      "variant": "naive_full_topk",
+      "role": "achievable",
+      "tokens": 13371,
+      "returned_files": 5,
+      "relevant_files": 1,
+      "recall": 1.0,
+      "covered_within_budget": false
+    },
+    {
+      "task_id": "T04",
+      "variant": "v4_get_task_context",
+      "role": "achievable",
+      "tokens": 3255,
+      "returned_files": 14,
+      "relevant_files": 1,
+      "recall": 0.0,
+      "covered_within_budget": false
+    },
+    {
+      "task_id": "T04",
+      "variant": "v4_semantic_only",
+      "role": "achievable",
+      "tokens": 2831,
+      "returned_files": 14,
+      "relevant_files": 1,
+      "recall": 0.0,
+      "covered_within_budget": false
+    },
+    {
+      "task_id": "T04",
+      "variant": "smart_read_skeleton_topk",
+      "role": "achievable",
+      "tokens": 2415,
+      "returned_files": 5,
+      "relevant_files": 1,
+      "recall": 1.0,
+      "covered_within_budget": true
+    },
+    {
+      "task_id": "T04",
+      "variant": "smart_read_skeleton_relevant",
+      "role": "reference",
+      "tokens": 168,
+      "returned_files": 1,
+      "relevant_files": 1,
+      "recall": 1.0,
+      "covered_within_budget": true
+    },
+    {
+      "task_id": "T05",
+      "variant": "baseline_full_relevant",
+      "role": "reference",
+      "tokens": 526,
+      "returned_files": 1,
+      "relevant_files": 1,
+      "recall": 1.0,
+      "covered_within_budget": true
+    },
+    {
+      "task_id": "T05",
+      "variant": "naive_full_topk",
+      "role": "achievable",
+      "tokens": 18158,
+      "returned_files": 5,
+      "relevant_files": 1,
+      "recall": 0.0,
+      "covered_within_budget": false
+    },
+    {
+      "task_id": "T05",
+      "variant": "v4_get_task_context",
+      "role": "achievable",
+      "tokens": 1582,
+      "returned_files": 8,
+      "relevant_files": 1,
+      "recall": 0.0,
+      "covered_within_budget": false
+    },
+    {
+      "task_id": "T05",
+      "variant": "v4_semantic_only",
+      "role": "achievable",
+      "tokens": 2,
+      "returned_files": 0,
+      "relevant_files": 1,
+      "recall": 0.0,
+      "covered_within_budget": false
+    },
+    {
+      "task_id": "T05",
+      "variant": "smart_read_skeleton_topk",
+      "role": "achievable",
+      "tokens": 4358,
+      "returned_files": 5,
+      "relevant_files": 1,
+      "recall": 0.0,
+      "covered_within_budget": false
+    },
+    {
+      "task_id": "T05",
+      "variant": "smart_read_skeleton_relevant",
+      "role": "reference",
+      "tokens": 647,
+      "returned_files": 1,
+      "relevant_files": 1,
+      "recall": 1.0,
+      "covered_within_budget": true
+    },
+    {
+      "task_id": "T06",
+      "variant": "baseline_full_relevant",
+      "role": "reference",
+      "tokens": 593,
+      "returned_files": 1,
+      "relevant_files": 1,
+      "recall": 1.0,
+      "covered_within_budget": true
+    },
+    {
+      "task_id": "T06",
+      "variant": "naive_full_topk",
+      "role": "achievable",
+      "tokens": 9011,
+      "returned_files": 5,
+      "relevant_files": 1,
+      "recall": 0.0,
+      "covered_within_budget": false
+    },
+    {
+      "task_id": "T06",
+      "variant": "v4_get_task_context",
+      "role": "achievable",
+      "tokens": 1171,
+      "returned_files": 2,
+      "relevant_files": 1,
+      "recall": 0.0,
+      "covered_within_budget": false
+    },
+    {
+      "task_id": "T06",
+      "variant": "v4_semantic_only",
+      "role": "achievable",
+      "tokens": 753,
+      "returned_files": 2,
+      "relevant_files": 1,
+      "recall": 0.0,
+      "covered_within_budget": false
+    },
+    {
+      "task_id": "T06",
+      "variant": "smart_read_skeleton_topk",
+      "role": "achievable",
+      "tokens": 2195,
+      "returned_files": 5,
+      "relevant_files": 1,
+      "recall": 0.0,
+      "covered_within_budget": false
+    },
+    {
+      "task_id": "T06",
+      "variant": "smart_read_skeleton_relevant",
+      "role": "reference",
+      "tokens": 722,
+      "returned_files": 1,
+      "relevant_files": 1,
+      "recall": 1.0,
+      "covered_within_budget": true
+    },
+    {
+      "task_id": "T07",
+      "variant": "baseline_full_relevant",
+      "role": "reference",
+      "tokens": 455,
+      "returned_files": 1,
+      "relevant_files": 1,
+      "recall": 1.0,
+      "covered_within_budget": true
+    },
+    {
+      "task_id": "T07",
+      "variant": "naive_full_topk",
+      "role": "achievable",
+      "tokens": 4956,
+      "returned_files": 5,
+      "relevant_files": 1,
+      "recall": 0.0,
+      "covered_within_budget": false
+    },
+    {
+      "task_id": "T07",
+      "variant": "v4_get_task_context",
+      "role": "achievable",
+      "tokens": 3317,
+      "returned_files": 11,
+      "relevant_files": 1,
+      "recall": 0.0,
+      "covered_within_budget": false
+    },
+    {
+      "task_id": "T07",
+      "variant": "v4_semantic_only",
+      "role": "achievable",
+      "tokens": 2894,
+      "returned_files": 11,
+      "relevant_files": 1,
+      "recall": 0.0,
+      "covered_within_budget": false
+    },
+    {
+      "task_id": "T07",
+      "variant": "smart_read_skeleton_topk",
+      "role": "achievable",
+      "tokens": 1855,
+      "returned_files": 5,
+      "relevant_files": 1,
+      "recall": 0.0,
+      "covered_within_budget": false
+    },
+    {
+      "task_id": "T07",
+      "variant": "smart_read_skeleton_relevant",
+      "role": "reference",
+      "tokens": 569,
+      "returned_files": 1,
+      "relevant_files": 1,
+      "recall": 1.0,
+      "covered_within_budget": true
+    },
+    {
+      "task_id": "T08",
+      "variant": "baseline_full_relevant",
+      "role": "reference",
+      "tokens": 412,
+      "returned_files": 1,
+      "relevant_files": 1,
+      "recall": 1.0,
+      "covered_within_budget": true
+    },
+    {
+      "task_id": "T08",
+      "variant": "naive_full_topk",
+      "role": "achievable",
+      "tokens": 4758,
+      "returned_files": 5,
+      "relevant_files": 1,
+      "recall": 0.0,
+      "covered_within_budget": false
+    },
+    {
+      "task_id": "T08",
+      "variant": "v4_get_task_context",
+      "role": "achievable",
+      "tokens": 3290,
+      "returned_files": 10,
+      "relevant_files": 1,
+      "recall": 0.0,
+      "covered_within_budget": false
+    },
+    {
+      "task_id": "T08",
+      "variant": "v4_semantic_only",
+      "role": "achievable",
+      "tokens": 2872,
+      "returned_files": 10,
+      "relevant_files": 1,
+      "recall": 0.0,
+      "covered_within_budget": false
+    },
+    {
+      "task_id": "T08",
+      "variant": "smart_read_skeleton_topk",
+      "role": "achievable",
+      "tokens": 1508,
+      "returned_files": 5,
+      "relevant_files": 1,
+      "recall": 0.0,
+      "covered_within_budget": false
+    },
+    {
+      "task_id": "T08",
+      "variant": "smart_read_skeleton_relevant",
+      "role": "reference",
+      "tokens": 554,
+      "returned_files": 1,
+      "relevant_files": 1,
+      "recall": 1.0,
+      "covered_within_budget": true
+    },
+    {
+      "task_id": "T09",
+      "variant": "baseline_full_relevant",
+      "role": "reference",
+      "tokens": 386,
+      "returned_files": 1,
+      "relevant_files": 1,
+      "recall": 1.0,
+      "covered_within_budget": true
+    },
+    {
+      "task_id": "T09",
+      "variant": "naive_full_topk",
+      "role": "achievable",
+      "tokens": 6562,
+      "returned_files": 5,
+      "relevant_files": 1,
+      "recall": 0.0,
+      "covered_within_budget": false
+    },
+    {
+      "task_id": "T09",
+      "variant": "v4_get_task_context",
+      "role": "achievable",
+      "tokens": 3280,
+      "returned_files": 8,
+      "relevant_files": 1,
+      "recall": 0.0,
+      "covered_within_budget": false
+    },
+    {
+      "task_id": "T09",
+      "variant": "v4_semantic_only",
+      "role": "achievable",
+      "tokens": 2861,
+      "returned_files": 8,
+      "relevant_files": 1,
+      "recall": 0.0,
+      "covered_within_budget": false
+    },
+    {
+      "task_id": "T09",
+      "variant": "smart_read_skeleton_topk",
+      "role": "achievable",
+      "tokens": 1983,
+      "returned_files": 5,
+      "relevant_files": 1,
+      "recall": 0.0,
+      "covered_within_budget": false
+    },
+    {
+      "task_id": "T09",
+      "variant": "smart_read_skeleton_relevant",
+      "role": "reference",
+      "tokens": 523,
+      "returned_files": 1,
+      "relevant_files": 1,
+      "recall": 1.0,
+      "covered_within_budget": true
+    },
+    {
+      "task_id": "T10",
+      "variant": "baseline_full_relevant",
+      "role": "reference",
+      "tokens": 353,
+      "returned_files": 1,
+      "relevant_files": 1,
+      "recall": 1.0,
+      "covered_within_budget": true
+    },
+    {
+      "task_id": "T10",
+      "variant": "naive_full_topk",
+      "role": "achievable",
+      "tokens": 4651,
+      "returned_files": 5,
+      "relevant_files": 1,
+      "recall": 0.0,
+      "covered_within_budget": false
+    },
+    {
+      "task_id": "T10",
+      "variant": "v4_get_task_context",
+      "role": "achievable",
+      "tokens": 3115,
+      "returned_files": 9,
+      "relevant_files": 1,
+      "recall": 0.0,
+      "covered_within_budget": false
+    },
+    {
+      "task_id": "T10",
+      "variant": "v4_semantic_only",
+      "role": "achievable",
+      "tokens": 2697,
+      "returned_files": 9,
+      "relevant_files": 1,
+      "recall": 0.0,
+      "covered_within_budget": false
+    },
+    {
+      "task_id": "T10",
+      "variant": "smart_read_skeleton_topk",
+      "role": "achievable",
+      "tokens": 1997,
+      "returned_files": 5,
+      "relevant_files": 1,
+      "recall": 0.0,
+      "covered_within_budget": false
+    },
+    {
+      "task_id": "T10",
+      "variant": "smart_read_skeleton_relevant",
+      "role": "reference",
+      "tokens": 486,
+      "returned_files": 1,
+      "relevant_files": 1,
+      "recall": 1.0,
+      "covered_within_budget": true
+    },
+    {
+      "task_id": "T11",
+      "variant": "baseline_full_relevant",
+      "role": "reference",
+      "tokens": 307,
+      "returned_files": 1,
+      "relevant_files": 1,
+      "recall": 1.0,
+      "covered_within_budget": true
+    },
+    {
+      "task_id": "T11",
+      "variant": "naive_full_topk",
+      "role": "achievable",
+      "tokens": 4555,
+      "returned_files": 5,
+      "relevant_files": 1,
+      "recall": 0.0,
+      "covered_within_budget": false
+    },
+    {
+      "task_id": "T11",
+      "variant": "v4_get_task_context",
+      "role": "achievable",
+      "tokens": 3143,
+      "returned_files": 12,
+      "relevant_files": 1,
+      "recall": 1.0,
+      "covered_within_budget": true
+    },
+    {
+      "task_id": "T11",
+      "variant": "v4_semantic_only",
+      "role": "achievable",
+      "tokens": 2723,
+      "returned_files": 12,
+      "relevant_files": 1,
+      "recall": 1.0,
+      "covered_within_budget": true
+    },
+    {
+      "task_id": "T11",
+      "variant": "smart_read_skeleton_topk",
+      "role": "achievable",
+      "tokens": 2103,
+      "returned_files": 5,
+      "relevant_files": 1,
+      "recall": 0.0,
+      "covered_within_budget": false
+    },
+    {
+      "task_id": "T11",
+      "variant": "smart_read_skeleton_relevant",
+      "role": "reference",
+      "tokens": 435,
+      "returned_files": 1,
+      "relevant_files": 1,
+      "recall": 1.0,
+      "covered_within_budget": true
+    },
+    {
+      "task_id": "T12",
+      "variant": "baseline_full_relevant",
+      "role": "reference",
+      "tokens": 246,
+      "returned_files": 1,
+      "relevant_files": 1,
+      "recall": 1.0,
+      "covered_within_budget": true
+    },
+    {
+      "task_id": "T12",
+      "variant": "naive_full_topk",
+      "role": "achievable",
+      "tokens": 3874,
+      "returned_files": 5,
+      "relevant_files": 1,
+      "recall": 0.0,
+      "covered_within_budget": false
+    },
+    {
+      "task_id": "T12",
+      "variant": "v4_get_task_context",
+      "role": "achievable",
+      "tokens": 2768,
+      "returned_files": 12,
+      "relevant_files": 1,
+      "recall": 0.0,
+      "covered_within_budget": false
+    },
+    {
+      "task_id": "T12",
+      "variant": "v4_semantic_only",
+      "role": "achievable",
+      "tokens": 2348,
+      "returned_files": 12,
+      "relevant_files": 1,
+      "recall": 0.0,
+      "covered_within_budget": false
+    },
+    {
+      "task_id": "T12",
+      "variant": "smart_read_skeleton_topk",
+      "role": "achievable",
+      "tokens": 1429,
+      "returned_files": 5,
+      "relevant_files": 1,
+      "recall": 0.0,
+      "covered_within_budget": false
+    },
+    {
+      "task_id": "T12",
+      "variant": "smart_read_skeleton_relevant",
+      "role": "reference",
+      "tokens": 366,
+      "returned_files": 1,
+      "relevant_files": 1,
+      "recall": 1.0,
+      "covered_within_budget": true
+    },
+    {
+      "task_id": "T13",
+      "variant": "baseline_full_relevant",
+      "role": "reference",
+      "tokens": 227,
+      "returned_files": 1,
+      "relevant_files": 1,
+      "recall": 1.0,
+      "covered_within_budget": true
+    },
+    {
+      "task_id": "T13",
+      "variant": "naive_full_topk",
+      "role": "achievable",
+      "tokens": 19874,
+      "returned_files": 5,
+      "relevant_files": 1,
+      "recall": 0.0,
+      "covered_within_budget": false
+    },
+    {
+      "task_id": "T13",
+      "variant": "v4_get_task_context",
+      "role": "achievable",
+      "tokens": 3099,
+      "returned_files": 14,
+      "relevant_files": 1,
+      "recall": 0.0,
+      "covered_within_budget": false
+    },
+    {
+      "task_id": "T13",
+      "variant": "v4_semantic_only",
+      "role": "achievable",
+      "tokens": 2683,
+      "returned_files": 14,
+      "relevant_files": 1,
+      "recall": 0.0,
+      "covered_within_budget": false
+    },
+    {
+      "task_id": "T13",
+      "variant": "smart_read_skeleton_topk",
+      "role": "achievable",
+      "tokens": 4667,
+      "returned_files": 5,
+      "relevant_files": 1,
+      "recall": 0.0,
+      "covered_within_budget": false
+    },
+    {
+      "task_id": "T13",
+      "variant": "smart_read_skeleton_relevant",
+      "role": "reference",
+      "tokens": 346,
+      "returned_files": 1,
+      "relevant_files": 1,
+      "recall": 1.0,
+      "covered_within_budget": true
+    },
+    {
+      "task_id": "T14",
+      "variant": "baseline_full_relevant",
+      "role": "reference",
+      "tokens": 208,
+      "returned_files": 1,
+      "relevant_files": 1,
+      "recall": 1.0,
+      "covered_within_budget": true
+    },
+    {
+      "task_id": "T14",
+      "variant": "naive_full_topk",
+      "role": "achievable",
+      "tokens": 19542,
+      "returned_files": 5,
+      "relevant_files": 1,
+      "recall": 0.0,
+      "covered_within_budget": false
+    },
+    {
+      "task_id": "T14",
+      "variant": "v4_get_task_context",
+      "role": "achievable",
+      "tokens": 1371,
+      "returned_files": 4,
+      "relevant_files": 1,
+      "recall": 0.0,
+      "covered_within_budget": false
+    },
+    {
+      "task_id": "T14",
+      "variant": "v4_semantic_only",
+      "role": "achievable",
+      "tokens": 953,
+      "returned_files": 4,
+      "relevant_files": 1,
+      "recall": 0.0,
+      "covered_within_budget": false
+    },
+    {
+      "task_id": "T14",
+      "variant": "smart_read_skeleton_topk",
+      "role": "achievable",
+      "tokens": 3763,
+      "returned_files": 5,
+      "relevant_files": 1,
+      "recall": 0.0,
+      "covered_within_budget": false
+    },
+    {
+      "task_id": "T14",
+      "variant": "smart_read_skeleton_relevant",
+      "role": "reference",
+      "tokens": 324,
+      "returned_files": 1,
+      "relevant_files": 1,
+      "recall": 1.0,
+      "covered_within_budget": true
+    },
+    {
+      "task_id": "T15",
+      "variant": "baseline_full_relevant",
+      "role": "reference",
+      "tokens": 26622,
+      "returned_files": 13,
+      "relevant_files": 13,
+      "recall": 1.0,
+      "covered_within_budget": false
+    },
+    {
+      "task_id": "T15",
+      "variant": "naive_full_topk",
+      "role": "achievable",
+      "tokens": 11891,
+      "returned_files": 5,
+      "relevant_files": 13,
+      "recall": 0.0,
+      "covered_within_budget": false
+    },
+    {
+      "task_id": "T15",
+      "variant": "v4_get_task_context",
+      "role": "achievable",
+      "tokens": 3334,
+      "returned_files": 13,
+      "relevant_files": 13,
+      "recall": 0.0,
+      "covered_within_budget": false
+    },
+    {
+      "task_id": "T15",
+      "variant": "v4_semantic_only",
+      "role": "achievable",
+      "tokens": 2901,
+      "returned_files": 13,
+      "relevant_files": 13,
+      "recall": 0.0,
+      "covered_within_budget": false
+    },
+    {
+      "task_id": "T15",
+      "variant": "smart_read_skeleton_topk",
+      "role": "achievable",
+      "tokens": 4085,
+      "returned_files": 5,
+      "relevant_files": 13,
+      "recall": 0.0,
+      "covered_within_budget": false
+    },
+    {
+      "task_id": "T15",
+      "variant": "smart_read_skeleton_relevant",
+      "role": "reference",
+      "tokens": 7043,
+      "returned_files": 13,
+      "relevant_files": 13,
+      "recall": 1.0,
+      "covered_within_budget": false
+    },
+    {
+      "task_id": "T16",
+      "variant": "baseline_full_relevant",
+      "role": "reference",
+      "tokens": 2274,
+      "returned_files": 1,
+      "relevant_files": 1,
+      "recall": 1.0,
+      "covered_within_budget": true
+    },
+    {
+      "task_id": "T16",
+      "variant": "naive_full_topk",
+      "role": "achievable",
+      "tokens": 20541,
+      "returned_files": 5,
+      "relevant_files": 1,
+      "recall": 0.0,
+      "covered_within_budget": false
+    },
+    {
+      "task_id": "T16",
+      "variant": "v4_get_task_context",
+      "role": "achievable",
+      "tokens": 3389,
+      "returned_files": 14,
+      "relevant_files": 1,
+      "recall": 0.0,
+      "covered_within_budget": false
+    },
+    {
+      "task_id": "T16",
+      "variant": "v4_semantic_only",
+      "role": "achievable",
+      "tokens": 2959,
+      "returned_files": 14,
+      "relevant_files": 1,
+      "recall": 0.0,
+      "covered_within_budget": false
+    },
+    {
+      "task_id": "T16",
+      "variant": "smart_read_skeleton_topk",
+      "role": "achievable",
+      "tokens": 3861,
+      "returned_files": 5,
+      "relevant_files": 1,
+      "recall": 0.0,
+      "covered_within_budget": false
+    },
+    {
+      "task_id": "T16",
+      "variant": "smart_read_skeleton_relevant",
+      "role": "reference",
+      "tokens": 821,
+      "returned_files": 1,
+      "relevant_files": 1,
+      "recall": 1.0,
+      "covered_within_budget": true
+    },
+    {
+      "task_id": "T17",
+      "variant": "baseline_full_relevant",
+      "role": "reference",
+      "tokens": 23728,
+      "returned_files": 15,
+      "relevant_files": 15,
+      "recall": 1.0,
+      "covered_within_budget": false
+    },
+    {
+      "task_id": "T17",
+      "variant": "naive_full_topk",
+      "role": "achievable",
+      "tokens": 15271,
+      "returned_files": 5,
+      "relevant_files": 15,
+      "recall": 0.13333333333333333,
+      "covered_within_budget": false
+    },
+    {
+      "task_id": "T17",
+      "variant": "v4_get_task_context",
+      "role": "achievable",
+      "tokens": 3269,
+      "returned_files": 15,
+      "relevant_files": 15,
+      "recall": 0.13333333333333333,
+      "covered_within_budget": false
+    },
+    {
+      "task_id": "T17",
+      "variant": "v4_semantic_only",
+      "role": "achievable",
+      "tokens": 2833,
+      "returned_files": 15,
+      "relevant_files": 15,
+      "recall": 0.13333333333333333,
+      "covered_within_budget": false
+    },
+    {
+      "task_id": "T17",
+      "variant": "smart_read_skeleton_topk",
+      "role": "achievable",
+      "tokens": 4287,
+      "returned_files": 5,
+      "relevant_files": 15,
+      "recall": 0.13333333333333333,
+      "covered_within_budget": false
+    },
+    {
+      "task_id": "T17",
+      "variant": "smart_read_skeleton_relevant",
+      "role": "reference",
+      "tokens": 7018,
+      "returned_files": 15,
+      "relevant_files": 15,
+      "recall": 1.0,
+      "covered_within_budget": false
+    },
+    {
+      "task_id": "T18",
+      "variant": "baseline_full_relevant",
+      "role": "reference",
+      "tokens": 9513,
+      "returned_files": 7,
+      "relevant_files": 7,
+      "recall": 1.0,
+      "covered_within_budget": false
+    },
+    {
+      "task_id": "T18",
+      "variant": "naive_full_topk",
+      "role": "achievable",
+      "tokens": 13950,
+      "returned_files": 5,
+      "relevant_files": 7,
+      "recall": 0.2857142857142857,
+      "covered_within_budget": false
+    },
+    {
+      "task_id": "T18",
+      "variant": "v4_get_task_context",
+      "role": "achievable",
+      "tokens": 3331,
+      "returned_files": 14,
+      "relevant_files": 7,
+      "recall": 0.42857142857142855,
+      "covered_within_budget": false
+    },
+    {
+      "task_id": "T18",
+      "variant": "v4_semantic_only",
+      "role": "achievable",
+      "tokens": 2896,
+      "returned_files": 14,
+      "relevant_files": 7,
+      "recall": 0.42857142857142855,
+      "covered_within_budget": false
+    },
+    {
+      "task_id": "T18",
+      "variant": "smart_read_skeleton_topk",
+      "role": "achievable",
+      "tokens": 3757,
+      "returned_files": 5,
+      "relevant_files": 7,
+      "recall": 0.2857142857142857,
+      "covered_within_budget": false
+    },
+    {
+      "task_id": "T18",
+      "variant": "smart_read_skeleton_relevant",
+      "role": "reference",
+      "tokens": 2505,
+      "returned_files": 7,
+      "relevant_files": 7,
+      "recall": 1.0,
+      "covered_within_budget": true
+    },
+    {
+      "task_id": "T19",
+      "variant": "baseline_full_relevant",
+      "role": "reference",
+      "tokens": 34131,
+      "returned_files": 18,
+      "relevant_files": 18,
+      "recall": 1.0,
+      "covered_within_budget": false
+    },
+    {
+      "task_id": "T19",
+      "variant": "naive_full_topk",
+      "role": "achievable",
+      "tokens": 16247,
+      "returned_files": 5,
+      "relevant_files": 18,
+      "recall": 0.2222222222222222,
+      "covered_within_budget": false
+    },
+    {
+      "task_id": "T19",
+      "variant": "v4_get_task_context",
+      "role": "achievable",
+      "tokens": 3238,
+      "returned_files": 16,
+      "relevant_files": 18,
+      "recall": 0.2222222222222222,
+      "covered_within_budget": false
+    },
+    {
+      "task_id": "T19",
+      "variant": "v4_semantic_only",
+      "role": "achievable",
+      "tokens": 2800,
+      "returned_files": 16,
+      "relevant_files": 18,
+      "recall": 0.2222222222222222,
+      "covered_within_budget": false
+    },
+    {
+      "task_id": "T19",
+      "variant": "smart_read_skeleton_topk",
+      "role": "achievable",
+      "tokens": 3529,
+      "returned_files": 5,
+      "relevant_files": 18,
+      "recall": 0.2222222222222222,
+      "covered_within_budget": false
+    },
+    {
+      "task_id": "T19",
+      "variant": "smart_read_skeleton_relevant",
+      "role": "reference",
+      "tokens": 8433,
+      "returned_files": 18,
+      "relevant_files": 18,
+      "recall": 1.0,
+      "covered_within_budget": false
+    },
+    {
+      "task_id": "T20",
+      "variant": "baseline_full_relevant",
+      "role": "reference",
+      "tokens": 27674,
+      "returned_files": 21,
+      "relevant_files": 21,
+      "recall": 1.0,
+      "covered_within_budget": false
+    },
+    {
+      "task_id": "T20",
+      "variant": "naive_full_topk",
+      "role": "achievable",
+      "tokens": 12526,
+      "returned_files": 5,
+      "relevant_files": 21,
+      "recall": 0.14285714285714285,
+      "covered_within_budget": false
+    },
+    {
+      "task_id": "T20",
+      "variant": "v4_get_task_context",
+      "role": "achievable",
+      "tokens": 3369,
+      "returned_files": 16,
+      "relevant_files": 21,
+      "recall": 0.23809523809523808,
+      "covered_within_budget": false
+    },
+    {
+      "task_id": "T20",
+      "variant": "v4_semantic_only",
+      "role": "achievable",
+      "tokens": 2931,
+      "returned_files": 16,
+      "relevant_files": 21,
+      "recall": 0.23809523809523808,
+      "covered_within_budget": false
+    },
+    {
+      "task_id": "T20",
+      "variant": "smart_read_skeleton_topk",
+      "role": "achievable",
+      "tokens": 3287,
+      "returned_files": 5,
+      "relevant_files": 21,
+      "recall": 0.14285714285714285,
+      "covered_within_budget": false
+    },
+    {
+      "task_id": "T20",
+      "variant": "smart_read_skeleton_relevant",
+      "role": "reference",
+      "tokens": 9569,
+      "returned_files": 21,
+      "relevant_files": 21,
+      "recall": 1.0,
+      "covered_within_budget": false
+    }
+  ],
+  "command_output": [
+    {
+      "fixture": "cargo_test_no_run.raw.txt",
+      "command_type": "test_runner",
+      "raw_tokens": 1688,
+      "compressed_tokens": 833,
+      "saved_tokens": 855,
+      "savings_ratio": 0.5065165876777251
+    }
+  ],
+  "caveats": [
+    "Tokens are estimates from a chars/words heuristic, not a model tokenizer.",
+    "Ground truth: modified .rs files of each commit; added files excluded (undiscoverable before the change).",
+    "Index input is the parent tree of each commit; the commit itself is never indexed.",
+    "Recall@k for v4_get_task_context uses the files it returned as k.",
+    "baseline_full_relevant and smart_read_skeleton_relevant use the ground truth and are references, not achievable variants."
+  ]
+}

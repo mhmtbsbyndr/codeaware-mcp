@@ -1,6 +1,8 @@
 pub mod architecture_memory;
 pub mod ast;
+pub mod bm25;
 pub mod budget;
+pub mod pack;
 pub mod cache;
 pub mod cache_invalidation;
 pub mod call_graph;
@@ -30,10 +32,11 @@ pub mod tools;
 pub mod trace;
 
 pub use architecture_memory::{ArchitectureMemory, ArchitectureRule, DecisionRecord};
+pub use bm25::{split_identifiers, Bm25Index};
 pub use budget::{BudgetCheck, BudgetRemaining, BudgetState};
 pub use cache_invalidation::{CacheInvalidation, CacheInvalidationEvent};
 pub use call_graph::{CallEdge, CallGraph, HeuristicCallExtractor};
-pub use context::{ContextAssembler, ContextPackage};
+pub use context::{content_hash, delta_for, ContextAssembler, ContextPackage, ServedMap, ServedVersion};
 pub use context_items::{ContextItem, ContextItemKind, ExcludedContext};
 pub use contracts::{StopCondition, TaskContract, TaskIntent, TaskScope};
 pub use discovery::{CandidateDiscovery, DiscoveryConfig};
@@ -43,7 +46,8 @@ pub use import_graph::{ImportEdge, ImportGraph, RustImportExtractor};
 pub use index_builder::SemanticIndexBuilder;
 pub use language_support::{LanguageDetector, SupportedLanguage};
 pub use precision::{PrecisionEvaluator, PrecisionMetrics};
-pub use ranking::{ContextRanker, RankedPath};
+pub use pack::{pack, score_gap_cutoff, PackCandidate, PackConfig, PackMode, PackResult, PackedItem, Representation};
+pub use ranking::{ContextRanker, RankSignals, RankedPath, RankingMode};
 pub use recovery::{RecoverySnapshot, SemanticRecovery};
 pub use retrieval::{SemanticRetrieval, SymbolSearchResult, SymbolTestResult};
 pub use semantic_context::{SemanticContextAssembler, SemanticContextOptions};
@@ -54,7 +58,7 @@ pub use semantic_tools::{
     FindTestsRequest, SemanticTools,
 };
 pub use storage::V4Storage;
-pub use summaries::{GeneratedSummary, SummaryGenerator};
+pub use summaries::{declaration_skeleton, doc_head, GeneratedSummary, SummaryGenerator};
 pub use symbols::{CodeSymbol, SymbolIndex, SymbolKind};
 pub use tests_graph::{RustTestExtractor, TestGraph, TestReference};
 pub use tokens::{estimate_path_relevance, estimate_tokens};

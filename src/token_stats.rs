@@ -98,6 +98,13 @@ pub struct TokenStatsBucket {
     pub savings_ratio: f64,
 }
 
+/// Heuristic token ESTIMATE: `max(ceil(chars/4), ceil(words*4/3))`.
+///
+/// This is NOT a real tokenizer. It is a fast, deterministic proxy used for relative
+/// comparisons (see `token_benchmark`). Absolute counts differ from model tokenizers.
+/// To swap in a real tokenizer, implement a `TokenCounter` (`fn(&str) -> u64`) that
+/// wraps e.g. `tiktoken-rs` or the provider's count-tokens endpoint, and pass it to
+/// `token_benchmark::SuiteConfig::counter`. Keep one counter for all variants.
 pub fn estimate_tokens(text: &str) -> u64 {
     if text.is_empty() {
         return 0;

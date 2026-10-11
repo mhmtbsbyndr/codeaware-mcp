@@ -1,0 +1,92 @@
+   Compiling my-app v0.1.0 (/home/dev/my-app)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 4.10s
+     Running unittests src/lib.rs (target/debug/deps/my_app-9f8e7d)
+
+running 60 tests
+test auth::tests::test_case_0 ... ok
+test auth::tests::test_case_1 ... ok
+test auth::tests::test_case_2 ... ok
+test auth::tests::test_case_3 ... ok
+test auth::tests::test_case_4 ... ok
+test auth::tests::test_case_5 ... ok
+test db::tests::test_case_0 ... ok
+test db::tests::test_case_1 ... ok
+test db::tests::test_case_2 ... ok
+test db::tests::test_case_3 ... ok
+test db::tests::test_case_4 ... ok
+test db::tests::test_case_5 ... ok
+test handlers::tests::test_case_0 ... ok
+test handlers::tests::test_case_1 ... ok
+test handlers::tests::test_case_2 ... ok
+test handlers::tests::test_case_3 ... ok
+test handlers::tests::test_case_4 ... ok
+test handlers::tests::test_case_5 ... ok
+test middleware::tests::test_case_0 ... ok
+test middleware::tests::test_case_1 ... ok
+test middleware::tests::test_case_2 ... ok
+test middleware::tests::test_case_3 ... ok
+test middleware::tests::test_case_4 ... ok
+test middleware::tests::test_case_5 ... ok
+test models::tests::test_case_0 ... ok
+test models::tests::test_case_1 ... ok
+test models::tests::test_case_2 ... ok
+test models::tests::test_case_3 ... ok
+test models::tests::test_case_4 ... ok
+test models::tests::test_case_5 ... ok
+test routes::tests::test_case_0 ... ok
+test routes::tests::test_case_1 ... ok
+test routes::tests::test_case_2 ... ok
+test routes::tests::test_case_3 ... ok
+test routes::tests::test_case_4 ... ok
+test routes::tests::test_case_5 ... ok
+test utils::tests::test_case_0 ... ok
+test utils::tests::test_case_1 ... ok
+test utils::tests::test_case_2 ... ok
+test utils::tests::test_case_3 ... ok
+test utils::tests::test_case_4 ... ok
+test utils::tests::test_case_5 ... ok
+test cache::tests::test_case_0 ... ok
+test cache::tests::test_case_1 ... ok
+test cache::tests::test_case_2 ... ok
+test cache::tests::test_case_3 ... ok
+test cache::tests::test_case_4 ... ok
+test cache::tests::test_case_5 ... ok
+test queue::tests::test_case_0 ... ok
+test queue::tests::test_case_1 ... ok
+test queue::tests::test_case_2 ... ok
+test queue::tests::test_case_3 ... ok
+test queue::tests::test_case_4 ... ok
+test queue::tests::test_case_5 ... ok
+test integration::test_full_auth_flow ... ok
+test integration::test_user_crud ... ok
+test integration::test_concurrent_requests ... ok
+test integration::test_error_recovery ... FAILED
+test integration::test_graceful_shutdown ... ok
+test integration::test_timeout ... ok
+
+failures:
+
+---- cache::tests::test_eviction_policy stdout ----
+warming cache with 128 entries
+thread 'cache::tests::test_eviction_policy' panicked at src/cache/tests.rs:88:9:
+assertion `left == right` failed
+  left: 3
+ right: 2
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+
+---- queue::tests::test_retry_backoff stdout ----
+thread 'queue::tests::test_retry_backoff' panicked at src/queue/tests.rs:142:5:
+called `Result::unwrap()` on an `Err` value: Timeout { after_ms: 500 }
+
+---- integration::test_error_recovery stdout ----
+thread 'integration::test_error_recovery' panicked at src/integration_tests.rs:234:5:
+assertion failed: `(left == right)`
+  left: `Err(ConnectionReset)`,
+ right: `Ok(Response { status: 200 })`
+
+failures:
+    cache::tests::test_eviction_policy
+    queue::tests::test_retry_backoff
+    integration::test_error_recovery
+
+test result: FAILED. 57 passed; 3 failed; 0 ignored; 0 measured; 0 filtered out; finished in 12.87s

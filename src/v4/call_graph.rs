@@ -48,6 +48,26 @@ impl CallGraph {
     }
 }
 
+impl CallGraph {
+    /// File-level edges `(caller_file, callee_file)`. `defs` maps a symbol name to the files
+    /// that define it. Each call is resolved to every defining file except the caller's own.
+    /// Output is sorted and de-duplicated.
+    pub fn file_edges(&self, defs: &BTreeMap<String, Vec<String>>) -> Vec<(String, String)> {
+        let mut out = BTreeSet::new();
+        for edge in &self.edges {
+            let Some(targets) = defs.get(&edge.to_symbol) else {
+                continue;
+            };
+            for target in targets {
+                if *target != edge.path {
+                    out.insert((edge.path.clone(), target.clone()));
+                }
+            }
+        }
+        out.into_iter().collect()
+    }
+}
+
 /// Keywords and builtins that look like calls (`if (`, `match(`) but are not.
 const NON_CALL_WORDS: &[&str] = &[
     "if", "while", "match", "for", "loop", "return", "fn", "pub", "impl", "where", "move", "async",

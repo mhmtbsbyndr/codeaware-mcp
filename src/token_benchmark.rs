@@ -523,52 +523,6 @@ pub fn write_report(report: &SuiteReport, dir: &Path) -> Result<(PathBuf, PathBu
     Ok((md_path, json_path))
 }
 
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    fn fixture() -> TokenBenchmarkFixture {
-        TokenBenchmarkFixture {
-            name: "sample".to_string(),
-            category: "file_read".to_string(),
-            tool: "smart_read".to_string(),
-            subject: "src/server.rs".to_string(),
-            raw: "fn main() { println!(\"hello\"); }\nfn health() -> &'static str { \"ok\" }".to_string(),
-            compressed: "symbols:\n- main\n- health".to_string(),
-            expected_min_savings_ratio: 0.1,
-            expected_max_savings_ratio: 0.99,
-        }
-    }
-
-    #[test]
-    fn goal_terms_drop_stopwords_and_short_words() {
-        let terms = goal_terms("Export the semantic index runtime");
-        assert_eq!(terms, vec!["export", "index", "runtime", "semantic"]);
-    }
-
-    #[test]
-    fn score_run_counts_recall_over_relevant_files() {
-        let task = BenchTask {
-            id: "T".into(),
-            commit: "c".into(),
-            parent: "p".into(),
-            subject: "s".into(),
-            goal: "g".into(),
-            relevant_files: vec!["src/a.rs".into(), "src/b.rs".into()],
-            excluded_added_files: vec![],
-        };
-        let run = VariantRun {
-            variant: "x",
-            paths: vec!["src/a.rs".into(), "src/z.rs".into()],
-            payload: "abcd".into(),
-        };
-        let row = score_run(&task, &run, "achievable", heuristic_counter, 1_000);
-        assert_eq!(row.recall, 0.5);
-        assert_eq!(row.returned_files, 2);
-        assert!(!row.covered_within_budget);
-    }
-
-
 #[derive(Debug, Clone, PartialEq)]
 pub struct TokenBenchmarkFixture {
     pub name: String,
@@ -679,6 +633,35 @@ mod tests {
             expected_max_savings_ratio: 0.99,
         }
     }
+
+    #[test]
+    fn goal_terms_drop_stopwords_and_short_words() {
+        let terms = goal_terms("Export the semantic index runtime");
+        assert_eq!(terms, vec!["export", "index", "runtime", "semantic"]);
+    }
+
+    #[test]
+    fn score_run_counts_recall_over_relevant_files() {
+        let task = BenchTask {
+            id: "T".into(),
+            commit: "c".into(),
+            parent: "p".into(),
+            subject: "s".into(),
+            goal: "g".into(),
+            relevant_files: vec!["src/a.rs".into(), "src/b.rs".into()],
+            excluded_added_files: vec![],
+        };
+        let run = VariantRun {
+            variant: "x",
+            paths: vec!["src/a.rs".into(), "src/z.rs".into()],
+            payload: "abcd".into(),
+        };
+        let row = score_run(&task, &run, "achievable", heuristic_counter, 1_000);
+        assert_eq!(row.recall, 0.5);
+        assert_eq!(row.returned_files, 2);
+        assert!(!row.covered_within_budget);
+    }
+
 
     #[test]
     fn runs_single_fixture() {

@@ -6,8 +6,9 @@ fn main() {
 
     if args.len() > 1 && args[1] == "hook" {
         let event = args.get(2).map(|s| s.as_str()).unwrap_or("unknown");
-        let mut input = String::new();
-        std::io::stdin().read_to_string(&mut input).ok();
+        // Read raw bytes and decode lossily once: read_to_string would silently
+        // drop the whole hook input on a single invalid UTF-8 byte.
+        let input = codeaware_mcp::hooks::stdin_utf8::read_hook_input(std::io::stdin()).unwrap_or_default();
         match codeaware_mcp::hooks::dispatch_hook(event, &input) {
             Ok(output) => {
                 println!("{output}");

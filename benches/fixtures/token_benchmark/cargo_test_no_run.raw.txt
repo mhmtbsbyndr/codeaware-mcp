@@ -1,21 +1,87 @@
-    Blocking waiting for file lock on build directory
-   Compiling codeaware-mcp v4.0.0 (/home/user/codeaware-mcp)
-error[E0432]: unresolved import `crate::hooks::session_drain`
- --> src/hooks/session_stop.rs:1:39
+warning: unused import: `Read`
+ --> src/main.rs:2:30
   |
-1 | use crate::hooks::{context_injection, session_drain, session_persistence, spool};
-  |                                       ^^^^^^^^^^^^^ no `session_drain` in `hooks`
+2 | use std::io::{self, BufRead, Read, Write};
+  |                              ^^^^
+  |
+  = note: `#[warn(unused_imports)]` (part of `#[warn(unused)]`) on by default
 
-warning: unused import: `File`
-  --> src/hooks/spool.rs:18:21
-   |
-18 | use std::fs::{self, File, OpenOptions};
-   |                     ^^^^
-   |
-   = note: `#[warn(unused_imports)]` (part of `#[warn(unused)]`) on by default
+warning: `codeaware-mcp` (bin "codeaware-mcp") generated 1 warning (run `cargo fix --bin "codeaware-mcp" -p codeaware-mcp` to apply 1 suggestion)
+   Compiling codeaware-mcp v4.0.0 (/home/user/codeaware-mcp)
+warning: unused import: `std::path::Path`
+ --> tests/test_path_resolver.rs:2:5
+  |
+2 | use std::path::Path;
+  |     ^^^^^^^^^^^^^^^
+  |
+  = note: `#[warn(unused_imports)]` (part of `#[warn(unused)]`) on by default
 
-For more information about this error, try `rustc --explain E0432`.
-warning: `codeaware-mcp` (lib) generated 1 warning
-error: could not compile `codeaware-mcp` (lib) due to 1 previous error; 1 warning emitted
-warning: build failed, waiting for other jobs to finish...
-error: could not compile `codeaware-mcp` (lib test) due to 1 previous error
+warning: `codeaware-mcp` (test "test_path_resolver") generated 1 warning (run `cargo fix --test "test_path_resolver" -p codeaware-mcp` to apply 1 suggestion)
+warning: `codeaware-mcp` (bin "codeaware-mcp" test) generated 1 warning (1 duplicate)
+warning: unused variable: `i`
+   --> src/v4/ranking.rs:176:16
+    |
+176 |         .map(|&i| ())
+    |                ^ help: if this is intentional, prefix it with an underscore: `_i`
+    |
+    = note: `#[warn(unused_variables)]` (part of `#[warn(unused)]`) on by default
+
+warning: `codeaware-mcp` (lib test) generated 1 warning (run `cargo fix --lib -p codeaware-mcp --tests` to apply 1 suggestion)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 18.86s
+  Executable unittests src/lib.rs (target/debug/deps/codeaware_mcp-a0dd02b7363220e1)
+  Executable unittests src/main.rs (target/debug/deps/codeaware_mcp-d7a4c6f1fa641ba7)
+  Executable tests/acceptance_tests.rs (target/debug/deps/acceptance_tests-bab723879a350201)
+  Executable tests/test_benchmark_report.rs (target/debug/deps/test_benchmark_report-0c02bd4e36636670)
+  Executable tests/test_compressor.rs (target/debug/deps/test_compressor-ffbc2d41c64c7d00)
+  Executable tests/test_compressor_all.rs (target/debug/deps/test_compressor_all-9416075804cb1e8e)
+  Executable tests/test_compressor_tokens.rs (target/debug/deps/test_compressor_tokens-7f891f685eb93588)
+  Executable tests/test_confidence.rs (target/debug/deps/test_confidence-df5b11c59899c7fa)
+  Executable tests/test_confidence_integration.rs (target/debug/deps/test_confidence_integration-f85d902dcda9de82)
+  Executable tests/test_config.rs (target/debug/deps/test_config-09dabe3e14e7baf4)
+  Executable tests/test_coverage_map.rs (target/debug/deps/test_coverage_map-aca053922cef4ada)
+  Executable tests/test_deny_list.rs (target/debug/deps/test_deny_list-e12e8e9516d49d64)
+  Executable tests/test_envelope.rs (target/debug/deps/test_envelope-838861d5237501d3)
+  Executable tests/test_error_loop.rs (target/debug/deps/test_error_loop-94523a2c26b0cbb4)
+  Executable tests/test_git_intelligence.rs (target/debug/deps/test_git_intelligence-508e7c87d719a4ea)
+  Executable tests/test_health.rs (target/debug/deps/test_health-1d04f18e0c490cee)
+  Executable tests/test_hooks.rs (target/debug/deps/test_hooks-7c8c9a77bd983720)
+  Executable tests/test_lsp.rs (target/debug/deps/test_lsp-9c9e7d1de9a88f9b)
+  Executable tests/test_memory.rs (target/debug/deps/test_memory-373f4a3e2a865486)
+  Executable tests/test_memory_blocks.rs (target/debug/deps/test_memory_blocks-d258931471c482b2)
+  Executable tests/test_memory_summary.rs (target/debug/deps/test_memory_summary-67abbc48b987ace4)
+  Executable tests/test_path_resolver.rs (target/debug/deps/test_path_resolver-faee8c22fedcbc59)
+  Executable tests/test_patterns.rs (target/debug/deps/test_patterns-fb61fb3e9d3f7ab4)
+  Executable tests/test_persistence.rs (target/debug/deps/test_persistence-9da9a358bb6232e1)
+  Executable tests/test_prefetch.rs (target/debug/deps/test_prefetch-70b3da75dcf2da3d)
+  Executable tests/test_project_map.rs (target/debug/deps/test_project_map-9c66aded6de0c3d2)
+  Executable tests/test_regex_fallback.rs (target/debug/deps/test_regex_fallback-b0734984094e4014)
+  Executable tests/test_secret_scanner.rs (target/debug/deps/test_secret_scanner-238bc7e9b6877681)
+  Executable tests/test_seen_files.rs (target/debug/deps/test_seen_files-f7615f533caba152)
+  Executable tests/test_semantic_diff.rs (target/debug/deps/test_semantic_diff-5e10310975cfc832)
+  Executable tests/test_server.rs (target/debug/deps/test_server-d503fe73877d97dd)
+  Executable tests/test_session_state.rs (target/debug/deps/test_session_state-cfcbc8f17ddc4888)
+  Executable tests/test_smart_edit.rs (target/debug/deps/test_smart_edit-622647e9099e011f)
+  Executable tests/test_smart_read.rs (target/debug/deps/test_smart_read-edeb4ee4e4a1d535)
+  Executable tests/test_smart_read_ts.rs (target/debug/deps/test_smart_read_ts-59f17a34649e2e1d)
+  Executable tests/test_smart_refactor.rs (target/debug/deps/test_smart_refactor-2b94eb563af3468c)
+  Executable tests/test_smart_run.rs (target/debug/deps/test_smart_run-2600df3facfbaf3f)
+  Executable tests/test_test_selector.rs (target/debug/deps/test_test_selector-1d80530c6cbd4fd0)
+  Executable tests/test_timeline.rs (target/debug/deps/test_timeline-5368fe57ff8deba9)
+  Executable tests/test_tool_schema_size.rs (target/debug/deps/test_tool_schema_size-b9d040b0c855651a)
+  Executable tests/test_tree_sitter.rs (target/debug/deps/test_tree_sitter-72d6921370eeed51)
+  Executable tests/test_tree_sitter_langs.rs (target/debug/deps/test_tree_sitter_langs-a698e113c904f702)
+  Executable tests/test_tree_sitter_multi.rs (target/debug/deps/test_tree_sitter_multi-f2f122b68fd01a3f)
+  Executable tests/test_validate_config.rs (target/debug/deps/test_validate_config-3543533dc08027e2)
+  Executable tests/test_workspace_state.rs (target/debug/deps/test_workspace_state-5fdaffe667c6c185)
+  Executable tests/test_xray_hook_integration.rs (target/debug/deps/test_xray_hook_integration-6b6e848247f1e273)
+  Executable tests/test_xray_metrics.rs (target/debug/deps/test_xray_metrics-b1c4482a398faa0f)
+  Executable tests/test_xray_server.rs (target/debug/deps/test_xray_server-6fc330a04021d437)
+  Executable tests/test_xray_tool.rs (target/debug/deps/test_xray_tool-319df24c4e2b2a5c)
+  Executable tests/v4_budget_tests.rs (target/debug/deps/v4_budget_tests-22c12a1d3503ab83)
+  Executable tests/v4_bugfix_tests.rs (target/debug/deps/v4_bugfix_tests-ddbee8b1af6dc2b0)
+  Executable tests/v4_context_tests.rs (target/debug/deps/v4_context_tests-40afa7598bf6102e)
+  Executable tests/v4_discovery_tests.rs (target/debug/deps/v4_discovery_tests-d88c26bca2c149d8)
+  Executable tests/v4_ranking_tests.rs (target/debug/deps/v4_ranking_tests-f534379232e8d5b6)
+  Executable tests/v4_semantic_context_tests.rs (target/debug/deps/v4_semantic_context_tests-ec5ab9550a0bf9a3)
+  Executable tests/v4_semantic_tools_tests.rs (target/debug/deps/v4_semantic_tools_tests-909d80390d52b117)
+  Executable tests/v4_symbols_tests.rs (target/debug/deps/v4_symbols_tests-906b45205128012d)

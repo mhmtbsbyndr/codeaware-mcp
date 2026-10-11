@@ -5,7 +5,7 @@ Ground truth per task:
 - The commit's MODIFIED .rs files that also exist in the parent are the relevant set.
 - ADDED .rs files are recorded as excluded: they cannot be discovered before the
   change, so no retrieval variant could find them.
-- The index input is always the parent tree (see tests/tokens/runner). The commit
+- The index input is always the parent tree (see materialize_snapshot in src/token_benchmark.rs). The commit
   itself is never an index input, so there is no leakage.
 
 Goals are written from the commit subject or body (the request a user would make).

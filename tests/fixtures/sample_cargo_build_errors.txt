@@ -1,0 +1,63 @@
+   Compiling my-app v0.1.0 (/home/dev/my-app)
+warning: unused variable: `retries`
+  --> src/queue/worker.rs:41:9
+   |
+41 |     let retries = 3;
+   |         ^^^^^^^ help: if this is intentional, prefix it with an underscore: `_retries`
+   |
+   = note: `#[warn(unused_variables)]` on by default
+
+error[E0308]: mismatched types
+   --> src/handlers/user.rs:87:24
+    |
+ 87 |     let count: usize = rows.len() as i32;
+    |                        ^^^^^^^^^^^^^^^^^ expected `usize`, found `i32`
+    |
+    = note: expected type `usize`
+               found type `i32`
+help: you can convert an `i32` to a `usize` and panic if the converted value doesn't fit
+    |
+ 87 |     let count: usize = rows.len().try_into().unwrap();
+    |                                  ++++++++++++++++++++
+
+error[E0425]: cannot find value `session_ttl` in this scope
+   --> src/auth/session.rs:12:18
+    |
+ 12 |     if age > session_ttl {
+    |              ^^^^^^^^^^^ not found in this scope
+    |
+    = note: did you mean `SESSION_TTL`?
+    = help: consider importing this constant
+
+warning: field `inner` is never read
+  --> src/cache/mod.rs:9:5
+   |
+ 9 |     inner: HashMap<String, Entry>,
+   |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+   |
+   = note: `#[warn(dead_code)]` on by default
+
+warning: unused import: `std::io`
+ --> src/metrics/mod.rs:3:5
+  |
+3 | use std::io;
+  |     ^^^^^^
+
+warning: function `legacy_hash` is never used
+  --> src/utils/hash.rs:55:4
+   |
+55 | fn legacy_hash(input: &str) -> u64 {
+   |    ^^^^^^^^^^^
+
+error[E0599]: no method named `flush_all` found for struct `Db` in the current scope
+   --> src/db/pool.rs:140:10
+    |
+140 |     db.flush_all();
+    |        ^^^^^^^^^ method not found in `Db`
+    |
+    = note: the method `flush` exists on `Db`
+
+error: aborting due to 3 previous errors; 3 warnings emitted
+
+For more information about this error, try `rustc --explain E0308`.
+error: could not compile `my-app` (lib) due to 3 previous errors; 3 warnings emitted

@@ -29,6 +29,11 @@ pub struct BudgetCheck {
 }
 
 impl BudgetState {
+    /// Context tokens still available for packing; never negative.
+    pub fn remaining_context_tokens(&self) -> usize {
+        self.max_context_tokens.saturating_sub(self.estimated_context_tokens)
+    }
+
     pub fn check(&self) -> BudgetCheck {
         let remaining = BudgetRemaining {
             files_read: self.max_files_read as isize - self.files_read as isize,
