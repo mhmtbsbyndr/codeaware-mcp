@@ -79,3 +79,80 @@ fn full_suite_writes_results() {
     assert!(json.ends_with("benches/RESULTS.json"));
     assert_eq!(report.task_count, 20);
 }
+
+fn git_out(args: &[&str]) -> String {
+    let out = std::process::Command::new("git")
+        .arg("-C")
+        .arg(manifest_dir())
+        .args(args)
+        .output()
+        .expect("git runs");
+    assert!(out.status.success(), "git {args:?}: {}", String::from_utf8_lossy(&out.stderr));
+    String::from_utf8_lossy(&out.stdout).to_string()
+}
+
+/// Ground truth: every task's parent is `commit^`, and its snapshot holds the parent version of
+/// each relevant file, not the version from the task commit (which would mean HEAD or the commit
+/// was indexed).
+#[test]
+fn every_task_snapshot_is_its_parent_tree() {
+    use codeaware_mcp::token_benchmark::materialize_snapshot;
+    let tasks = load_tasks(&manifest_dir().join("benches/token_benchmark/tasks.json"))
+        .expect("tasks.json must load");
+    let work = PathBuf::from(env!("CARGO_TARGET_TMPDIR")).join("ground-truth-check");
+    for task in &tasks {
+        let parent = git_out(&["rev-parse", &format!("{}^", task.commit)]).trim().to_string();
+        assert_eq!(parent, task.parent, "{} parent must be commit^", task.id);
+
+        let snapshot = work.join(&task.id);
+        materialize_snapshot(&manifest_dir(), &task.parent, &snapshot).expect("snapshot materializes");
+        for rel in &task.relevant_files {
+            let on_disk = std::fs::read_to_string(snapshot.join(rel)).expect("relevant file exists in parent");
+            let parent_blob = git_out(&["show", &format!("{}:{rel}", task.parent)]);
+            let commit_blob = git_out(&["show", &format!("{}:{rel}", task.commit)]);
+            assert_eq!(on_disk, parent_blob, "{} {rel}: snapshot must be the parent version", task.id);
+            assert_ne!(on_disk, commit_blob, "{} {rel}: snapshot must differ from the task commit", task.id);
+        }
+    }
+}
+
+#[test]
+fn candidate_suite_quick_subset_has_no_history_leak() {
+    use codeaware_mcp::token_benchmark::{run_candidate_suite, CANDIDATE_VARIANTS};
+    let tasks = load_tasks(&manifest_dir().join("benches/token_benchmark/tasks.json"))
+        .expect("tasks.json must load");
+    let subset: Vec<_> = tasks.iter().filter(|t| t.id == "T17" || t.id == "T19").cloned().collect();
+    let cfg = SuiteConfig {
+        work_dir: PathBuf::from(env!("CARGO_TARGET_TMPDIR")).join("candidate-quick-work"),
+        ..config("unused")
+    };
+    let report = run_candidate_suite(&cfg, &subset).expect("candidate suite runs (leak guard included)");
+    assert_eq!(report.rows.len(), subset.len() * CANDIDATE_VARIANTS.len());
+    for row in report.rows.iter().filter(|r| r.variant == "candidate_list") {
+        assert_eq!(row.history_commits, 0);
+        assert!(row.returned_files <= 10);
+    }
+    for row in report.rows.iter().filter(|r| r.variant == "candidate_list_cochange") {
+        assert!(row.history_commits > 0, "{} should see history before its commit", row.task_id);
+    }
+    for row in &report.rows {
+        assert!((0.0..=1.0).contains(&row.recall_at_5));
+        assert!(row.recall_at_10 >= row.recall_at_5 - 1e-9);
+    }
+}
+
+/// Regenerates the candidate section of benches/RESULTS.md (other sections are kept).
+#[test]
+#[ignore = "full run; rewrites the candidate section of benches/RESULTS.md"]
+fn candidate_suite_writes_section() {
+    use codeaware_mcp::token_benchmark::{run_candidate_suite, write_candidate_section};
+    let tasks = load_tasks(&manifest_dir().join("benches/token_benchmark/tasks.json"))
+        .expect("tasks.json must load");
+    let cfg = SuiteConfig {
+        work_dir: manifest_dir().join("target/token-bench-candidates"),
+        ..config("unused")
+    };
+    let report = run_candidate_suite(&cfg, &tasks).expect("candidate suite runs");
+    assert_eq!(report.task_count, 20);
+    write_candidate_section(&report, &manifest_dir().join("benches/RESULTS.md")).expect("section written");
+}
