@@ -1,4 +1,4 @@
-use codeaware_mcp::session::patterns::{PatternStore, PatternType};
+use codeaware_mcp::session::patterns::PatternStore;
 
 #[test]
 fn test_record_co_access() {

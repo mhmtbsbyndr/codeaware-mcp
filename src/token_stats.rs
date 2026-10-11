@@ -218,7 +218,8 @@ mod tests {
 
     #[test]
     fn estimates_prose_deterministically() {
-        assert_eq!(estimate_tokens("hello world from codeaware"), 6);
+        // 26 chars -> ceil(26/4) = 7; 4 words -> ceil(4*4/3) = 6; estimator takes the max.
+        assert_eq!(estimate_tokens("hello world from codeaware"), 7);
     }
 
     #[test]

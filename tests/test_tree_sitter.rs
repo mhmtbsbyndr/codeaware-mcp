@@ -1,4 +1,4 @@
-use codeaware_mcp::intelligence::tree_sitter_provider::{TreeSitterProvider, SymbolInfo, SymbolKind};
+use codeaware_mcp::intelligence::tree_sitter_provider::{TreeSitterProvider, SymbolKind};
 use codeaware_mcp::intelligence::IntelligenceLevel;
 
 #[test]

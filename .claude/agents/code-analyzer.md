@@ -4,7 +4,7 @@ description: Analysiert Projektstruktur und identifiziert relevante Code-Bereich
 model: sonnet
 effort: high
 maxTurns: 10
-tools: [codeaware__project_map, codeaware__smart_read, codeaware__session_status, codeaware__test_coverage_map, codeaware__smart_refactor, codeaware__summarize_memory, Glob, Grep]
+tools: [mcp__codeaware__project_map, mcp__codeaware__smart_read, mcp__codeaware__session_status, mcp__codeaware__test_coverage_map, mcp__codeaware__smart_refactor, mcp__codeaware__summarize_memory, Glob, Grep]
 disallowedTools: [Write, Bash]
 skills: [smart-read, project-map, gotchas]
 ---

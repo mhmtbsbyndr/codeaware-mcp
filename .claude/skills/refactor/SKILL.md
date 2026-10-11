@@ -29,10 +29,10 @@ Refaktoriere sicher: $ARGUMENTS
 
 ### 3. Dry-Run Preview
 - Rufe `smart_refactor` auf mit:
-  - `operation`: z.B. "rename"
-  - `target`: das alte Symbol
-  - `new_value`: der neue Name
-  - `dry_run`: true
+  - `old_name`: das alte Symbol
+  - `new_name`: der neue Name
+  - `path`: optional, Wurzelverzeichnis der Suche (Default: aktuelles Verzeichnis)
+  - `dry_run`: true (Default ist ebenfalls true; `operation` ist optional und nur "rename")
 - Zeige dem User die Preview:
   - Anzahl betroffener Dateien
   - Jede geplante Änderung mit Kontext (3 Zeilen davor/danach)

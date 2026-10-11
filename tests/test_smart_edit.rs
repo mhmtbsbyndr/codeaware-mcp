@@ -125,3 +125,76 @@ fn test_line_range_edit() {
     let content = fs::read_to_string(&file).unwrap();
     assert!(content.contains("line1\nreplaced2\nreplaced3\nline4"));
 }
+
+#[test]
+fn test_empty_old_text_is_rejected_without_hanging() {
+    // An empty `old` used to loop forever in count_occurrences. Run the call on a
+    // worker thread so a regression fails the test instead of hanging the suite.
+    let dir = TempDir::new().unwrap();
+    let file = dir.path().join("test.rs");
+    fs::write(&file, "fn hello() {}\n").unwrap();
+    let input = SmartEditInput {
+        path: file.to_string_lossy().to_string(),
+        strategy: "text".into(),
+        edits: Some(vec![EditPair { old: String::new(), new: "x".into() }]),
+        ..Default::default()
+    };
+    let root = dir.path().to_path_buf();
+    let (tx, rx) = std::sync::mpsc::channel();
+    std::thread::spawn(move || {
+        let _ = tx.send(smart_edit(&input, &root).is_err());
+    });
+    let is_err = rx
+        .recv_timeout(std::time::Duration::from_secs(5))
+        .expect("smart_edit with empty `old` must not hang");
+    assert!(is_err, "empty `old` must be rejected with an error");
+    assert_eq!(fs::read_to_string(&file).unwrap(), "fn hello() {}\n");
+}
+
+#[test]
+fn test_lines_strategy_preserves_crlf() {
+    let dir = TempDir::new().unwrap();
+    let file = dir.path().join("test.rs");
+    fs::write(&file, "line1\r\nline2\r\nline3\r\nline4\r\n").unwrap();
+    let input = SmartEditInput {
+        path: file.to_string_lossy().to_string(),
+        strategy: "lines".into(),
+        line_range: Some("2-3".into()),
+        new_content: Some("replaced2\nreplaced3".into()),
+        ..Default::default()
+    };
+    smart_edit(&input, dir.path()).unwrap();
+    let bytes = fs::read(&file).unwrap();
+    assert_eq!(bytes, b"line1\r\nreplaced2\r\nreplaced3\r\nline4\r\n");
+}
+
+#[test]
+fn test_text_strategy_matches_multiline_text_in_crlf_file() {
+    let dir = TempDir::new().unwrap();
+    let file = dir.path().join("test.rs");
+    fs::write(&file, "fn a() {\r\n    1\r\n}\r\n").unwrap();
+    let input = SmartEditInput {
+        path: file.to_string_lossy().to_string(),
+        strategy: "text".into(),
+        edits: Some(vec![EditPair { old: "    1\n}".into(), new: "    2\n}".into() }]),
+        ..Default::default()
+    };
+    smart_edit(&input, dir.path()).unwrap();
+    assert_eq!(fs::read(&file).unwrap(), b"fn a() {\r\n    2\r\n}\r\n");
+}
+
+#[test]
+fn test_non_utf8_file_is_refused_and_untouched() {
+    let dir = TempDir::new().unwrap();
+    let file = dir.path().join("test.txt");
+    let original: Vec<u8> = vec![b'a', b' ', b'=', b' ', 0xff, 0xfe, b'\n'];
+    fs::write(&file, &original).unwrap();
+    let input = SmartEditInput {
+        path: file.to_string_lossy().to_string(),
+        strategy: "text".into(),
+        edits: Some(vec![EditPair { old: "a".into(), new: "b".into() }]),
+        ..Default::default()
+    };
+    assert!(smart_edit(&input, dir.path()).is_err());
+    assert_eq!(fs::read(&file).unwrap(), original, "non-UTF-8 bytes must not be rewritten");
+}

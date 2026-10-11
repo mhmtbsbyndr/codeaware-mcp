@@ -13,15 +13,6 @@ use codeaware_mcp::security::deny_list::DenyList;
 use codeaware_mcp::security::secret_scanner::SecretScanner;
 use tempfile::TempDir;
 use std::fs;
-use std::io::Write;
-
-// ── Helper ────────────────────────────────────────────────────────────────────
-
-fn temp_file_with_content(content: &str) -> tempfile::NamedTempFile {
-    let mut f = tempfile::NamedTempFile::new().unwrap();
-    write!(f, "{}", content).unwrap();
-    f
-}
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // T01-T09: Core Tool Tests

@@ -101,6 +101,9 @@ pub enum SmartEditError {
     #[error("not implemented: {0}")]
     NotImplemented(String),
 
+    #[error("file is not valid UTF-8, refusing to edit: {0}")]
+    NotUtf8(String),
+
     #[error(transparent)]
     Io(#[from] std::io::Error),
 }
@@ -123,7 +126,12 @@ fn find_occurrences(haystack: &str, needle: &str) -> Vec<usize> {
 }
 
 /// Count non-overlapping occurrences of `needle` in `haystack`.
+/// An empty needle has no meaningful occurrences and is reported as 0
+/// (it would otherwise match at every position and never advance).
 fn count_occurrences(haystack: &str, needle: &str) -> usize {
+    if needle.is_empty() {
+        return 0;
+    }
     let mut count = 0;
     let mut start = 0;
     while let Some(pos) = haystack[start..].find(needle) {
@@ -145,6 +153,25 @@ fn atomic_write(path: &Path, content: &[u8]) -> Result<(), SmartEditError> {
     }
     std::fs::rename(&tmp_path, path)?;
     Ok(())
+}
+
+/// Line terminator used by the file: CRLF if the file contains any CRLF, else LF.
+fn detect_eol(content: &str) -> &'static str {
+    if content.contains("\r\n") {
+        "\r\n"
+    } else {
+        "\n"
+    }
+}
+
+/// Normalize `s` to the given line terminator.
+fn normalize_eol(s: &str, eol: &str) -> String {
+    let lf = s.replace("\r\n", "\n");
+    if eol == "\n" {
+        lf
+    } else {
+        lf.replace('\n', eol)
+    }
 }
 
 /// Parse "start-end" or "start" line range (1-based).
@@ -182,7 +209,11 @@ pub fn smart_edit(
     }
 
     let original_bytes = std::fs::read(&abs_path)?;
-    let original_content = String::from_utf8_lossy(&original_bytes).into_owned();
+    // Refuse non-UTF-8 input instead of lossy conversion, which would permanently
+    // replace the invalid bytes with U+FFFD when the file is written back.
+    let original_content = std::str::from_utf8(&original_bytes)
+        .map_err(|_| SmartEditError::NotUtf8(input.path.clone()))?
+        .to_owned();
 
     // Hash check
     if let Some(expected) = &input.expected_hash {
@@ -248,9 +279,18 @@ fn apply_text_strategy(
     let edits = input.edits.as_deref().unwrap_or(&[]);
     let mut current = original.to_owned();
     let mut applied = Vec::new();
+    let eol = detect_eol(original);
 
     for pair in edits {
-        let occurrences = count_occurrences(&current, &pair.old);
+        if pair.old.is_empty() {
+            return Err(SmartEditError::InvalidStrategy(
+                "edit 'old' text must not be empty".into(),
+            ));
+        }
+        // Match and insert using the file's own line terminators.
+        let old_text = normalize_eol(&pair.old, eol);
+        let new_text = normalize_eol(&pair.new, eol);
+        let occurrences = count_occurrences(&current, &old_text);
         if occurrences == 0 {
             return Err(SmartEditError::AmbiguousMatch {
                 text: pair.old.clone(),
@@ -259,7 +299,7 @@ fn apply_text_strategy(
             });
         }
         if occurrences > 1 {
-            let lines = find_occurrences(&current, &pair.old);
+            let lines = find_occurrences(&current, &old_text);
             return Err(SmartEditError::AmbiguousMatch {
                 text: pair.old.clone(),
                 occurrences,
@@ -268,11 +308,11 @@ fn apply_text_strategy(
         }
 
         // Exactly one match — find line number for reporting
-        let line_numbers = find_occurrences(&current, &pair.old);
+        let line_numbers = find_occurrences(&current, &old_text);
         let line = line_numbers.first().copied().unwrap_or(0);
 
         let diff = format!("-{}\n+{}", pair.old, pair.new);
-        current = current.replacen(&pair.old, &pair.new, 1);
+        current = current.replacen(&old_text, &new_text, 1);
 
         applied.push(EditApplied {
             lines: (line, line),
@@ -303,8 +343,9 @@ fn apply_lines_strategy(
         .as_deref()
         .ok_or_else(|| SmartEditError::InvalidStrategy("lines strategy requires new_content".into()))?;
 
-    let lines: Vec<&str> = original.lines().collect();
-    let total = lines.len();
+    // Segments keep their original terminators, so untouched lines are byte-identical.
+    let segments: Vec<&str> = original.split_inclusive('\n').collect();
+    let total = segments.len();
 
     if start == 0 || start > total + 1 || end < start || end > total {
         return Err(SmartEditError::InvalidStrategy(format!(
@@ -313,20 +354,23 @@ fn apply_lines_strategy(
         )));
     }
 
-    // Replace lines [start..=end] (1-based) with new_content lines
+    let eol = detect_eol(original);
     let new_lines: Vec<&str> = new_content.lines().collect();
-    let before = &lines[..start - 1];
-    let after = &lines[end..];
+    // If the file's last line has no terminator, the replacement block must not add one.
+    let ends_without_newline = end == total && !original.ends_with('\n');
 
-    let mut result_lines: Vec<&str> = Vec::new();
-    result_lines.extend_from_slice(before);
-    result_lines.extend_from_slice(&new_lines);
-    result_lines.extend_from_slice(after);
-
-    // Preserve trailing newline if original had one
-    let mut result = result_lines.join("\n");
-    if original.ends_with('\n') {
-        result.push('\n');
+    let mut result = String::with_capacity(original.len() + new_content.len());
+    for seg in &segments[..start - 1] {
+        result.push_str(seg);
+    }
+    for (i, line) in new_lines.iter().enumerate() {
+        result.push_str(line);
+        if !(ends_without_newline && i + 1 == new_lines.len()) {
+            result.push_str(eol);
+        }
+    }
+    for seg in &segments[end..] {
+        result.push_str(seg);
     }
 
     let applied = vec![EditApplied {

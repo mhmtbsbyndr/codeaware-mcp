@@ -243,7 +243,9 @@ fn extract_symbol_hint(line: &str) -> Option<String> {
 
 fn extract_file_hint(line: &str) -> Option<String> {
     for token in line.split_whitespace() {
-        let cleaned = token.trim_matches(|c: char| c == ':' || c == ',' || c == ')' || c == '(');
+        let trimmed = token.trim_matches(|c: char| c == ':' || c == ',' || c == ')' || c == '(');
+        // Drop compiler-style location suffixes such as ":10" or ":10:5".
+        let cleaned = trimmed.split(':').next().unwrap_or(trimmed);
         if cleaned.contains('/') && (cleaned.ends_with(".rs") || cleaned.ends_with(".py") || cleaned.ends_with(".ts") || cleaned.ends_with(".js") || cleaned.ends_with(".php")) {
             return Some(cleaned.to_string());
         }

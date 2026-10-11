@@ -135,3 +135,26 @@ fn test_formatter_compression() {
     let compressed = formatter_output::compress(raw, 10);
     assert!(compressed.contains("3 files") || compressed.contains("Formatted"));
 }
+
+// --- Git diff stats: content lines that start with "---" / "+++" ---
+#[test]
+fn test_git_diff_counts_content_lines_starting_with_dashes() {
+    let raw = "diff --git a/db/schema.sql b/db/schema.sql\n\
+index 111..222 100644\n\
+--- a/db/schema.sql\n\
++++ b/db/schema.sql\n\
+@@ -1,3 +1,3 @@\n\
+ CREATE TABLE t (id INT);\n\
+--- foo\n\
+++ bar\n\
+ SELECT 1;\n\
+ -- keep\n\
+ SELECT 2;\n\
+ SELECT 3;\n";
+    // max_lines below line count so the diff compressor runs
+    let compressed = git_output::compress(raw, 5);
+    assert!(
+        compressed.contains("db/schema.sql: +1 -1 (1 hunk)"),
+        "removed '-- foo' and added '++ bar' must be counted; got: {compressed}"
+    );
+}

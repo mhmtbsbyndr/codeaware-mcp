@@ -96,4 +96,19 @@ mod tests {
         let result = truncate_at_word(input, 10);
         assert_eq!(result, "abcdefghij…");
     }
+
+    #[test]
+    fn test_truncate_at_word_multibyte_straddles_limit() {
+        // "—" is 3 bytes (E2 80 94) and occupies bytes 199..202, so byte 200 is
+        // inside the character. Must not panic.
+        let input = format!("{}— tail text that keeps going", "a".repeat(199));
+        let result = truncate_at_word(&input, 200);
+        assert!(result.ends_with('…'));
+        assert!(result.is_char_boundary(result.len()));
+
+        // Same with a 3-byte euro sign straddling the limit, no spaces.
+        let input = format!("{}€€€€", "b".repeat(199));
+        let result = truncate_at_word(&input, 200);
+        assert!(result.ends_with('…'));
+    }
 }

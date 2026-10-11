@@ -199,3 +199,107 @@ fn test_git_diff_in_non_git_dir() {
     assert!(!envelope["ok"].as_bool().unwrap());
     assert_eq!(envelope["error_code"].as_str().unwrap(), "E_GIT_ERROR");
 }
+
+// ── Regression: option injection via user-supplied refs/paths ────
+
+#[test]
+fn test_git_diff_rejects_output_option_injection() {
+    let repo = setup_git_repo();
+    let target = repo.path().join("pwned_diff.txt");
+    let base = format!("--output={}", target.display());
+
+    let params = serde_json::json!({
+        "cwd": repo.path().to_str().unwrap(),
+        "base": base,
+        "head": "HEAD"
+    });
+    let result = codeaware_mcp::tools::git_intelligence::handle_git_diff(&params);
+    let text = result["content"][0]["text"].as_str().unwrap();
+    let envelope: serde_json::Value = serde_json::from_str(text).unwrap();
+
+    assert!(!envelope["ok"].as_bool().unwrap(), "option-like base must be rejected");
+    assert!(!target.exists(), "git must not write the --output file");
+}
+
+#[test]
+fn test_git_changelog_rejects_output_option_injection() {
+    let repo = setup_git_repo();
+    let target = repo.path().join("pwned_log.txt");
+    let base = format!("--output={}", target.display());
+
+    let params = serde_json::json!({
+        "cwd": repo.path().to_str().unwrap(),
+        "base": base,
+        "head": "HEAD"
+    });
+    let result = codeaware_mcp::tools::git_intelligence::handle_git_changelog(&params);
+    let text = result["content"][0]["text"].as_str().unwrap();
+    let envelope: serde_json::Value = serde_json::from_str(text).unwrap();
+
+    assert!(!envelope["ok"].as_bool().unwrap(), "option-like base must be rejected");
+    assert!(!target.exists(), "git must not write the --output file");
+}
+
+#[test]
+fn test_git_blame_rejects_output_option_injection() {
+    let repo = setup_git_repo();
+    let target = repo.path().join("pwned_blame.txt");
+    let file = format!("--output={}", target.display());
+
+    let params = serde_json::json!({
+        "cwd": repo.path().to_str().unwrap(),
+        "file": file
+    });
+    let result = codeaware_mcp::tools::git_intelligence::handle_git_blame(&params);
+    let text = result["content"][0]["text"].as_str().unwrap();
+    let envelope: serde_json::Value = serde_json::from_str(text).unwrap();
+
+    assert!(!envelope["ok"].as_bool().unwrap(), "option-like file must be rejected");
+    assert!(!target.exists(), "git must not write the --output file");
+}
+
+// ── Regression: porcelain blame must attribute each line to its own commit ──
+
+#[test]
+fn test_git_blame_attributes_repeated_commit_correctly() {
+    let dir = TempDir::new().expect("tempdir");
+    let path = dir.path();
+
+    let commit = |author: &str, content: &str, msg: &str| {
+        std::fs::write(path.join("ab.txt"), content).unwrap();
+        let run = |args: &[&str]| {
+            let out = Command::new("git")
+                .args(args)
+                .current_dir(path)
+                .env("GIT_AUTHOR_NAME", author)
+                .env("GIT_AUTHOR_EMAIL", "a@example.com")
+                .env("GIT_COMMITTER_NAME", author)
+                .env("GIT_COMMITTER_EMAIL", "a@example.com")
+                .output()
+                .expect("git");
+            assert!(out.status.success(), "git {:?}: {}", args, String::from_utf8_lossy(&out.stderr));
+        };
+        run(&["add", "ab.txt"]);
+        run(&["commit", "-m", msg]);
+    };
+
+    Command::new("git").args(["init"]).current_dir(path).output().unwrap();
+    // Commit A (Alice): lines 1 and 3
+    commit("Alice", "one\nthree\n", "feat: A");
+    // Commit B (Bob): line 2 inserted between them
+    commit("Bob", "one\ntwo\nthree\n", "feat: B");
+
+    let params = serde_json::json!({
+        "cwd": path.to_str().unwrap(),
+        "file": "ab.txt"
+    });
+    let result = codeaware_mcp::tools::git_intelligence::handle_git_blame(&params);
+    let text = result["content"][0]["text"].as_str().unwrap();
+    let envelope: serde_json::Value = serde_json::from_str(text).unwrap();
+    let lines = envelope["data"]["lines"].as_array().unwrap();
+
+    assert_eq!(lines.len(), 3);
+    assert_eq!(lines[0]["author"], "Alice");
+    assert_eq!(lines[1]["author"], "Bob");
+    assert_eq!(lines[2]["author"], "Alice", "line 3 belongs to Alice's second commit");
+}

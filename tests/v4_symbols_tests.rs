@@ -1,4 +1,5 @@
-use codeaware_mcp::v4::{AstExtractor, SymbolKind};
+use codeaware_mcp::v4::ast::AstExtractor;
+use codeaware_mcp::v4::SymbolKind;
 
 #[test]
 fn rust_symbol_extraction_finds_function_and_struct() {

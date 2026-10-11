@@ -126,7 +126,7 @@ Description=CodeAware MCP dashboard daemon
 
 [Service]
 Type=simple
-ExecStart=$WRAPPER
+ExecStart="$WRAPPER"
 Restart=always
 RestartSec=3
 
@@ -146,7 +146,10 @@ fi
 
 if [ "$ACTION" = "start" ]; then
   if [ "$OS" = "Darwin" ]; then
-    launchctl bootstrap "gui/$(id -u)" "$PLIST"
+    # Bootstrap only if the job is not already loaded; bootstrap fails otherwise.
+    if ! launchctl print "gui/$(id -u)/$LABEL" >/dev/null 2>&1; then
+      launchctl bootstrap "gui/$(id -u)" "$PLIST"
+    fi
     launchctl kickstart -k "gui/$(id -u)/$LABEL"
     echo "Started $LABEL"
   else

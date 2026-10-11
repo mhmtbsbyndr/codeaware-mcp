@@ -3,6 +3,7 @@ use codeaware_mcp::v4::{
     SemanticIndex, SymbolKind,
 };
 
+
 #[test]
 fn semantic_context_contains_symbol_items() {
     let mut index = SemanticIndex::default();
@@ -23,5 +24,7 @@ fn semantic_context_contains_symbol_items() {
     );
 
     assert!(!items.is_empty());
-    assert!(items.iter().any(|item| item.kind == ContextItemKind::FileExcerpt));
+    assert!(items
+        .iter()
+        .any(|item| matches!(item.kind, ContextItemKind::FileExcerpt)));
 }

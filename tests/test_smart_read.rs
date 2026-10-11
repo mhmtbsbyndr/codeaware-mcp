@@ -136,3 +136,61 @@ fn test_binary_file_returns_error() {
     let result = smart_read(&input, dir.path());
     assert!(result.is_err());
 }
+
+use codeaware_mcp::tools::smart_read::SmartReadError;
+
+fn read_input(path: &str) -> SmartReadInput {
+    SmartReadInput {
+        path: path.to_string(),
+        mode: ReadMode::Full,
+        focus: None,
+        lines: None,
+        scope: None,
+    }
+}
+
+#[test]
+fn test_relative_path_read_from_project_root() {
+    let dir = TempDir::new().unwrap();
+    fs::create_dir_all(dir.path().join("src")).unwrap();
+    fs::write(dir.path().join("src/lib.rs"), "fn a() {}\n").unwrap();
+    let result = smart_read(&read_input("src/lib.rs"), dir.path()).unwrap();
+    assert_eq!(result.loc, 1);
+}
+
+#[test]
+fn test_traversal_outside_root_rejected() {
+    let base = TempDir::new().unwrap();
+    let project = base.path().join("project");
+    fs::create_dir_all(&project).unwrap();
+    fs::write(base.path().join("outside.rs"), "fn x() {}\n").unwrap();
+    let result = smart_read(&read_input("../outside.rs"), &project);
+    assert!(result.is_err(), "traversal must be rejected");
+    let abs = base.path().join("outside.rs");
+    let result = smart_read(&read_input(&abs.to_string_lossy()), &project);
+    assert!(result.is_err(), "absolute path outside root must be rejected");
+}
+
+#[test]
+fn test_denied_read_patterns_enforced() {
+    let dir = TempDir::new().unwrap();
+    fs::write(dir.path().join(".env"), "SECRET=1\n").unwrap();
+    fs::create_dir_all(dir.path().join("target/debug")).unwrap();
+    fs::write(dir.path().join("target/debug/app.rs"), "fn x() {}\n").unwrap();
+    let env = smart_read(&read_input(&dir.path().join(".env").to_string_lossy()), dir.path());
+    assert!(matches!(env, Err(SmartReadError::Denied(_))), "got {env:?}");
+    let target = smart_read(&read_input("target/debug/app.rs"), dir.path());
+    assert!(matches!(target, Err(SmartReadError::Denied(_))), "got {target:?}");
+}
+
+#[test]
+fn test_symlink_escape_for_missing_child_rejected() {
+    let base = TempDir::new().unwrap();
+    let project = base.path().join("project");
+    let outside = base.path().join("outside");
+    fs::create_dir_all(&project).unwrap();
+    fs::create_dir_all(&outside).unwrap();
+    std::os::unix::fs::symlink(&outside, project.join("link")).unwrap();
+    let result = smart_read(&read_input("link/new.conf"), &project);
+    assert!(result.is_err());
+}

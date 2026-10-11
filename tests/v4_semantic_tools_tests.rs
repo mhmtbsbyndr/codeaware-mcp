@@ -16,7 +16,8 @@ fn semantic_tools_find_symbol_runs() {
     let result = SemanticTools::find_symbol(FindSymbolRequest {
         repo_root: dir.path().to_string_lossy().to_string(),
         query: "build_context".to_string(),
-    });
+    })
+    .expect("find_symbol should succeed on a valid repo");
 
     assert!(!result.matches.is_empty());
 }
@@ -36,7 +37,8 @@ fn semantic_tools_find_callers_runs() {
     let result = SemanticTools::find_callers(FindCallersRequest {
         repo_root: dir.path().to_string_lossy().to_string(),
         symbol: "target".to_string(),
-    });
+    })
+    .expect("find_callers should succeed on a valid repo");
 
     assert!(!result.callers.is_empty());
 }

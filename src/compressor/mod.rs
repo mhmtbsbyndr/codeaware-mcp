@@ -75,6 +75,20 @@ pub fn classify_command(command: &str) -> &'static str {
     "generic"
 }
 
+/// Dispatch to type-specific compressor.
+pub fn compress_output(command_type: &str, raw_output: &str, max_lines: usize) -> String {
+    match command_type {
+        "test_runner" => test_output::compress(raw_output, max_lines),
+        "compiler" => compiler_output::compress(raw_output, max_lines),
+        "linter" => linter_output::compress(raw_output, max_lines),
+        "search" => search_output::compress(raw_output, max_lines),
+        "git_info" => git_output::compress(raw_output, max_lines),
+        "package_mgr" => package_mgr_output::compress(raw_output, max_lines),
+        "formatter" => formatter_output::compress(raw_output, max_lines),
+        _ => generic::compress(raw_output, max_lines),
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -161,19 +175,5 @@ mod tests {
         for category in &["test_runner", "compiler", "linter", "search", "git_info", "package_mgr", "formatter", "generic"] {
             let _ = compress_output(category, output, 50);
         }
-    }
-}
-
-/// Dispatch to type-specific compressor.
-pub fn compress_output(command_type: &str, raw_output: &str, max_lines: usize) -> String {
-    match command_type {
-        "test_runner" => test_output::compress(raw_output, max_lines),
-        "compiler" => compiler_output::compress(raw_output, max_lines),
-        "linter" => linter_output::compress(raw_output, max_lines),
-        "search" => search_output::compress(raw_output, max_lines),
-        "git_info" => git_output::compress(raw_output, max_lines),
-        "package_mgr" => package_mgr_output::compress(raw_output, max_lines),
-        "formatter" => formatter_output::compress(raw_output, max_lines),
-        _ => generic::compress(raw_output, max_lines),
     }
 }

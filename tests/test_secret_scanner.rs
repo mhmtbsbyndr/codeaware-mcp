@@ -118,3 +118,28 @@ fn test_pattern_count_is_14() {
     let scanner = SecretScanner::new();
     assert_eq!(scanner.pattern_count(), 14, "expected exactly 14 patterns");
 }
+
+#[test]
+fn test_quoted_password_fully_redacted() {
+    let scanner = SecretScanner::new();
+    let (redacted, detected) = scanner.scan("password = \"hunter22!SuperSecret\"");
+    assert!(detected);
+    assert!(!redacted.contains("SuperSecret"), "tail leaked: {redacted}");
+    assert!(!redacted.contains("hunter22"), "value leaked: {redacted}");
+}
+
+#[test]
+fn test_unquoted_password_with_special_chars_detected() {
+    let scanner = SecretScanner::new();
+    let (redacted, detected) = scanner.scan("password=P@ssw0rd!23");
+    assert!(detected, "P@ssw0rd!23 must be detected");
+    assert!(!redacted.contains("P@ssw0rd"), "leaked: {redacted}");
+}
+
+#[test]
+fn test_single_quoted_value_with_spaces_redacted() {
+    let scanner = SecretScanner::new();
+    let (redacted, detected) = scanner.scan("db_password: 'correct horse battery'");
+    assert!(detected);
+    assert!(!redacted.contains("horse"), "leaked: {redacted}");
+}
