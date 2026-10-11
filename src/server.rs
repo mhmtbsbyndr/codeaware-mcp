@@ -280,61 +280,17 @@ impl McpServer {
                     }
                 },
                 {
-                    "name": "codeaware_get_task_context",
-                    "description": "Goal-relevant symbols and files for a task.",
+                    "name": "codeaware_v4",
+                    "description": "Semantic code context. op: task_context, find_symbol, find_callers, find_tests, diff_impact.",
                     "inputSchema": {
                         "type": "object",
-                        "required": ["goal"],
+                        "required": ["op"],
                         "properties": {
+                            "op": { "type": "string", "enum": ["task_context", "find_symbol", "find_callers", "find_tests", "diff_impact"] },
                             "goal": { "type": "string" },
                             "task_id": { "type": "string" },
-                            "repo_root": { "type": "string" }
-                        }
-                    }
-                },
-                {
-                    "name": "codeaware_find_symbol",
-                    "description": "Find symbols matching a query.",
-                    "inputSchema": {
-                        "type": "object",
-                        "required": ["query"],
-                        "properties": {
                             "query": { "type": "string" },
-                            "repo_root": { "type": "string" }
-                        }
-                    }
-                },
-                {
-                    "name": "codeaware_find_callers",
-                    "description": "Find callers of a symbol.",
-                    "inputSchema": {
-                        "type": "object",
-                        "required": ["symbol"],
-                        "properties": {
                             "symbol": { "type": "string" },
-                            "repo_root": { "type": "string" }
-                        }
-                    }
-                },
-                {
-                    "name": "codeaware_find_tests",
-                    "description": "Find tests that reference a symbol.",
-                    "inputSchema": {
-                        "type": "object",
-                        "required": ["symbol"],
-                        "properties": {
-                            "symbol": { "type": "string" },
-                            "repo_root": { "type": "string" }
-                        }
-                    }
-                },
-                {
-                    "name": "codeaware_diff_impact",
-                    "description": "Impact of a changed file on callers and tests.",
-                    "inputSchema": {
-                        "type": "object",
-                        "required": ["changed_path"],
-                        "properties": {
                             "changed_path": { "type": "string" },
                             "repo_root": { "type": "string" }
                         }

@@ -27,6 +27,16 @@ pub fn dispatch_tool(
 ) -> Value {
     match tool_name {
         // CodeAware v4 semantic runtime tools
+        // One listed entry (codeaware_v4) selects the operation: fewer schema tokens per session.
+        "codeaware_v4" => match tool_input.get("op").and_then(|v| v.as_str()) {
+            Some("task_context") => dispatch_v4_get_task_context(tool_input),
+            Some("find_symbol") => dispatch_v4_find_symbol(tool_input),
+            Some("find_callers") => dispatch_v4_find_callers(tool_input),
+            Some("find_tests") => dispatch_v4_find_tests(tool_input),
+            Some("diff_impact") => dispatch_v4_diff_impact(tool_input),
+            Some(other) => tool_error(&format!("codeaware_v4: unknown op '{other}'")),
+            None => tool_error("codeaware_v4: 'op' is required"),
+        },
         "codeaware_get_task_context" => dispatch_v4_get_task_context(tool_input),
         "codeaware_find_symbol" => dispatch_v4_find_symbol(tool_input),
         "codeaware_find_callers" => dispatch_v4_find_callers(tool_input),

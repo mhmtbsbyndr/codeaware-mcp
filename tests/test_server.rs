@@ -86,9 +86,8 @@ fn test_tools_list_returns_all_tools() {
     assert!(!tool_names.contains(&"session_status"));
     assert!(!tool_names.contains(&"codeaware__workspace_context"));
     assert!(tool_names.contains(&"skill_lookup"));
-    assert_eq!(tools.len(), 22);
-    assert!(tool_names.contains(&"codeaware_get_task_context"));
-    assert!(tool_names.contains(&"codeaware_diff_impact"));
+    assert_eq!(tools.len(), 18);
+    assert!(tool_names.contains(&"codeaware_v4"));
 }
 
 #[test]
