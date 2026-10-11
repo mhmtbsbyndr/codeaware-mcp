@@ -151,6 +151,8 @@ Reading of the result:
 | T19 | 3264 | 0.17 | 0.22 | 288 | 0.17 | 0.22 | 262 | 0.11 | 0.22 | 18 | 51 |
 | T20 | 3386 | 0.10 | 0.19 | 298 | 0.10 | 0.19 | 298 | 0.10 | 0.19 | 21 | 50 |
 
+Decision inputs: candidate list vs current: Recall@5 +0.000, Recall@10 +0.037, tokens 13.1x fewer. Co-change vs candidate list: Recall@5 -0.003, Recall@10 -0.003, tokens +3.
+
 Caveats:
 
 - Each task indexes its parent snapshot; co-change history is `git log <parent>`, so the task commit and later commits are never read.

@@ -203,8 +203,8 @@ fn get_task_context_candidates_mode_returns_items_without_bodies() {
 }
 
 #[test]
-fn default_get_task_context_still_returns_full_output() {
-    let root = std::env::temp_dir().join(format!("codeaware-default-full-{}", std::process::id()));
+fn default_get_task_context_is_the_candidate_list() {
+    let root = std::env::temp_dir().join(format!("codeaware-default-candidates-{}", std::process::id()));
     let src = root.join("src");
     std::fs::create_dir_all(&src).unwrap();
     std::fs::write(src.join("config.rs"), "pub fn parse_config() {}\n").unwrap();
@@ -215,11 +215,16 @@ fn default_get_task_context_still_returns_full_output() {
         intent: TaskIntent::ImplementFeature,
     };
     let default = V4Tools::get_task_context(req(), root.to_string_lossy().into_owned());
-    let full = V4Tools::get_task_context_with(req(), root.to_string_lossy().into_owned(), ContextOutput::Full, None);
+    let candidates = V4Tools::get_task_context_with(
+        req(),
+        root.to_string_lossy().into_owned(),
+        ContextOutput::Candidates,
+        None,
+    );
     assert_eq!(
         serde_json::to_string(&default.context_package.selected_context).unwrap(),
-        serde_json::to_string(&full.context_package.selected_context).unwrap(),
-        "default output must be the Full output"
+        serde_json::to_string(&candidates.context_package.selected_context).unwrap(),
+        "default output must be the candidate output"
     );
     let _ = std::fs::remove_dir_all(&root);
 }

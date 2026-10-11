@@ -79,7 +79,8 @@ fn depth_bounds_the_number_of_commits_read() {
 fn missing_repository_and_unknown_revision_give_empty_history() {
     let (dir, _c1, _c2, _c3) = fixture_repo("cochange-unknown-rev");
     assert_eq!(CoChangeHistory::from_git(&dir, "no-such-revision-xyz", COCHANGE_DEPTH).commit_count(), 0);
-    let not_a_repo = PathBuf::from(env!("CARGO_TARGET_TMPDIR")).join("cochange-not-a-repo");
+    // Outside any repository. A directory under target/ would resolve to this repo's history.
+    let not_a_repo = std::env::temp_dir().join(format!("codeaware-cochange-not-a-repo-{}", std::process::id()));
     std::fs::create_dir_all(&not_a_repo).unwrap();
     assert_eq!(CoChangeHistory::from_git(&not_a_repo, "HEAD", COCHANGE_DEPTH).commit_count(), 0);
 }

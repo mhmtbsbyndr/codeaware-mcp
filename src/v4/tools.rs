@@ -54,8 +54,9 @@ pub enum ContextOutput {
     Candidates,
 }
 
-/// Output used by `get_task_context`. See benches/RESULTS.md for the measurement behind the choice.
-pub const DEFAULT_CONTEXT_OUTPUT: ContextOutput = ContextOutput::Full;
+/// Output used by `get_task_context`. Candidates: recall@5 equal to the full output and recall@10
+/// higher, at about 1/13 of the tokens (benches/RESULTS.md, candidate section).
+pub const DEFAULT_CONTEXT_OUTPUT: ContextOutput = ContextOutput::Candidates;
 
 /// Candidate items become context items with the file path, the reason as content and the
 /// score in the reason field, so the response envelope stays the same for both outputs.
@@ -219,7 +220,12 @@ impl V4Tools {
             selected_context,
             excluded_context,
             warnings: vec![
-                "Semantic-first context assembly active.".to_string(),
+                match output {
+                    ContextOutput::Full => "Semantic-first context assembly active.".to_string(),
+                    ContextOutput::Candidates => {
+                        "Ranked candidate list active: path, score and reason only, no file bodies.".to_string()
+                    }
+                },
                 "Falls back to summary-first file context when no semantic items are found.".to_string(),
                 format!("Retrieval terms from normalized goal: {retrieval_query}"),
             ],
