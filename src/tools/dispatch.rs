@@ -27,11 +27,11 @@ pub fn dispatch_tool(
 ) -> Value {
     match tool_name {
         // CodeAware v4 semantic runtime tools
-        "codeaware.get_task_context" => dispatch_v4_get_task_context(tool_input),
-        "codeaware.find_symbol" => dispatch_v4_find_symbol(tool_input),
-        "codeaware.find_callers" => dispatch_v4_find_callers(tool_input),
-        "codeaware.find_tests" => dispatch_v4_find_tests(tool_input),
-        "codeaware.diff_impact" => dispatch_v4_diff_impact(tool_input),
+        "codeaware_get_task_context" => dispatch_v4_get_task_context(tool_input),
+        "codeaware_find_symbol" => dispatch_v4_find_symbol(tool_input),
+        "codeaware_find_callers" => dispatch_v4_find_callers(tool_input),
+        "codeaware_find_tests" => dispatch_v4_find_tests(tool_input),
+        "codeaware_diff_impact" => dispatch_v4_diff_impact(tool_input),
 
         // Foundation runtime tools
         "token_stats" => crate::tools::foundation::handle_token_stats(tool_input),

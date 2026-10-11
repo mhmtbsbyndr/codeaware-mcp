@@ -148,14 +148,14 @@ src/v4/
 The following v4 tools are wired into the MCP `tools/call` dispatcher:
 
 ```text
-codeaware.get_task_context
-codeaware.find_symbol
-codeaware.find_callers
-codeaware.find_tests
-codeaware.diff_impact
+codeaware_get_task_context
+codeaware_find_symbol
+codeaware_find_callers
+codeaware_find_tests
+codeaware_diff_impact
 ```
 
-### `codeaware.get_task_context`
+### `codeaware_get_task_context`
 
 Builds a bounded semantic context package for an AI coding task.
 
@@ -165,7 +165,7 @@ Builds a bounded semantic context package for an AI coding task.
   "id": 10,
   "method": "tools/call",
   "params": {
-    "name": "codeaware.get_task_context",
+    "name": "codeaware_get_task_context",
     "arguments": {
       "repo_root": "/workspace/project",
       "goal": "Refactor semantic context assembly"
@@ -174,7 +174,7 @@ Builds a bounded semantic context package for an AI coding task.
 }
 ```
 
-### `codeaware.find_symbol`
+### `codeaware_find_symbol`
 
 Finds symbols from the semantic index.
 
@@ -184,7 +184,7 @@ Finds symbols from the semantic index.
   "id": 11,
   "method": "tools/call",
   "params": {
-    "name": "codeaware.find_symbol",
+    "name": "codeaware_find_symbol",
     "arguments": {
       "repo_root": "/workspace/project",
       "query": "ContextPackage"
@@ -193,7 +193,7 @@ Finds symbols from the semantic index.
 }
 ```
 
-### `codeaware.find_callers`
+### `codeaware_find_callers`
 
 Finds callers of a symbol.
 
@@ -203,7 +203,7 @@ Finds callers of a symbol.
   "id": 12,
   "method": "tools/call",
   "params": {
-    "name": "codeaware.find_callers",
+    "name": "codeaware_find_callers",
     "arguments": {
       "repo_root": "/workspace/project",
       "symbol": "build_context"
@@ -212,7 +212,7 @@ Finds callers of a symbol.
 }
 ```
 
-### `codeaware.find_tests`
+### `codeaware_find_tests`
 
 Finds tests related to a symbol.
 
@@ -222,7 +222,7 @@ Finds tests related to a symbol.
   "id": 13,
   "method": "tools/call",
   "params": {
-    "name": "codeaware.find_tests",
+    "name": "codeaware_find_tests",
     "arguments": {
       "repo_root": "/workspace/project",
       "symbol": "ContextPackage"
@@ -231,7 +231,7 @@ Finds tests related to a symbol.
 }
 ```
 
-### `codeaware.diff_impact`
+### `codeaware_diff_impact`
 
 Estimates semantic impact for a changed file.
 
@@ -241,7 +241,7 @@ Estimates semantic impact for a changed file.
   "id": 14,
   "method": "tools/call",
   "params": {
-    "name": "codeaware.diff_impact",
+    "name": "codeaware_diff_impact",
     "arguments": {
       "repo_root": "/workspace/project",
       "changed_path": "src/v4/tools.rs"
@@ -286,7 +286,7 @@ Repository
 Instead of asking an agent to inspect the whole repository, ask CodeAware first:
 
 ```text
-codeaware.get_task_context(goal="Fix login session handling")
+codeaware_get_task_context(goal="Fix login session handling")
 ```
 
 Then feed the returned context package to the agent.
@@ -294,7 +294,7 @@ Then feed the returned context package to the agent.
 ### 2. Find exactly where a symbol lives
 
 ```text
-codeaware.find_symbol(query="ContextPackage")
+codeaware_find_symbol(query="ContextPackage")
 ```
 
 This avoids loading unrelated files.
@@ -302,7 +302,7 @@ This avoids loading unrelated files.
 ### 3. Find callers before editing
 
 ```text
-codeaware.find_callers(symbol="build_context")
+codeaware_find_callers(symbol="build_context")
 ```
 
 Useful before refactors, renames and behavior changes.
@@ -310,7 +310,7 @@ Useful before refactors, renames and behavior changes.
 ### 4. Find related tests
 
 ```text
-codeaware.find_tests(symbol="ContextPackage")
+codeaware_find_tests(symbol="ContextPackage")
 ```
 
 Useful for minimal test selection.
@@ -318,7 +318,7 @@ Useful for minimal test selection.
 ### 5. Estimate change impact
 
 ```text
-codeaware.diff_impact(changed_path="src/v4/tools.rs")
+codeaware_diff_impact(changed_path="src/v4/tools.rs")
 ```
 
 Useful before committing or asking a model to make a risky edit.
@@ -516,11 +516,11 @@ Context compaction           -> working memory disappears
 CodeAware v4 moves toward:
 
 ```text
-codeaware.get_task_context   -> bounded semantic context package
-codeaware.find_symbol        -> symbol-level retrieval
-codeaware.find_callers       -> caller graph lookup
-codeaware.find_tests         -> related tests
-codeaware.diff_impact        -> impact-aware reasoning
+codeaware_get_task_context   -> bounded semantic context package
+codeaware_find_symbol        -> symbol-level retrieval
+codeaware_find_callers       -> caller graph lookup
+codeaware_find_tests         -> related tests
+codeaware_diff_impact        -> impact-aware reasoning
 semantic_router              -> cheap/balanced/premium model routing hint
 semantic_recovery            -> compact task recovery snapshot
 ```
@@ -617,7 +617,7 @@ Example existing tool call:
 Example v4 semantic tool call:
 
 ```json
-{"jsonrpc":"2.0","id":3,"method":"tools/call","params":{"name":"codeaware.get_task_context","arguments":{"repo_root":".","goal":"Explain v4 semantic context"}}}
+{"jsonrpc":"2.0","id":3,"method":"tools/call","params":{"name":"codeaware_get_task_context","arguments":{"repo_root":".","goal":"Explain v4 semantic context"}}}
 ```
 
 ---

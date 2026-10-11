@@ -6,7 +6,11 @@ use serde_json::{json, Value};
 // 16 tools were 4946 bytes. skill_lookup (17th tool) adds about 215 bytes, roughly
 // 60 tokens per session; it returns at most two excerpts of 1.5 KB when a skill
 // matches, which saves far more than it costs. Keep this budget tight.
-const TOOLS_LIST_BYTE_BUDGET: usize = 5200;
+// 17 tools were 5161 bytes. Five v4 tools (codeaware_*) are now advertised,
+// adding about 1100 bytes, roughly 290 tokens per session. Their handlers are
+// already wired, so unlisted tools were unusable for clients. A single
+// op-dispatch tool would cost about a third of this; see the review notes.
+const TOOLS_LIST_BYTE_BUDGET: usize = 6300;
 
 /// Measures the serialized tools/list payload that every session pays for.
 #[test]
