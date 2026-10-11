@@ -219,9 +219,11 @@ mod tests {
         let base = tempfile::TempDir::new().unwrap();
         let dir = base.path().join("codeaware");
         ensure_private_dir(&dir).unwrap();
-        let mut metrics = SharedMetrics::default();
-        metrics.tool_calls = 3;
-        metrics.timeline.push(sample_event());
+        let metrics = SharedMetrics {
+            tool_calls: 3,
+            timeline: vec![sample_event()],
+            ..Default::default()
+        };
         write_shared_in(&dir, &metrics);
 
         let mode = fs::metadata(dir.join(METRICS_FILE_NAME)).unwrap().permissions().mode() & 0o777;
