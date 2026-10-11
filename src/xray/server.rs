@@ -1,4 +1,5 @@
 use crate::session::persistence::SessionDb;
+use crate::xray::lifecycle::{check_and_record_start, ready_report, Lifecycle, RestartDecision, RESTART_MAX_IN_WINDOW, RESTART_WINDOW_SECS};
 use crate::xray::metrics::MetricsState;
 use std::io::{Read, Write};
 use std::net::{TcpListener, TcpStream};
@@ -88,6 +89,8 @@ impl XrayServer {
         metrics: Arc<Mutex<MetricsState>>,
         db: Option<Arc<Mutex<SessionDb>>>,
     ) -> Result<Self, std::io::Error> {
+        let lifecycle = Arc::new(Lifecycle::new());
+
         // If there's already a server on DEFAULT_PORT, reuse it (no new tab)
         if probe_existing_server() {
             return Ok(XrayServer {
@@ -96,18 +99,32 @@ impl XrayServer {
             });
         }
 
+        // Refuse a new listener when starts are looping (launchd/systemd restarts).
+        if let RestartDecision::Refuse { starts_in_window } = check_and_record_start() {
+            return Err(std::io::Error::new(
+                std::io::ErrorKind::Other,
+                format!(
+                    "xray restart rate limit: {starts_in_window} starts within {RESTART_WINDOW_SECS} s \
+                     (max {RESTART_MAX_IN_WINDOW}); refusing to start, check for a restart loop"
+                ),
+            ));
+        }
+
         // Bind to default port first, then gracefully fall back to a free ephemeral port.
         let listener = bind_with_reuseaddr(DEFAULT_PORT)
             .or_else(|_| TcpListener::bind("127.0.0.1:0"))?;
         let port = listener.local_addr()?.port();
 
+        let handle_lifecycle = Arc::clone(&lifecycle);
         let handle = thread::spawn(move || {
             for stream in listener.incoming().flatten() {
                 let metrics = Arc::clone(&metrics);
                 let db = db.clone();
-                thread::spawn(move || handle_connection(stream, &metrics, &db));
+                let lifecycle = Arc::clone(&handle_lifecycle);
+                thread::spawn(move || handle_connection(stream, &metrics, &db, &lifecycle));
             }
         });
+        lifecycle.mark_ready();
 
         Ok(XrayServer {
             port,
@@ -134,6 +151,7 @@ fn handle_connection(
     mut stream: TcpStream,
     metrics: &Arc<Mutex<MetricsState>>,
     db: &Option<Arc<Mutex<SessionDb>>>,
+    lifecycle: &Lifecycle,
 ) {
     let mut buf = [0u8; 2048];
     let n = match stream.read(&mut buf) {
@@ -160,6 +178,7 @@ fn handle_connection(
         "/api/memories" => serve_memories_json(&mut stream, db),
         "/api/graph" => serve_graph_json(&mut stream, db),
         "/api/identity" => serve_identity(&mut stream),
+        "/api/ready" => serve_ready(&mut stream, lifecycle),
         "/events" => serve_sse(&mut stream, metrics),
         _ => serve_404(&mut stream),
     }
@@ -336,6 +355,20 @@ fn serve_identity(stream: &mut TcpStream) {
     .to_string();
     let response = format!(
         "HTTP/1.1 200 OK\r\nContent-Type: application/json\r\nContent-Length: {}\r\nConnection: close\r\n\r\n{}",
+        json.len(),
+        json
+    );
+    let _ = stream.write_all(response.as_bytes());
+}
+
+fn serve_ready(stream: &mut TcpStream, lifecycle: &Lifecycle) {
+    let (phase, elapsed_ms) = lifecycle.status();
+    let (code, mut body) = ready_report(phase, elapsed_ms);
+    body["service"] = serde_json::Value::from(SERVICE_NAME);
+    let json = body.to_string();
+    let reason = if code == 200 { "OK" } else { "Service Unavailable" };
+    let response = format!(
+        "HTTP/1.1 {code} {reason}\r\nContent-Type: application/json\r\nContent-Length: {}\r\nConnection: close\r\n\r\n{}",
         json.len(),
         json
     );

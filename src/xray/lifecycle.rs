@@ -1,13 +1,8 @@
-//! Startup phase reporting and restart rate-limiting for the xray server.
-//!
-//! The phase is exposed through `GET /api/ready` so clients can wait for readiness.
-//! Every new xray listener start is recorded in a small private state file in the
-//! per-user codeaware directory; more than `RESTART_MAX_IN_WINDOW` starts within
-//! `RESTART_WINDOW_SECS` are refused, which stops a launchd/systemd restart loop.
-
+use crate::xray::shared::{private_state_dir, read_private_file, with_dir_lock, write_private_file};
 use serde_json::Value;
 use std::path::Path;
-use std::time::{Duration, Instant};
+use std::sync::{Mutex, MutexGuard};
+use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
 
 pub const RESTART_WINDOW_SECS: u64 = 60;
 pub const RESTART_MAX_IN_WINDOW: usize = 5;
@@ -21,35 +16,59 @@ pub enum Phase {
 
 impl Phase {
     pub fn as_str(self) -> &'static str {
-        todo!()
+        match self {
+            Phase::Binding => "binding",
+            Phase::Ready => "ready",
+        }
     }
 }
 
 /// Tracks the startup phase of one xray server instance.
 pub struct Lifecycle {
     started: Instant,
-    ready_after: std::sync::Mutex<Option<Duration>>,
+    /// None while binding; the time from start to readiness once ready.
+    ready_after: Mutex<Option<Duration>>,
 }
 
 impl Lifecycle {
     pub fn new() -> Self {
-        todo!()
+        Lifecycle {
+            started: Instant::now(),
+            ready_after: Mutex::new(None),
+        }
+    }
+
+    fn slot(&self) -> MutexGuard<'_, Option<Duration>> {
+        self.ready_after.lock().unwrap_or_else(|e| e.into_inner())
     }
 
     pub fn mark_ready(&self) {
-        todo!()
+        let elapsed = self.started.elapsed();
+        let mut slot = self.slot();
+        if slot.is_none() {
+            *slot = Some(elapsed);
+        }
     }
 
     /// Current phase and elapsed milliseconds (frozen at the moment of becoming ready).
     pub fn status(&self) -> (Phase, u64) {
-        todo!()
+        match *self.slot() {
+            Some(ready_after) => (Phase::Ready, ready_after.as_millis() as u64),
+            None => (Phase::Binding, self.started.elapsed().as_millis() as u64),
+        }
     }
 }
 
 /// HTTP status code and JSON body (without the service name) for `/api/ready`.
 pub fn ready_report(phase: Phase, elapsed_ms: u64) -> (u16, Value) {
-    let _ = (phase, elapsed_ms);
-    todo!()
+    let ready = phase == Phase::Ready;
+    let code = if ready { 200 } else { 503 };
+    let body = serde_json::json!({
+        "ready": ready,
+        "phase": phase.as_str(),
+        "elapsed_ms": elapsed_ms,
+    });
+    (code, body)
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -61,15 +80,54 @@ pub enum RestartDecision {
 /// Pure rate-limit decision. `history` holds unix-second timestamps of earlier starts.
 /// Refuses when `max` or more of them fall in the window `(now - window, now]`.
 pub fn restart_decision(history: &[u64], now: u64, window_secs: u64, max: usize) -> RestartDecision {
-    let _ = (history, now, window_secs, max);
-    todo!()
+    let window_start = now.saturating_sub(window_secs);
+    let starts_in_window = history
+        .iter()
+        .filter(|&&t| t > window_start && t <= now)
+        .count();
+    if starts_in_window >= max {
+        RestartDecision::Refuse { starts_in_window }
+    } else {
+        RestartDecision::Allow
+    }
+}
+
+fn load_history(dir: &Path) -> Vec<u64> {
+    read_private_file(dir, RESTART_LOG_FILE)
+        .and_then(|text| serde_json::from_str(&text).ok())
+        .unwrap_or_default()
 }
 
 /// Check the restart log in `dir` (an already private directory) and record `now`
-/// when allowed. Refused starts are not recorded.
+/// when allowed. Refused starts are not recorded. If the log cannot be locked or
+/// written, the start is allowed: the limiter must never block xray on I/O trouble.
 pub fn check_and_record_start_in(dir: &Path, now: u64) -> RestartDecision {
-    let _ = (dir, now);
-    todo!()
+    with_dir_lock(dir, || {
+        let mut history = load_history(dir);
+        let decision = restart_decision(&history, now, RESTART_WINDOW_SECS, RESTART_MAX_IN_WINDOW);
+        if decision == RestartDecision::Allow {
+            let window_start = now.saturating_sub(RESTART_WINDOW_SECS);
+            history.retain(|&t| t > window_start && t <= now);
+            history.push(now);
+            if let Ok(json) = serde_json::to_string(&history) {
+                write_private_file(dir, RESTART_LOG_FILE, &json);
+            }
+        }
+        decision
+    })
+    .unwrap_or(RestartDecision::Allow)
+}
+
+/// Rate-limit check for a new xray listener, using the per-user state directory.
+pub fn check_and_record_start() -> RestartDecision {
+    let Some(dir) = private_state_dir() else {
+        return RestartDecision::Allow;
+    };
+    let now = SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .map(|d| d.as_secs())
+        .unwrap_or(0);
+    check_and_record_start_in(&dir, now)
 }
 
 #[cfg(test)]

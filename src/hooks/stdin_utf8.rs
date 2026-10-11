@@ -33,12 +33,44 @@ impl Utf8ChunkDecoder {
 
     /// Feed one chunk and return the text that is complete so far.
     pub fn push(&mut self, chunk: &[u8]) -> String {
-        todo!("stub")
+        let mut input = std::mem::take(&mut self.pending);
+        input.extend_from_slice(chunk);
+        let mut out = String::with_capacity(input.len());
+        let mut rest: &[u8] = &input;
+        loop {
+            match std::str::from_utf8(rest) {
+                Ok(valid) => {
+                    out.push_str(valid);
+                    break;
+                }
+                Err(e) => {
+                    let valid = e.valid_up_to();
+                    // SAFETY-free: the prefix up to valid_up_to is valid by definition.
+                    out.push_str(std::str::from_utf8(&rest[..valid]).unwrap_or_default());
+                    match e.error_len() {
+                        Some(bad) => {
+                            out.push('\u{FFFD}');
+                            rest = &rest[valid + bad..];
+                        }
+                        None => {
+                            // Incomplete sequence at the end of this chunk: keep it.
+                            self.pending = rest[valid..].to_vec();
+                            break;
+                        }
+                    }
+                }
+            }
+        }
+        out
     }
 
     /// Consume the decoder. A character that never completed becomes U+FFFD.
     pub fn finish(self) -> String {
-        todo!("stub")
+        if self.pending.is_empty() {
+            String::new()
+        } else {
+            String::from_utf8_lossy(&self.pending).into_owned()
+        }
     }
 }
 

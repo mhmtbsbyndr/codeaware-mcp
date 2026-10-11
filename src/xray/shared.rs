@@ -150,20 +150,49 @@ fn write_shared_in(dir: &Path, metrics: &SharedMetrics) {
     let Ok(json) = serde_json::to_string(metrics) else {
         return;
     };
-    let tmp = dir.join(format!("{METRICS_FILE_NAME}.tmp.{}", uuid::Uuid::new_v4()));
+    write_private_file(dir, METRICS_FILE_NAME, &json);
+}
+
+/// Private per-user state directory (created 0700, owned by us), or None if unavailable.
+pub fn private_state_dir() -> Option<PathBuf> {
+    let dir = metrics_dir()?;
+    ensure_private_dir(&dir)?;
+    Some(dir)
+}
+
+/// Run `f` while holding the exclusive lock of a private state directory.
+pub fn with_dir_lock<F, R>(dir: &Path, f: F) -> Option<R>
+where
+    F: FnOnce() -> R,
+{
+    with_lock(dir, f)
+}
+
+/// Read a small private state file from `dir`. Missing or unreadable files give None.
+pub fn read_private_file(dir: &Path, name: &str) -> Option<String> {
+    fs::read_to_string(dir.join(name)).ok()
+}
+
+/// Write `contents` to `dir/name` atomically: a uniquely named 0600 temp file
+/// (created with `create_new`), then rename over the target. A planted symlink at
+/// the target is replaced, not followed. Returns false if the write failed.
+pub fn write_private_file(dir: &Path, name: &str, contents: &str) -> bool {
+    let tmp = dir.join(format!("{name}.tmp.{}", uuid::Uuid::new_v4()));
     let written = OpenOptions::new()
         .write(true)
         .create_new(true)
         .mode(0o600)
         .open(&tmp)
-        .and_then(|mut f| f.write_all(json.as_bytes()));
+        .and_then(|mut f| f.write_all(contents.as_bytes()));
     if written.is_err() {
         let _ = fs::remove_file(&tmp);
-        return;
+        return false;
     }
-    if fs::rename(&tmp, dir.join(METRICS_FILE_NAME)).is_err() {
+    if fs::rename(&tmp, dir.join(name)).is_err() {
         let _ = fs::remove_file(&tmp);
+        return false;
     }
+    true
 }
 
 /// Reset shared metrics (called at session start).
