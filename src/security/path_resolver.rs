@@ -175,6 +175,7 @@ fn resolve_missing(path: &Path, canonical_root: &Path, depth: usize) -> Result<P
 
 /// Normalize a path without requiring it to exist (no canonicalize).
 /// Resolves `.` and `..` components lexically.
+#[cfg_attr(not(test), allow(dead_code))]
 fn normalize_path(path: &Path) -> PathBuf {
     let mut components: Vec<std::path::Component> = Vec::new();
     for component in path.components() {

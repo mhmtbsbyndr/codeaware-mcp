@@ -43,35 +43,13 @@ pub fn detect_workspace(root: &Path) -> Result<Option<WorkspaceInfo>, std::io::E
 }
 
 fn find_cargo_workspace_members(root: &Path, content: &str) -> Vec<String> {
-    // Extract members patterns from TOML content (simple heuristic)
-    let mut patterns: Vec<String> = Vec::new();
-
-    let mut in_workspace = false;
-    for line in content.lines() {
-        let trimmed = line.trim();
-        if trimmed == "[workspace]" {
-            in_workspace = true;
-            continue;
-        }
-        if in_workspace && trimmed.starts_with('[') {
-            break;
-        }
-        if in_workspace && trimmed.starts_with("members") {
-            // Extract quoted strings from the members line(s)
-            for part in trimmed.split('"') {
-                let p = part.trim();
-                if !p.is_empty()
-                    && !p.contains('=')
-                    && !p.starts_with('[')
-                    && !p.starts_with(']')
-                    && p != "members"
-                    && !p.contains(',')
-                {
-                    patterns.push(p.to_string());
-                }
-            }
-        }
-    }
+    // Parse the TOML so multi-line `members = [ ... ]` arrays are handled.
+    // Invalid TOML yields no members rather than guessing.
+    let patterns: Vec<String> = toml::from_str::<toml::Value>(content)
+        .ok()
+        .and_then(|v| v.get("workspace")?.get("members")?.as_array().cloned())
+        .map(|arr| arr.iter().filter_map(|v| v.as_str().map(str::to_string)).collect())
+        .unwrap_or_default();
 
     // Expand glob patterns by scanning the filesystem
     let mut packages = Vec::new();
@@ -141,4 +119,49 @@ fn find_npm_workspace_packages(root: &Path, json: &serde_json::Value) -> Vec<Str
     }
 
     packages
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn write(root: &Path, rel: &str, content: &str) {
+        let path = root.join(rel);
+        std::fs::create_dir_all(path.parent().unwrap()).unwrap();
+        std::fs::write(path, content).unwrap();
+    }
+
+    #[test]
+    fn test_cargo_members_multiline_array() {
+        let dir = tempfile::TempDir::new().unwrap();
+        let root = dir.path();
+        write(
+            root,
+            "Cargo.toml",
+            "[workspace]\nmembers = [\n    \"core\",\n    \"tools/*\",\n]\n\n[package]\nname = \"x\"\n",
+        );
+        write(root, "core/Cargo.toml", "[package]\nname = \"core\"\n");
+        write(root, "tools/a/Cargo.toml", "[package]\nname = \"a\"\n");
+        write(root, "tools/b/Cargo.toml", "[package]\nname = \"b\"\n");
+        write(root, "other/Cargo.toml", "[package]\nname = \"other\"\n");
+
+        let info = detect_workspace(root).unwrap().unwrap();
+        assert_eq!(info.kind, "cargo");
+        let mut packages = info.packages.clone();
+        packages.sort();
+        assert_eq!(
+            packages,
+            vec!["core".to_string(), "tools/a".to_string(), "tools/b".to_string()]
+        );
+    }
+
+    #[test]
+    fn test_cargo_members_single_line_array() {
+        let dir = tempfile::TempDir::new().unwrap();
+        let root = dir.path();
+        write(root, "Cargo.toml", "[workspace]\nmembers = [\"core\"]\n");
+        write(root, "core/Cargo.toml", "[package]\nname = \"core\"\n");
+        let info = detect_workspace(root).unwrap().unwrap();
+        assert_eq!(info.packages, vec!["core".to_string()]);
+    }
 }

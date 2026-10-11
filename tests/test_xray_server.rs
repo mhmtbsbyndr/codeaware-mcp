@@ -65,3 +65,65 @@ fn test_sse_stream_connects() {
     let response = String::from_utf8_lossy(&buf[..n]);
     assert!(response.contains("text/event-stream"));
 }
+
+fn raw_request(port: u16, request: &str) -> String {
+    let mut stream = TcpStream::connect(("127.0.0.1", port)).unwrap();
+    stream
+        .set_read_timeout(Some(std::time::Duration::from_secs(3)))
+        .unwrap();
+    stream.write_all(request.as_bytes()).unwrap();
+    let mut response = String::new();
+    let _ = stream.read_to_string(&mut response);
+    response
+}
+
+#[test]
+fn test_foreign_host_header_is_forbidden() {
+    // DNS rebinding: the browser sends the attacker's hostname as Host.
+    let (_server, port) = start_server();
+    let resp = raw_request(port, "GET /api/memories HTTP/1.1\r\nHost: evil.example.com\r\n\r\n");
+    assert!(resp.starts_with("HTTP/1.1 403"), "got: {resp}");
+    assert!(!resp.contains("\r\n\r\n[") && !resp.contains("application/json"));
+}
+
+#[test]
+fn test_missing_host_header_is_forbidden() {
+    let (_server, port) = start_server();
+    let resp = raw_request(port, "GET /api/metrics HTTP/1.1\r\n\r\n");
+    assert!(resp.starts_with("HTTP/1.1 403"), "got: {resp}");
+}
+
+#[test]
+fn test_loopback_host_variants_are_allowed() {
+    let (_server, port) = start_server();
+    for host in [
+        format!("127.0.0.1:{port}"),
+        format!("localhost:{port}"),
+        "127.0.0.1".to_string(),
+        format!("[::1]:{port}"),
+    ] {
+        let req = format!("GET /api/metrics HTTP/1.1\r\nHost: {host}\r\n\r\n");
+        let resp = raw_request(port, &req);
+        assert!(resp.starts_with("HTTP/1.1 200"), "Host {host} should be allowed, got: {resp}");
+    }
+}
+
+#[test]
+fn test_host_suffix_tricks_are_forbidden() {
+    let (_server, port) = start_server();
+    for host in ["localhost.evil.com", "127.0.0.1.evil.com", "evil.com:80@localhost"] {
+        let req = format!("GET /api/metrics HTTP/1.1\r\nHost: {host}\r\n\r\n");
+        let resp = raw_request(port, &req);
+        assert!(resp.starts_with("HTTP/1.1 403"), "Host {host} must be rejected, got: {resp}");
+    }
+}
+
+#[test]
+fn test_identity_endpoint_identifies_service() {
+    let (_server, port) = start_server();
+    let resp = raw_request(port, "GET /api/identity HTTP/1.1\r\nHost: 127.0.0.1\r\n\r\n");
+    assert!(resp.starts_with("HTTP/1.1 200"), "got: {resp}");
+    let body = resp.split_once("\r\n\r\n").unwrap().1;
+    let json: serde_json::Value = serde_json::from_str(body).unwrap();
+    assert_eq!(json["service"], "codeaware-xray");
+}

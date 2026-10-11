@@ -40,7 +40,7 @@ impl ContextRanker {
             })
             .collect();
 
-        ranked.sort_by(|a, b| b.score.cmp(&a.score));
+        ranked.sort_by_key(|item| std::cmp::Reverse(item.score));
         ranked
     }
 }

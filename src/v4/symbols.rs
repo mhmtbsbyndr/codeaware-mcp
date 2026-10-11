@@ -77,7 +77,7 @@ impl SymbolIndex {
             })
             .collect();
 
-        scored.sort_by(|a, b| b.0.cmp(&a.0));
+        scored.sort_by_key(|(hits, _)| std::cmp::Reverse(*hits));
         scored.into_iter().map(|(_, symbol)| symbol.clone()).collect()
     }
 }

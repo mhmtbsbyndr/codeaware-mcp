@@ -13,21 +13,26 @@ pub struct SecretScanner {
 
 impl SecretScanner {
     pub fn new() -> Self {
-        let raw_patterns: &[(&str, &str)] = &[
-            ("api_key",      r#"(?i)(api[_-]?key|apikey)\s*[:=]\s*['"]?[\w-]{20,}"#),
-            ("secret",       r#"(?i)(secret|password|passwd|pwd)\s*[:=]\s*['"]?[\w-]{8,}"#),
-            ("token",        r#"(?i)(token|bearer)\s*[:=]\s*['"]?[\w.\-]{20,}"#),
-            ("github_token", r"(ghp|gho|ghu|ghs|ghr)_[A-Za-z0-9_]{36,}"),
-            ("openai_key",   r"sk-[A-Za-z0-9]{20,}"),
-            ("private_key",  r"-----BEGIN (RSA |EC )?PRIVATE KEY-----"),
-            ("aws_key",      r"AKIA[0-9A-Z]{16}"),
-            ("aws_secret",   r"(?i)aws.{0,10}secret.{0,10}=.{0,5}[A-Za-z0-9+/]{40}"),
-            ("anthropic_key",r"sk-ant-[A-Za-z0-9_-]{40,}"),
-            ("jwt",          r"eyJ[A-Za-z0-9_-]{10,}\.[A-Za-z0-9_-]{10,}\.[A-Za-z0-9_-]{10,}"),
-            ("stripe_live",  r"sk_live_[A-Za-z0-9]{24,}"),
-            ("stripe_test",  r"sk_test_[A-Za-z0-9]{24,}"),
-            ("password_url", r"[a-zA-Z][a-zA-Z0-9+\-.]+://[^:@\s]+:[^@\s]{8,}@"),
-            ("twilio_sid",   r"AC[a-f0-9]{32}"),
+        // Value = quoted (whole quoted string, may contain spaces/special chars)
+        // or unquoted run up to whitespace or a quote/semicolon.
+        let value = |min: usize| {
+            format!(r#"(?:"[^"\n]{{{min},}}"|'[^'\n]{{{min},}}'|[^\s"';]{{{min},}})"#)
+        };
+        let raw_patterns: Vec<(&str, String)> = vec![
+            ("api_key",      format!(r#"(?i)(api[_-]?key|apikey)['"]?\s*[:=]\s*{}"#, value(20))),
+            ("secret",       format!(r#"(?i)(secret|password|passwd|pwd)['"]?\s*[:=]\s*{}"#, value(8))),
+            ("token",        format!(r#"(?i)(token|bearer)['"]?\s*[:=]\s*{}"#, value(20))),
+            ("github_token", r"(ghp|gho|ghu|ghs|ghr)_[A-Za-z0-9_]{36,}".to_string()),
+            ("openai_key",   r"sk-[A-Za-z0-9]{20,}".to_string()),
+            ("private_key",  r"-----BEGIN (RSA |EC )?PRIVATE KEY-----".to_string()),
+            ("aws_key",      r"AKIA[0-9A-Z]{16}".to_string()),
+            ("aws_secret",   r"(?i)aws.{0,10}secret.{0,10}=.{0,5}[A-Za-z0-9+/]{40}".to_string()),
+            ("anthropic_key",r"sk-ant-[A-Za-z0-9_-]{40,}".to_string()),
+            ("jwt",          r"eyJ[A-Za-z0-9_-]{10,}\.[A-Za-z0-9_-]{10,}\.[A-Za-z0-9_-]{10,}".to_string()),
+            ("stripe_live",  r"sk_live_[A-Za-z0-9]{24,}".to_string()),
+            ("stripe_test",  r"sk_test_[A-Za-z0-9]{24,}".to_string()),
+            ("password_url", r"[a-zA-Z][a-zA-Z0-9+\-.]+://[^:@\s]+:[^@\s]{8,}@".to_string()),
+            ("twilio_sid",   r"AC[a-f0-9]{32}".to_string()),
         ];
 
         let patterns = raw_patterns

@@ -99,7 +99,7 @@ impl DenyList {
 
 /// Splits a command into simple segments at shell separators.
 fn segments(command: &str) -> impl Iterator<Item = &str> {
-    command.split(|c: char| matches!(c, ';' | '&' | '|' | '\n' | '(' | ')' | '`'))
+    command.split([';', '&', '|', '\n', '(', ')', '`'])
 }
 
 /// Removes surrounding quotes and a leading backslash from a shell word.

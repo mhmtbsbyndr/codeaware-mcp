@@ -146,6 +146,14 @@ fn pick_summary(command_type: &str, compressed: &str, raw: &str) -> String {
 }
 
 pub async fn smart_run(input: &SmartRunInput) -> Result<SmartRunResult, SmartRunError> {
+    // Deny-Run policy: refuse before anything reaches `sh -c`.
+    if crate::security::deny_list::default_deny_list().is_command_denied(&input.command) {
+        return Err(SmartRunError::Denied(format!(
+            "command refused by security policy (rm -rf without explicit path, sudo, or pipe into shell): {}",
+            input.command
+        )));
+    }
+
     let command_type = crate::compressor::classify_command(&input.command);
 
     let start = Instant::now();

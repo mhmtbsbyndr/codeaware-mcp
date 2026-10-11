@@ -12,30 +12,38 @@ use crate::token_stats_tools::{
     render_token_savings_report, TokenSavingsReportFormat, TokenStatsGroupBy, TokenStatsResponse,
 };
 
+/// Shown with every response that is based on `sample_events()` instead of recorded data.
+const SAMPLE_NOTE: &str = "Values are computed from a built-in sample event, not from recorded usage. No recorded token events are wired to this tool yet.";
+
 pub fn handle_token_stats(_input: &Value) -> Value {
     let events = sample_events();
     let summary = summarize_events(&events);
     let response = TokenStatsResponse::from_summary(summary, TokenStatsGroupBy::Tool);
 
-    json!({"ok": true,"trust": "exact","data": {"events": response.events,"raw_tokens": response.raw_tokens,"compressed_tokens": response.compressed_tokens,"saved_tokens": response.saved_tokens,"savings_ratio": response.savings_ratio,"group_by": response.group_by,"buckets": response.buckets.iter().map(|bucket| json!({"name": bucket.name,"events": bucket.events,"raw_tokens": bucket.raw_tokens,"compressed_tokens": bucket.compressed_tokens,"saved_tokens": bucket.saved_tokens,"savings_ratio": bucket.savings_ratio})).collect::<Vec<_>>()}})
+    json!({"ok": true,"trust": "sample","note": SAMPLE_NOTE,"data": {"events": response.events,"raw_tokens": response.raw_tokens,"compressed_tokens": response.compressed_tokens,"saved_tokens": response.saved_tokens,"savings_ratio": response.savings_ratio,"group_by": response.group_by,"buckets": response.buckets.iter().map(|bucket| json!({"name": bucket.name,"events": bucket.events,"raw_tokens": bucket.raw_tokens,"compressed_tokens": bucket.compressed_tokens,"saved_tokens": bucket.saved_tokens,"savings_ratio": bucket.savings_ratio})).collect::<Vec<_>>()}})
 }
 
 pub fn handle_token_savings_report(_input: &Value) -> Value {
     let events = sample_events();
     let summary = summarize_events(&events);
     let report = render_token_savings_report(&summary, TokenSavingsReportFormat::Markdown);
-    json!({"ok": true,"trust": "exact","data": {"markdown": report.content}})
+    json!({"ok": true,"trust": "sample","note": SAMPLE_NOTE,"data": {"markdown": report.content}})
 }
 
 pub fn handle_benchmark_compression(_input: &Value) -> Value {
     let fixtures = vec![TokenBenchmarkFixture {name: "sample_rust_module".to_string(),category: "file_read".to_string(),tool: "smart_read".to_string(),subject: "src/server.rs".to_string(),raw: "fn main() { println!(\"hello\"); }\nfn health() -> &'static str { \"ok\" }".to_string(),compressed: "symbols:\n- main\n- health".to_string(),expected_min_savings_ratio: 0.1,expected_max_savings_ratio: 0.99}];
     let summary = run_token_benchmarks(&fixtures);
-    json!({"ok": true,"trust": "exact","data": {"fixtures": summary.fixtures,"passed": summary.passed,"failed": summary.failed,"raw_tokens": summary.raw_tokens,"compressed_tokens": summary.compressed_tokens,"saved_tokens": summary.saved_tokens,"average_savings_ratio": summary.average_savings_ratio,"results": summary.results.iter().map(|result| json!({"name": result.name,"category": result.category,"tool": result.tool,"subject": result.subject,"raw_tokens": result.raw_tokens,"compressed_tokens": result.compressed_tokens,"saved_tokens": result.saved_tokens,"savings_ratio": result.savings_ratio,"passed": result.passed})).collect::<Vec<_>>()}})
+    json!({"ok": true,"trust": "sample","note": "Benchmarks a fixed built-in fixture, not recorded usage.","data": {"fixtures": summary.fixtures,"passed": summary.passed,"failed": summary.failed,"raw_tokens": summary.raw_tokens,"compressed_tokens": summary.compressed_tokens,"saved_tokens": summary.saved_tokens,"average_savings_ratio": summary.average_savings_ratio,"results": summary.results.iter().map(|result| json!({"name": result.name,"category": result.category,"tool": result.tool,"subject": result.subject,"raw_tokens": result.raw_tokens,"compressed_tokens": result.compressed_tokens,"saved_tokens": result.saved_tokens,"savings_ratio": result.savings_ratio,"passed": result.passed})).collect::<Vec<_>>()}})
 }
 
 pub fn handle_provide_feedback(input: &Value) -> Value {
-    let rating = input.get("rating").and_then(|v| v.as_u64()).unwrap_or(0) as u8;
-    let valid = validate_feedback_rating(rating);
+    // Validate the full value before narrowing: a bare `as u8` would wrap 261 to 5.
+    let rating = input
+        .get("rating")
+        .and_then(|v| v.as_i64())
+        .and_then(|r| u8::try_from(r).ok())
+        .filter(|r| validate_feedback_rating(*r));
+    let valid = rating.is_some();
     json!({"ok": valid,"trust": "exact","data": {"accepted": valid,"rating": rating,"prompt": feedback_prompt(),"comment": input.get("comment").and_then(|v| v.as_str()).unwrap_or("")}})
 }
 
@@ -84,4 +92,45 @@ pub fn handle_tool_manager(input: &Value) -> Value {
 
 fn sample_events() -> Vec<TokenEvent> {
     vec![TokenEvent::new("event-1","trace-1","current","smart_read",TokenEventCategory::FileRead,"src/server.rs","fn main() { println!(\"hello\"); }\nfn health() -> &'static str { \"ok\" }","symbols:\n- main\n- health","2026-05-06T00:00:00Z")]
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_feedback_rating_is_validated_before_narrowing() {
+        // 261 used to wrap to 5 through `as u8`; it must be rejected outright.
+        let out = handle_provide_feedback(&json!({"rating": 261}));
+        assert_eq!(out["data"]["accepted"], false);
+        assert_eq!(out["ok"], false);
+        assert!(out["data"]["rating"].is_null());
+    }
+
+    #[test]
+    fn test_feedback_rating_rejects_negative_and_out_of_scale() {
+        for bad in [-1, 0, 4, 5, 256] {
+            let out = handle_provide_feedback(&json!({"rating": bad}));
+            assert_eq!(out["data"]["accepted"], false, "rating {bad} must be rejected");
+        }
+    }
+
+    #[test]
+    fn test_feedback_rating_accepts_scale_values() {
+        for good in 1..=3 {
+            let out = handle_provide_feedback(&json!({"rating": good}));
+            assert_eq!(out["data"]["accepted"], true, "rating {good} must be accepted");
+            assert_eq!(out["data"]["rating"], good);
+        }
+    }
+
+    #[test]
+    fn test_token_stats_reports_sample_trust() {
+        // No recorded data is available here, so the response must not claim "exact".
+        let out = handle_token_stats(&json!({}));
+        assert_eq!(out["trust"], "sample");
+        assert!(out["note"].as_str().unwrap().contains("sample"));
+        let report = handle_token_savings_report(&json!({}));
+        assert_eq!(report["trust"], "sample");
+    }
 }

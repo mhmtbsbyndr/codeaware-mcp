@@ -67,6 +67,8 @@ pub enum SmartReadError {
     BinaryFile(String),
     #[error("Invalid line range: {0}")]
     InvalidRange(String),
+    #[error("Access denied: {0}")]
+    Denied(String),
 }
 
 pub fn detect_language(path: &str) -> Option<&str> {
@@ -86,9 +88,11 @@ pub fn detect_language(path: &str) -> Option<&str> {
     }
 }
 
-pub fn smart_read(input: &SmartReadInput, _project_root: &Path) -> Result<SmartReadResult, SmartReadError> {
-    let path = Path::new(&input.path);
-    let raw = std::fs::read(path)?;
+pub fn smart_read(input: &SmartReadInput, project_root: &Path) -> Result<SmartReadResult, SmartReadError> {
+    // Resolve against the project root, reject escapes, and apply the Deny-Read policy.
+    let resolved = crate::security::deny_list::check_read_allowed(&input.path, project_root)
+        .map_err(SmartReadError::Denied)?;
+    let raw = std::fs::read(&resolved)?;
 
     // Binary detection: check first 8KB for null bytes
     let check_len = raw.len().min(8192);
@@ -168,7 +172,7 @@ pub fn smart_read(input: &SmartReadInput, _project_root: &Path) -> Result<SmartR
     };
 
     // Build suggested_next: related files the caller might want to read next
-    let suggested_next = suggest_next_files(&input.path, _project_root);
+    let suggested_next = suggest_next_files(&input.path, project_root);
 
     Ok(SmartReadResult {
         path: input.path.clone(),

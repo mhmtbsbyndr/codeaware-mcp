@@ -8,28 +8,74 @@ use std::time::Duration;
 
 const DASHBOARD_HTML: &str = include_str!("dashboard.html");
 const DEFAULT_PORT: u16 = 9847;
+const SERVICE_NAME: &str = "codeaware-xray";
 
 pub struct XrayServer {
     port: u16,
     _handle: Option<thread::JoinHandle<()>>,
 }
 
-/// Check if an existing XRay server is already responding on the default port.
+/// Check if an existing XRay server of this program is responding on the default
+/// port. Any other service that answers 200 there must not be mistaken for it.
 fn probe_existing_server() -> bool {
-    use std::net::TcpStream as TcpClient;
-    if let Ok(mut stream) = TcpClient::connect_timeout(
-        &format!("127.0.0.1:{DEFAULT_PORT}").parse().unwrap(),
-        Duration::from_millis(200),
-    ) {
-        let _ = stream.write_all(b"GET /api/metrics HTTP/1.1\r\nHost: 127.0.0.1\r\n\r\n");
-        let _ = stream.set_read_timeout(Some(Duration::from_millis(500)));
-        let mut buf = [0u8; 64];
-        if let Ok(n) = stream.read(&mut buf) {
-            let resp = String::from_utf8_lossy(&buf[..n]);
-            return resp.contains("200 OK");
-        }
+    let addr = std::net::SocketAddr::from(([127, 0, 0, 1], DEFAULT_PORT));
+    let Ok(mut stream) = TcpStream::connect_timeout(&addr, Duration::from_millis(200)) else {
+        return false;
+    };
+    let _ = stream.set_read_timeout(Some(Duration::from_millis(500)));
+    let _ = stream.set_write_timeout(Some(Duration::from_millis(500)));
+    if stream
+        .write_all(b"GET /api/identity HTTP/1.1\r\nHost: 127.0.0.1\r\nConnection: close\r\n\r\n")
+        .is_err()
+    {
+        return false;
     }
-    false
+    let mut raw = Vec::new();
+    // The server closes the connection after responding, so read_to_end ends there.
+    let _ = (&mut stream).take(16 * 1024).read_to_end(&mut raw);
+    let text = String::from_utf8_lossy(&raw);
+    let Some((head, body)) = text.split_once("\r\n\r\n") else {
+        return false;
+    };
+    head.starts_with("HTTP/1.1 200")
+        && serde_json::from_str::<serde_json::Value>(body)
+            .ok()
+            .and_then(|v| v.get("service")?.as_str().map(|s| s == SERVICE_NAME))
+            .unwrap_or(false)
+}
+
+/// Host header values allowed for requests: loopback names only, with or without a port.
+/// This blocks DNS rebinding, where a remote name resolves to 127.0.0.1.
+fn host_header_is_local(value: &str) -> bool {
+    let v = value.trim();
+    let host = if v.starts_with('[') {
+        // "[::1]" or "[::1]:port"
+        match v.find(']') {
+            Some(end) => &v[..=end],
+            None => return false,
+        }
+    } else {
+        match v.rsplit_once(':') {
+            Some((name, port)) if !port.is_empty() && port.bytes().all(|b| b.is_ascii_digit()) => name,
+            _ => v,
+        }
+    };
+    matches!(
+        host.to_ascii_lowercase().as_str(),
+        "localhost" | "127.0.0.1" | "[::1]"
+    )
+}
+
+/// Extract the Host header from raw request head lines (case-insensitive name).
+fn request_host(request: &str) -> Option<&str> {
+    request
+        .lines()
+        .skip(1)
+        .take_while(|line| !line.is_empty())
+        .find_map(|line| {
+            let (name, value) = line.split_once(':')?;
+            name.trim().eq_ignore_ascii_case("host").then(|| value.trim())
+        })
 }
 
 fn bind_with_reuseaddr(port: u16) -> Result<TcpListener, std::io::Error> {
@@ -95,6 +141,13 @@ fn handle_connection(
         _ => return,
     };
     let request = String::from_utf8_lossy(&buf[..n]);
+    match request_host(&request) {
+        Some(host) if host_header_is_local(host) => {}
+        _ => {
+            serve_forbidden(&mut stream);
+            return;
+        }
+    }
     let path = request
         .lines()
         .next()
@@ -106,6 +159,7 @@ fn handle_connection(
         "/api/metrics" => serve_metrics_json(&mut stream, metrics),
         "/api/memories" => serve_memories_json(&mut stream, db),
         "/api/graph" => serve_graph_json(&mut stream, db),
+        "/api/identity" => serve_identity(&mut stream),
         "/events" => serve_sse(&mut stream, metrics),
         _ => serve_404(&mut stream),
     }
@@ -270,6 +324,30 @@ fn serve_graph_json(stream: &mut TcpStream, db: &Option<Arc<Mutex<SessionDb>>>) 
         "HTTP/1.1 200 OK\r\nContent-Type: application/json\r\nContent-Length: {}\r\nConnection: close\r\n\r\n{}",
         json.len(),
         json
+    );
+    let _ = stream.write_all(response.as_bytes());
+}
+
+fn serve_identity(stream: &mut TcpStream) {
+    let json = serde_json::json!({
+        "service": SERVICE_NAME,
+        "version": env!("CARGO_PKG_VERSION"),
+    })
+    .to_string();
+    let response = format!(
+        "HTTP/1.1 200 OK\r\nContent-Type: application/json\r\nContent-Length: {}\r\nConnection: close\r\n\r\n{}",
+        json.len(),
+        json
+    );
+    let _ = stream.write_all(response.as_bytes());
+}
+
+fn serve_forbidden(stream: &mut TcpStream) {
+    let body = "Forbidden";
+    let response = format!(
+        "HTTP/1.1 403 Forbidden\r\nContent-Length: {}\r\nConnection: close\r\n\r\n{}",
+        body.len(),
+        body
     );
     let _ = stream.write_all(response.as_bytes());
 }

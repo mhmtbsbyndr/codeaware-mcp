@@ -189,7 +189,7 @@ impl V4Tools {
         if let Ok(line) = serde_json::to_string(&trace) {
             let storage = V4Storage::new(&repo_root);
             if let Err(err) = storage.append_jsonl("traces/task_traces.jsonl", &line) {
-                tracing::warn!(error = %err, "failed to append v4 task trace");
+                eprintln!("codeaware v4: failed to append task trace: {err}");
             }
         }
 
