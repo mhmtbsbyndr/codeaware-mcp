@@ -371,7 +371,17 @@ pub fn fuse_with_cochange(
     let partners: Vec<Partner> = history.partners(&seeds, &indexed_files(index));
     let partner_order: Vec<String> = partners.iter().map(|p| p.path.clone()).collect();
 
-    let fused = rrf_paths(&[bm25_order, partner_order], RRF_K);
+    // Ties (equal RRF score) go to the file that matches the goal, so a co-change partner ranked
+    // first in its list never displaces the BM25 file it sits beside.
+    let bm25_position: BTreeMap<&str, usize> = bm25_order.iter().enumerate().map(|(i, p)| (p.as_str(), i)).collect();
+    let mut fused = rrf_paths(&[bm25_order.clone(), partner_order], RRF_K);
+    fused.sort_by(|a, b| {
+        b.1.total_cmp(&a.1).then_with(|| {
+            let pa = bm25_position.get(a.0.as_str()).copied().unwrap_or(usize::MAX);
+            let pb = bm25_position.get(b.0.as_str()).copied().unwrap_or(usize::MAX);
+            pa.cmp(&pb).then_with(|| a.0.cmp(&b.0))
+        })
+    });
     let top = fused.first().map_or(1.0, |(_, score)| *score);
     let bm25_by_path: BTreeMap<&str, &FileCandidate> =
         bm25.iter().map(|candidate| (candidate.path.as_str(), candidate)).collect();

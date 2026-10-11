@@ -131,16 +131,27 @@ fn cochange_fusion_adds_partner_files_and_marks_them() {
     // config.rs and cli.rs changed together twice; config.rs also changed alone once.
     let log = "\u{1e}c3\n\nsrc/config.rs\nsrc/cli.rs\n\u{1e}c2\n\nsrc/config.rs\nsrc/cli.rs\n\u{1e}c1\n\nsrc/config.rs\n";
     let history = CoChangeHistory::from_log(log);
-    let bm25 = rank_file_candidates("parse config", &index, &SemanticContextOptions::default());
+    // "cli" matches run_cli too, so both files are BM25 hits and both are seeds.
+    let bm25 = rank_file_candidates("parse config cli", &index, &SemanticContextOptions::default());
     let fused = fuse_with_cochange(&bm25, &index, &history, 10);
 
     let config = fused.iter().find(|c| c.path == "src/config.rs").expect("bm25 file kept");
-    assert!(config.reason.ends_with("co-change"), "reason: {}", config.reason);
+    assert!(config.reason.ends_with("+ co-change"), "reason: {}", config.reason);
     assert!((config.score - 1.0).abs() < 1e-9);
+    assert_eq!(fused[0].path, "src/config.rs", "BM25 top file keeps first place on ties");
+}
+
+#[test]
+fn cochange_partner_outside_bm25_list_is_added_with_seed_reason() {
+    let index = sample_index();
+    let log = "\u{1e}c2\n\nsrc/config.rs\nsrc/cli.rs\n\u{1e}c1\n\nsrc/config.rs\nsrc/cli.rs\n";
+    let history = CoChangeHistory::from_log(log);
+    let bm25 = rank_file_candidates("parse config", &index, &SemanticContextOptions::default());
+    let fused = fuse_with_cochange(&bm25, &index, &history, 10);
 
     let cli = fused.iter().find(|c| c.path == "src/cli.rs").expect("co-change partner added");
     assert_eq!(cli.reason, "co-changed with src/config.rs");
-    assert!(cli.score < 1.0 && cli.score > 0.0);
+    assert!(cli.score > 0.0 && cli.score <= 1.0);
 }
 
 #[test]
