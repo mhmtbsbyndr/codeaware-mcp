@@ -241,14 +241,14 @@ pub fn is_credential_read(raw: &str) -> bool {
 
 const RAW_NET_TOOLS: &[&str] = &["nc", "netcat", "ncat", "socat"];
 
-/// A raw-socket tool used as a command: first token of the line, or the first
-/// token after a pipe, `;`, `&&`, `||` or an opening parenthesis. A bare `nc`
-/// word in prose ("NC type", a dictionary key) does not count.
+/// A raw-socket tool used as a lowercase command: first token of the line, or
+/// the first token after a pipe, `;`, `&&`, `||` or an opening parenthesis.
+/// Uppercase "NC" (nonconformance) and quoted dictionary keys do not count.
 fn is_raw_net_command(raw: &str) -> bool {
     let toks: Vec<&str> = raw.split_whitespace().collect();
     toks.iter().enumerate().any(|(i, t)| {
-        let cmd = t.trim_start_matches(|c: char| "($`".contains(c)).to_lowercase();
-        if !RAW_NET_TOOLS.contains(&cmd.as_str()) {
+        let cmd = t.trim_start_matches(|c: char| "($`".contains(c));
+        if !RAW_NET_TOOLS.contains(&cmd) {
             return false;
         }
         i == 0
@@ -527,6 +527,24 @@ mod tests {
     fn claude_settings_write_benign() {
         assert!(!is_claude_settings_write("Settings are documented in ~/.claude/settings.json"));
         assert!(!is_claude_settings_write("Write the report to ./out/report.md"));
+    }
+
+    #[test]
+    fn refinements_keep_prose_and_templates_clean() {
+        // Uppercase NC in a table and a dictionary key are not raw-socket commands.
+        assert!(!is_exfiltration("| 8.3 | NC Product | Identification |"));
+        assert!(!is_exfiltration("'nc': 'north carolina',"));
+        // Wildcard under a named directory is a specified path.
+        assert!(!is_destructive_rm("rm -rf /var/lib/apt/lists/*"));
+        assert!(is_destructive_rm("rm -rf /*"));
+        // Output directories under ~/.claude are not Claude configuration.
+        assert!(!is_claude_settings_write("Write the record to ~/.claude/decisions/raw/x.md"));
+        assert!(is_claude_settings_write("Add the hook to ~/.claude/hooks/pre.sh"));
+        // Template copies read no secret; `source` only counts in command position.
+        assert!(!is_credential_read("cp .env.example .env.local"));
+        assert!(!is_credential_read("`.env` files copied (if present in source repo)"));
+        assert!(is_credential_read("source .env && run"));
+        assert!(is_credential_read("cat ~/.ssh/id_ed25519"));
     }
 
     #[test]

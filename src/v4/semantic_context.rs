@@ -5,6 +5,7 @@ use serde::{Deserialize, Serialize};
 use crate::v4::bm25::Bm25Index;
 use crate::v4::context_items::{ContextItem, ContextItemKind};
 use crate::v4::pack::{pack, PackCandidate, PackConfig, PackedItem};
+use crate::v4::query::normalize_goal;
 use crate::v4::ranking::RankingMode;
 use crate::v4::semantic_index::SemanticIndex;
 use crate::v4::summaries::{declaration_skeleton, read_capped};
@@ -37,6 +38,14 @@ pub struct SemanticContextOptions {
     /// have a skeleton (from the signature) and a one-line form.
     #[serde(default)]
     pub source_root: Option<PathBuf>,
+    /// Normalizes the goal before matching (German to English vocabulary, stopwords, identifier
+    /// split). `false` uses the raw goal, as before the normalizer existed.
+    #[serde(default = "default_normalize_goal")]
+    pub normalize_goal: bool,
+}
+
+fn default_normalize_goal() -> bool {
+    true
 }
 
 impl Default for SemanticContextOptions {
@@ -51,6 +60,7 @@ impl Default for SemanticContextOptions {
             ranking: RankingMode::Bm25,
             pack: None,
             source_root: None,
+            normalize_goal: true,
         }
     }
 }
@@ -105,14 +115,25 @@ impl SemanticContextAssembler {
     }
 }
 
+/// Query string for symbol ranking and the term list for the import, call and test filters.
+/// With normalization the query is the normalized terms and identifiers; without it, the raw goal.
+fn retrieval_query(goal: &str, options: &SemanticContextOptions) -> (String, Vec<String>) {
+    if options.normalize_goal {
+        let normalized = normalize_goal(goal);
+        (normalized.search_query(), normalized.match_terms())
+    } else {
+        (goal.to_string(), query_terms(goal))
+    }
+}
+
 fn collect(goal: &str, index: &SemanticIndex, options: &SemanticContextOptions) -> Vec<Scored> {
     let mut scored = Vec::new();
-    let terms = query_terms(goal);
+    let (query, terms) = retrieval_query(goal, options);
     if terms.is_empty() && options.ranking == RankingMode::Legacy {
         return scored;
     }
 
-    for (symbol, relevance) in select_symbols(goal, index, options.ranking)
+    for (symbol, relevance) in select_symbols(&query, index, options.ranking)
         .into_iter()
         .take(options.max_symbols)
     {
@@ -215,10 +236,10 @@ fn plain_item(item: ContextItem, relevance: f64) -> Scored {
 
 /// Symbols with a relevance score, best first. Legacy: term-hit order with `1/(1+rank)`.
 /// BM25: BM25 score over name, path and signature, normalised to the top hit (1.0).
-fn select_symbols(goal: &str, index: &SemanticIndex, ranking: RankingMode) -> Vec<(CodeSymbol, f64)> {
+fn select_symbols(query: &str, index: &SemanticIndex, ranking: RankingMode) -> Vec<(CodeSymbol, f64)> {
     match ranking {
         RankingMode::Legacy => index
-            .find_symbols(goal)
+            .find_symbols(query)
             .into_iter()
             .enumerate()
             .map(|(rank, symbol)| (symbol, 1.0 / (1.0 + rank as f64)))
@@ -234,7 +255,7 @@ fn select_symbols(goal: &str, index: &SemanticIndex, ranking: RankingMode) -> Ve
             }
             // Scores are divided by the top hit so they share the (0, 1] scale of the other
             // item categories; this keeps a score-gap cut across categories meaningful.
-            let hits = bm25.rank(goal);
+            let hits = bm25.rank(query);
             let top = hits.first().map_or(1.0, |(_, score)| *score);
             hits.into_iter()
                 .map(|(id, score)| (index.symbols.symbols[id].clone(), score / top))

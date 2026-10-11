@@ -3,6 +3,7 @@ use std::collections::{BTreeMap, BTreeSet, HashMap};
 use serde::{Deserialize, Serialize};
 
 use crate::v4::bm25::Bm25Index;
+use crate::v4::query::normalize_goal;
 use crate::v4::semantic_index::SemanticIndex;
 
 /// Ranking strategy. `Legacy` is the substring counter used before v4 BM25 and stays the default.
@@ -89,18 +90,21 @@ impl ContextRanker {
     }
 
     /// Ranks `paths` with the given strategy. Ties are broken by path, so output is stable.
+    /// The BM25 modes rank by the normalized goal (see `query::normalize_goal`); `Legacy` keeps
+    /// the raw goal so it stays a fixed reference for the benchmark.
     pub fn rank(mode: RankingMode, goal: &str, paths: Vec<String>, signals: RankSignals<'_>) -> Vec<RankedPath> {
         match mode {
             RankingMode::Legacy => Self::rank_paths(goal, paths),
             RankingMode::Bm25 => {
-                let relevance = build_bm25(&paths, &signals).scores(goal);
+                let query = normalize_goal(goal).search_query();
+                let relevance = build_bm25(&paths, &signals).scores(&query);
                 let reasons = relevance
                     .iter()
                     .map(|score| if *score > 0.0 { "Matched goal keywords" } else { "Fallback candidate" })
                     .collect();
                 finalize(paths, relevance, reasons)
             }
-            RankingMode::Bm25Graph => rank_with_graph(goal, paths, &signals),
+            RankingMode::Bm25Graph => rank_with_graph(&normalize_goal(goal).search_query(), paths, &signals),
         }
     }
 }

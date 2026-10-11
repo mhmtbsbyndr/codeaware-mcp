@@ -117,6 +117,16 @@ license_file = "alirezarezvani-claude-skills/LICENSES/license.txt"
 sha256 = "9c95ad2d18a41b1ca4d575377868c84ff5d294fd0e96a83aafd67fe404aec078"
 
 [[skills]]
+id = "agent-protocol"
+source = "alirezarezvani-claude-skills"
+source_path = "c-level-advisor/skills/agent-protocol/SKILL.md"
+path = "alirezarezvani-claude-skills/agent-protocol/SKILL.md"
+license = "MIT"
+license_file = "alirezarezvani-claude-skills/LICENSES/license.txt"
+sha256 = "fda98bece66a8903d95c79fa6dab49eb4e636014626ee119264e2c0e4224154e"
+files = ["references/invocation-patterns.md"]
+
+[[skills]]
 id = "agent-workflow-designer"
 source = "alirezarezvani-claude-skills"
 source_path = "engineering/skills/agent-workflow-designer/SKILL.md"
@@ -318,6 +328,16 @@ sha256 = "73ca16546887edd28fe97e9c40647034f4b09dae692530d738d24b7d5bfc60a0"
 files = ["references/deck-frameworks.md", "templates/board-deck-template.md"]
 
 [[skills]]
+id = "board-meeting"
+source = "alirezarezvani-claude-skills"
+source_path = "c-level-advisor/skills/board-meeting/SKILL.md"
+path = "alirezarezvani-claude-skills/board-meeting/SKILL.md"
+license = "MIT"
+license_file = "alirezarezvani-claude-skills/LICENSES/license.txt"
+sha256 = "cb9bca1b04867a7e11e4aa716e0776bc787053de397ef2dacbcbf51638460e05"
+files = ["references/meeting-facilitation.md", "templates/meeting-agenda.md", "templates/meeting-minutes.md"]
+
+[[skills]]
 id = "board-prep"
 source = "alirezarezvani-claude-skills"
 source_path = "c-level-advisor/executive-mentor/skills/board-prep/SKILL.md"
@@ -325,6 +345,15 @@ path = "alirezarezvani-claude-skills/board-prep/SKILL.md"
 license = "MIT"
 license_file = "alirezarezvani-claude-skills/LICENSES/license.txt"
 sha256 = "7c1d19e1114b41fee8a27b8a575c5744e613484a3067a396c743245f21ed3352"
+
+[[skills]]
+id = "boardroom"
+source = "alirezarezvani-claude-skills"
+source_path = "c-level-agents/skills/boardroom/SKILL.md"
+path = "alirezarezvani-claude-skills/boardroom/SKILL.md"
+license = "MIT"
+license_file = "alirezarezvani-claude-skills/LICENSES/license.txt"
+sha256 = "f3fbe354cb7683637caee407d839c62c968482163ab0a0471a461c0c1e88206b"
 
 [[skills]]
 id = "book-to-skill"
@@ -354,6 +383,15 @@ path = "alirezarezvani-claude-skills/brand-guidelines/SKILL.md"
 license = "MIT"
 license_file = "alirezarezvani-claude-skills/LICENSES/license.txt"
 sha256 = "2c4bce4eaf394a76d6e0f81394c2b13078153408f56cf4b7fe46d3bbb88eacd2"
+
+[[skills]]
+id = "brief"
+source = "alirezarezvani-claude-skills"
+source_path = "c-level-agents/skills/brief/SKILL.md"
+path = "alirezarezvani-claude-skills/brief/SKILL.md"
+license = "MIT"
+license_file = "alirezarezvani-claude-skills/LICENSES/license.txt"
+sha256 = "8e883f382d96456a79cf444587507e6e22a55b70e8278eeed175cc7ef2790f6e"
 
 [[skills]]
 id = "browser-automation"
@@ -541,6 +579,15 @@ license_file = "alirezarezvani-claude-skills/LICENSES/license.txt"
 sha256 = "87a4193b3ad7445c0a8421c32e60be9237104a559570e01b35eff2b540e89252"
 
 [[skills]]
+id = "c-level-skills"
+source = "alirezarezvani-claude-skills"
+source_path = "c-level-advisor/skills/c-level-skills/SKILL.md"
+path = "alirezarezvani-claude-skills/c-level-skills/SKILL.md"
+license = "MIT"
+license_file = "alirezarezvani-claude-skills/LICENSES/license.txt"
+sha256 = "dcb4929a38868316b83d22098cf6d2a32fb590aed9c07a06e2ed7b8339197083"
+
+[[skills]]
 id = "caio-review"
 source = "alirezarezvani-claude-skills"
 source_path = "c-level-agents/skills/caio-review/SKILL.md"
@@ -664,6 +711,16 @@ license = "MIT"
 license_file = "alirezarezvani-claude-skills/LICENSES/license.txt"
 sha256 = "fb1b193f7efcfe36189cdfcb660294e1ed95413d92cab9dd084c0b417aaab3e0"
 files = ["assets/channel_data_template.md", "references/channel_anti_patterns.md", "references/channel_economics_canon.md", "references/cost_to_serve_canon.md", "scripts/channel_mix_optimizer.py", "scripts/channel_roi_analyzer.py", "scripts/cost_to_serve_calculator.py"]
+
+[[skills]]
+id = "chief-of-staff"
+source = "alirezarezvani-claude-skills"
+source_path = "c-level-advisor/skills/chief-of-staff/SKILL.md"
+path = "alirezarezvani-claude-skills/chief-of-staff/SKILL.md"
+license = "MIT"
+license_file = "alirezarezvani-claude-skills/LICENSES/license.txt"
+sha256 = "bc217ed8a294363fb61c895c54fcc70f55221f92aab16841df25c8ed8a05e9a5"
+files = ["references/routing-matrix.md", "references/synthesis-framework.md"]
 
 [[skills]]
 id = "chro-advisor"
@@ -948,6 +1005,16 @@ license_file = "alirezarezvani-claude-skills/LICENSES/license.txt"
 sha256 = "eddbe5788b8bf6806dabe308c0f8babdd7d0e79a04e848d112c016cccd05bc83"
 
 [[skills]]
+id = "context-engine"
+source = "alirezarezvani-claude-skills"
+source_path = "c-level-advisor/skills/context-engine/SKILL.md"
+path = "alirezarezvani-claude-skills/context-engine/SKILL.md"
+license = "MIT"
+license_file = "alirezarezvani-claude-skills/LICENSES/license.txt"
+sha256 = "c42fcd0b2cbd3bfded844a990a6b8129118b63b5208b49a4b08806954a74a1b8"
+files = ["references/anonymization-protocol.md"]
+
+[[skills]]
 id = "contract-and-proposal-writer"
 source = "alirezarezvani-claude-skills"
 source_path = "business-growth/skills/contract-and-proposal-writer/SKILL.md"
@@ -1034,6 +1101,25 @@ license_file = "alirezarezvani-claude-skills/LICENSES/license.txt"
 sha256 = "69bbc505a3716e361d43bbd1bee388bada5c92a561b140ef7fc364dcf95f3e99"
 
 [[skills]]
+id = "cross-eval"
+source = "alirezarezvani-claude-skills"
+source_path = "c-level-agents/skills/cross-eval/SKILL.md"
+path = "alirezarezvani-claude-skills/cross-eval/SKILL.md"
+license = "MIT"
+license_file = "alirezarezvani-claude-skills/LICENSES/license.txt"
+sha256 = "bf2222d1c936e5e18acb634a92c7d17f73f44088784b85157fd6d81fd807004f"
+
+[[skills]]
+id = "cs-onboard"
+source = "alirezarezvani-claude-skills"
+source_path = "c-level-advisor/skills/cs-onboard/SKILL.md"
+path = "alirezarezvani-claude-skills/cs-onboard/SKILL.md"
+license = "MIT"
+license_file = "alirezarezvani-claude-skills/LICENSES/license.txt"
+sha256 = "8867e51eb0fcdfd054039aa139a55db8565a4ed14f5e14fea976b504aa33c643"
+files = ["references/interview-guide.md", "templates/company-context-template.md"]
+
+[[skills]]
 id = "cto-advisor"
 source = "alirezarezvani-claude-skills"
 source_path = "c-level-advisor/skills/cto-advisor/SKILL.md"
@@ -1112,6 +1198,25 @@ sha256 = "39dcfb0d50983bbfaf2b25876ce5fe4fb23b2cf5b3d5469191de9c349743af20"
 files = ["assets/deal_intake_template.md", "references/contract_landmines.md", "references/deal_desk_canon.md", "references/discount_economics.md", "scripts/deal_scorer.py", "scripts/discount_approval_router.py", "scripts/terms_redliner.py"]
 
 [[skills]]
+id = "decide"
+source = "alirezarezvani-claude-skills"
+source_path = "c-level-agents/skills/decide/SKILL.md"
+path = "alirezarezvani-claude-skills/decide/SKILL.md"
+license = "MIT"
+license_file = "alirezarezvani-claude-skills/LICENSES/license.txt"
+sha256 = "cdc4cee218a662df55f403c5873f274eed258936e49921862f7a24ea154ffba0"
+
+[[skills]]
+id = "decision-logger"
+source = "alirezarezvani-claude-skills"
+source_path = "c-level-advisor/skills/decision-logger/SKILL.md"
+path = "alirezarezvani-claude-skills/decision-logger/SKILL.md"
+license = "MIT"
+license_file = "alirezarezvani-claude-skills/LICENSES/license.txt"
+sha256 = "f7f5902cd4970015389e52e0196274146a9d334a32e90137e6f480032414697d"
+files = ["scripts/decision_tracker.py", "templates/decision-entry.md"]
+
+[[skills]]
 id = "deep-learning-book"
 source = "alirezarezvani-claude-skills"
 source_path = "engineering/deep-learning-book/skills/deep-learning-book/SKILL.md"
@@ -1179,6 +1284,16 @@ license = "MIT"
 license_file = "alirezarezvani-claude-skills/LICENSES/license.txt"
 sha256 = "3696d4b85012b09c6ac7973e003203668d15ab282128e09bc8552e790121d766"
 files = ["assets/design_system_schema.json"]
+
+[[skills]]
+id = "docker-development"
+source = "alirezarezvani-claude-skills"
+source_path = "engineering/docker-development/skills/docker-development/SKILL.md"
+path = "alirezarezvani-claude-skills/docker-development/SKILL.md"
+license = "MIT"
+license_file = "alirezarezvani-claude-skills/LICENSES/license.txt"
+sha256 = "6471aa331d8a13d1b451dfcf5f1603b585d65b5fa70f99078604e778a7ab9f1c"
+files = ["scripts/compose_validator.py", "scripts/dockerfile_analyzer.py"]
 
 [[skills]]
 id = "dossier"
@@ -1364,6 +1479,15 @@ license_file = "alirezarezvani-claude-skills/LICENSES/license.txt"
 sha256 = "270d7d054f0f8755b91acfe5095e900c053f8959404f9ce25f7cd3884b6ce5e1"
 
 [[skills]]
+id = "execute"
+source = "alirezarezvani-claude-skills"
+source_path = "c-level-agents/skills/execute/SKILL.md"
+path = "alirezarezvani-claude-skills/execute/SKILL.md"
+license = "MIT"
+license_file = "alirezarezvani-claude-skills/LICENSES/license.txt"
+sha256 = "ad08d9ab3f7ff5b6b8639a0f1e65eefe8f483ede401bd4f77f6997bc6b3a4577"
+
+[[skills]]
 id = "executive-mentor"
 source = "alirezarezvani-claude-skills"
 source_path = "c-level-advisor/executive-mentor/skills/executive-mentor/SKILL.md"
@@ -1382,6 +1506,15 @@ license = "MIT"
 license_file = "alirezarezvani-claude-skills/LICENSES/license.txt"
 sha256 = "c686e366cd57d0c8e7458a10e9e5ad9348dd3132b7176af6d25015d9842b1793"
 files = ["references/experiment-playbook.md", "references/statistics-reference.md", "scripts/sample_size_calculator.py"]
+
+[[skills]]
+id = "extract"
+source = "alirezarezvani-claude-skills"
+source_path = "engineering-team/self-improving-agent/skills/extract/SKILL.md"
+path = "alirezarezvani-claude-skills/extract/SKILL.md"
+license = "MIT"
+license_file = "alirezarezvani-claude-skills/LICENSES/engineering-team-self-improving-agent-license.txt"
+sha256 = "eabdb4c6ffd2624a51108649623b29ccdc02d2b390305e65e2b7a981dc4d72dd"
 
 [[skills]]
 id = "fable-goal"
@@ -1488,6 +1621,15 @@ sha256 = "1deb39b71ff522db9c678f90f06e62e1d7d4bf5030f2f1b75bc664aa81f8256d"
 files = ["references/tool-types-guide.md", "scripts/tool_roi_estimator.py"]
 
 [[skills]]
+id = "freeze"
+source = "alirezarezvani-claude-skills"
+source_path = "c-level-agents/skills/freeze/SKILL.md"
+path = "alirezarezvani-claude-skills/freeze/SKILL.md"
+license = "MIT"
+license_file = "alirezarezvani-claude-skills/LICENSES/license.txt"
+sha256 = "61514fa19f56ec07eeabd9d9c1b66083a0f615121999cc461b3787104a534eb5"
+
+[[skills]]
 id = "full-page-screenshot"
 source = "alirezarezvani-claude-skills"
 source_path = "engineering/skills/full-page-screenshot/SKILL.md"
@@ -1542,6 +1684,16 @@ path = "alirezarezvani-claude-skills/generate/SKILL.md"
 license = "MIT"
 license_file = "alirezarezvani-claude-skills/LICENSES/engineering-team-playwright-pro-license.txt"
 sha256 = "995f6cf365634ab96d9124203e8f9d9a05997dbbd89786f217cd7cade884d367"
+
+[[skills]]
+id = "git-worktree-manager"
+source = "alirezarezvani-claude-skills"
+source_path = "engineering/skills/git-worktree-manager/SKILL.md"
+path = "alirezarezvani-claude-skills/git-worktree-manager/SKILL.md"
+license = "MIT"
+license_file = "alirezarezvani-claude-skills/LICENSES/license.txt"
+sha256 = "c972e7576a18df4180b92f83af3d5e375814a8d6133267acce44ec89709f4dac"
+files = ["README.md", "references/docker-compose-patterns.md", "references/port-allocation-strategy.md"]
 
 [[skills]]
 id = "google-workspace-cli"
@@ -1600,6 +1752,16 @@ license = "MIT"
 license_file = "alirezarezvani-claude-skills/LICENSES/license.txt"
 sha256 = "a4a2a63c2dec21e9b795b50f7a315c4af2e2b204a3ecc37dff39e1ace1c59e57"
 files = ["scripts/chart_analyzer.py", "scripts/values_validator.py"]
+
+[[skills]]
+id = "hivemind"
+source = "alirezarezvani-claude-skills"
+source_path = "engineering/hivemind/SKILL.md"
+path = "alirezarezvani-claude-skills/hivemind/SKILL.md"
+license = "Apache-2.0"
+license_file = "alirezarezvani-claude-skills/LICENSES/engineering-hivemind-license-txt.txt"
+sha256 = "fe5816a83b2c82e2cb575b681536ef18e0388955b9f88ff3851fcd1f6ddd7e8c"
+files = ["scripts/bench/grader-prompt.md", "scripts/bench/run-bench.mjs", "scripts/oc-aggregate.mjs", "scripts/oc-status.mjs", "scripts/oc-worker.mjs"]
 
 [[skills]]
 id = "hub-init"
@@ -1901,6 +2063,16 @@ sha256 = "e7893d31b5e32271d2e3399d5ff8686236812827ab10f6b6d575396915d9b368"
 files = ["references/cross-tool-setup.md", "references/ingest-workflow.md", "references/lint-workflow.md", "references/memex-principles.md", "references/obsidian-setup.md", "references/page-formats.md", "references/query-workflow.md", "references/wiki-schema.md", "scripts/wiki_search.py"]
 
 [[skills]]
+id = "local-seo-manager"
+source = "alirezarezvani-claude-skills"
+source_path = "marketing-skill/skills/local-seo-manager/SKILL.md"
+path = "alirezarezvani-claude-skills/local-seo-manager/SKILL.md"
+license = "MIT"
+license_file = "alirezarezvani-claude-skills/LICENSES/license.txt"
+sha256 = "6d93fc13f7e0bd4907722c5950aa0e7803e186d941405cec9bdccc553e027ecc"
+files = ["references/local-schema-types.md", "references/local-seo-checklist.md", "references/review-response-templates.md", "scripts/nap_checker.py", "scripts/schema_generator.py", "scripts/service_area_generator.py"]
+
+[[skills]]
 id = "loop"
 source = "alirezarezvani-claude-skills"
 source_path = "engineering/autoresearch-agent/skills/loop/SKILL.md"
@@ -2093,6 +2265,24 @@ sha256 = "77b420549bc6bcd1e871c62481d0f0183e9d1eb0b8aa88801c471002cf8453e5"
 files = ["assets/forgetting_policy_template.md", "assets/memory_design_spec.example.json", "assets/memory_engineer_worksheet.md", "references/forgetting_policy_design.md", "references/memory_control_and_governance.md", "references/memory_cost_canon.md", "references/what_to_keep.md", "scripts/forgetting_policy_linter.py", "scripts/memory_architecture_picker.py", "scripts/memory_cost_profiler.py", "scripts/memory_density_auditor.py"]
 
 [[skills]]
+id = "memory-review"
+source = "alirezarezvani-claude-skills"
+source_path = "engineering-team/self-improving-agent/skills/memory-review/SKILL.md"
+path = "alirezarezvani-claude-skills/memory-review/SKILL.md"
+license = "MIT"
+license_file = "alirezarezvani-claude-skills/LICENSES/engineering-team-self-improving-agent-license.txt"
+sha256 = "51caa5e982dff97a33b0c20ee63061425aca01e70e21bbfd41fa9915c183c6fd"
+
+[[skills]]
+id = "memory-status"
+source = "alirezarezvani-claude-skills"
+source_path = "engineering-team/self-improving-agent/skills/memory-status/SKILL.md"
+path = "alirezarezvani-claude-skills/memory-status/SKILL.md"
+license = "MIT"
+license_file = "alirezarezvani-claude-skills/LICENSES/engineering-team-self-improving-agent-license.txt"
+sha256 = "76a903945568faba3146a5523654d1a606f297bb704dc3d283e00a2780e87bc0"
+
+[[skills]]
 id = "merge"
 source = "alirezarezvani-claude-skills"
 source_path = "engineering/agenthub/skills/merge/SKILL.md"
@@ -2185,6 +2375,15 @@ path = "alirezarezvani-claude-skills/office-hours/SKILL.md"
 license = "MIT"
 license_file = "alirezarezvani-claude-skills/LICENSES/license.txt"
 sha256 = "250c36b8bf9f32964f2ca141a8c6956b6935eff739d8e7b61ba9062a28a0dd4a"
+
+[[skills]]
+id = "onboard"
+source = "alirezarezvani-claude-skills"
+source_path = "c-level-agents/skills/onboard/SKILL.md"
+path = "alirezarezvani-claude-skills/onboard/SKILL.md"
+license = "MIT"
+license_file = "alirezarezvani-claude-skills/LICENSES/license.txt"
+sha256 = "b34d69709fb6f8b11c8911715187a53eecf60df3afdd13a5edabf063c9cb9393"
 
 [[skills]]
 id = "onboarding-cro"
@@ -2281,6 +2480,15 @@ path = "alirezarezvani-claude-skills/popup-cro/SKILL.md"
 license = "MIT"
 license_file = "alirezarezvani-claude-skills/LICENSES/license.txt"
 sha256 = "c8af49f0c29b87c80b9e2d2f266f410d989a21ecee29b584e59e5e89a0d2f65f"
+
+[[skills]]
+id = "post-mortem"
+source = "alirezarezvani-claude-skills"
+source_path = "c-level-agents/skills/post-mortem/SKILL.md"
+path = "alirezarezvani-claude-skills/post-mortem/SKILL.md"
+license = "MIT"
+license_file = "alirezarezvani-claude-skills/LICENSES/license.txt"
+sha256 = "d10aca55ecb042fd690a92c6a0c9b1b9257f19ab26d25628c6b4957fc6b530f3"
 
 [[skills]]
 id = "postmortem"
@@ -2420,6 +2628,15 @@ license_file = "alirezarezvani-claude-skills/LICENSES/license.txt"
 sha256 = "0851f7c8ab34a21d52a27ee1c7993ea0b37e670b7a51293939c6ad82b6102e22"
 
 [[skills]]
+id = "promote"
+source = "alirezarezvani-claude-skills"
+source_path = "engineering-team/self-improving-agent/skills/promote/SKILL.md"
+path = "alirezarezvani-claude-skills/promote/SKILL.md"
+license = "MIT"
+license_file = "alirezarezvani-claude-skills/LICENSES/engineering-team-self-improving-agent-license.txt"
+sha256 = "ac90d59f83c7fcb4a3e63376d6546aa17f5d134f204bc08881a0f7fff4777ade"
+
+[[skills]]
 id = "prompt-engineer-toolkit"
 source = "alirezarezvani-claude-skills"
 source_path = "marketing-skill/skills/prompt-engineer-toolkit/SKILL.md"
@@ -2486,6 +2703,15 @@ license = "MIT"
 license_file = "alirezarezvani-claude-skills/LICENSES/license.txt"
 sha256 = "8b677b83f5f9ad0c1f4a1dbe0691a1193c41a531fb20381872a8be5f5f0fd355"
 files = ["references/21cfr11-compliance-guide.md", "references/document-control-procedures.md"]
+
+[[skills]]
+id = "ra-qm-skills"
+source = "alirezarezvani-claude-skills"
+source_path = "ra-qm-team/skills/ra-qm-skills/SKILL.md"
+path = "alirezarezvani-claude-skills/ra-qm-skills/SKILL.md"
+license = "MIT"
+license_file = "alirezarezvani-claude-skills/LICENSES/license.txt"
+sha256 = "0567bc2c021733109eb87b227069bdf1070c4311470ab92fbf7c4375edebb308"
 
 [[skills]]
 id = "ra-qm-team-compliance-team-eu-ai-act-skills-eu-ai-act-specialist"
@@ -2576,6 +2802,15 @@ license = "MIT"
 license_file = "alirezarezvani-claude-skills/LICENSES/license.txt"
 sha256 = "e2e4fa920a82cbc24f437fc5e2a8a1b1a219c61b81dbc5a5d9f7c86e56b08b4c"
 files = ["references/eu-mdr-submission-guide.md", "references/fda-submission-guide.md", "references/global-regulatory-pathways.md", "references/iso-regulatory-requirements.md", "scripts/regulatory_tracker.py"]
+
+[[skills]]
+id = "remember"
+source = "alirezarezvani-claude-skills"
+source_path = "engineering-team/self-improving-agent/skills/remember/SKILL.md"
+path = "alirezarezvani-claude-skills/remember/SKILL.md"
+license = "MIT"
+license_file = "alirezarezvani-claude-skills/LICENSES/engineering-team-self-improving-agent-license.txt"
+sha256 = "7d596b07a8791019c54bd9c32e4ac8116604971aecef3e3084ff4b78b54e9a3f"
 
 [[skills]]
 id = "research"
@@ -2764,6 +2999,15 @@ license_file = "alirezarezvani-claude-skills/LICENSES/license.txt"
 sha256 = "0396394941477744e8a46f7653d2af20d4ea8ba325469f039244bba986c72642"
 
 [[skills]]
+id = "self-improving-agent"
+source = "alirezarezvani-claude-skills"
+source_path = "engineering-team/self-improving-agent/skills/self-improving-agent/SKILL.md"
+path = "alirezarezvani-claude-skills/self-improving-agent/SKILL.md"
+license = "MIT"
+license_file = "alirezarezvani-claude-skills/LICENSES/engineering-team-self-improving-agent-license.txt"
+sha256 = "c259260503478672ee829b7dcc1ef5d1937875db3e286e9bfda7013d235e7d60"
+
+[[skills]]
 id = "senior-architect"
 source = "alirezarezvani-claude-skills"
 source_path = "engineering-team/skills/senior-architect/SKILL.md"
@@ -2822,6 +3066,16 @@ license = "MIT"
 license_file = "alirezarezvani-claude-skills/LICENSES/license.txt"
 sha256 = "886e83d1713b473f01091954683d7f008cefd1100d32114ccaf85368fb67a9a5"
 files = ["profiles/vite-spa.json", "references/composition_map.md", "references/forcing_questions.md", "references/frontend_best_practices.md", "references/nextjs_optimization_guide.md", "references/react_patterns.md", "scripts/frontend_decision_engine.py"]
+
+[[skills]]
+id = "senior-fullstack"
+source = "alirezarezvani-claude-skills"
+source_path = "engineering-team/skills/senior-fullstack/SKILL.md"
+path = "alirezarezvani-claude-skills/senior-fullstack/SKILL.md"
+license = "MIT"
+license_file = "alirezarezvani-claude-skills/LICENSES/license.txt"
+sha256 = "fa3567f3bd96e76803a0125d8e949937a0a477f292c675920d43abcb7c2a84c5"
+files = ["profiles/saas-startup.json", "references/architecture_patterns.md", "references/composition_map.md", "references/development_workflows.md", "references/forcing_questions.md", "references/tech_stack_guide.md", "scripts/fullstack_decision_engine.py"]
 
 [[skills]]
 id = "senior-ml-engineer"
@@ -2940,6 +3194,15 @@ license = "MIT"
 license_file = "alirezarezvani-claude-skills/LICENSES/license.txt"
 sha256 = "a62efa4e6d596e442083543f86a6bfc5724b0d06a4921d9a31bbc1c5d12e23e0"
 files = ["scripts/quality_scorer.py", "scripts/script_tester.py", "scripts/security_scorer.py", "scripts/skill_validator.py"]
+
+[[skills]]
+id = "skillopt-sleep"
+source = "alirezarezvani-claude-skills"
+source_path = "engineering/skillopt-sleep/skills/skillopt-sleep/SKILL.md"
+path = "alirezarezvani-claude-skills/skillopt-sleep/SKILL.md"
+license = "MIT"
+license_file = "alirezarezvani-claude-skills/LICENSES/engineering-skillopt-sleep-license.txt"
+sha256 = "34a226425186dca65cb1f8dcceaaae0e22c2db5ecf184fa3e2b7f7391601891c"
 
 [[skills]]
 id = "snowflake-development"
@@ -10243,14 +10506,14 @@ sha256 = "6e22cc54cb02a5e98ae42d06d9d7292db0c1b43894831b32879beb0166b2aea7"
 [[skipped]]
 source = "alirezarezvani-claude-skills"
 source_path = ".gemini/skills/README/SKILL.md"
-reason = "unreadable"
-detail = "SKILL.md is not a regular file"
+reason = "symlink-not-followed"
+detail = "SKILL.md is a symbolic link"
 
 [[skipped]]
 source = "alirezarezvani-claude-skills"
 source_path = ".gemini/skills/TEMPLATE/SKILL.md"
-reason = "unreadable"
-detail = "SKILL.md is not a regular file"
+reason = "symlink-not-followed"
+detail = "SKILL.md is a symbolic link"
 
 [[skipped]]
 source = "alirezarezvani-claude-skills"
@@ -10633,8 +10896,8 @@ detail = "same name as a main-tree skill"
 [[skipped]]
 source = "alirezarezvani-claude-skills"
 source_path = ".gemini/skills/changelog/SKILL.md"
-reason = "unreadable"
-detail = "SKILL.md is not a regular file"
+reason = "symlink-not-followed"
+detail = "SKILL.md is a symbolic link"
 
 [[skipped]]
 source = "alirezarezvani-claude-skills"
@@ -10651,8 +10914,8 @@ detail = "same name as a main-tree skill"
 [[skipped]]
 source = "alirezarezvani-claude-skills"
 source_path = ".gemini/skills/chaos-experiment/SKILL.md"
-reason = "unreadable"
-detail = "SKILL.md is not a regular file"
+reason = "symlink-not-followed"
+detail = "SKILL.md is a symbolic link"
 
 [[skipped]]
 source = "alirezarezvani-claude-skills"
@@ -10729,26 +10992,26 @@ detail = "same name as a main-tree skill"
 [[skipped]]
 source = "alirezarezvani-claude-skills"
 source_path = ".gemini/skills/cmd-a11y-audit/SKILL.md"
-reason = "unreadable"
-detail = "SKILL.md is not a regular file"
+reason = "symlink-not-followed"
+detail = "SKILL.md is a symbolic link"
 
 [[skipped]]
 source = "alirezarezvani-claude-skills"
 source_path = ".gemini/skills/cmd-code-to-prd/SKILL.md"
-reason = "unreadable"
-detail = "SKILL.md is not a regular file"
+reason = "symlink-not-followed"
+detail = "SKILL.md is a symbolic link"
 
 [[skipped]]
 source = "alirezarezvani-claude-skills"
 source_path = ".gemini/skills/cmd-cs-aeo/SKILL.md"
-reason = "unreadable"
-detail = "SKILL.md is not a regular file"
+reason = "symlink-not-followed"
+detail = "SKILL.md is a symbolic link"
 
 [[skipped]]
 source = "alirezarezvani-claude-skills"
 source_path = ".gemini/skills/cmd-focused-fix/SKILL.md"
-reason = "unreadable"
-detail = "SKILL.md is not a regular file"
+reason = "symlink-not-followed"
+detail = "SKILL.md is a symbolic link"
 
 [[skipped]]
 source = "alirezarezvani-claude-skills"
@@ -10831,8 +11094,8 @@ detail = "same name as a main-tree skill"
 [[skipped]]
 source = "alirezarezvani-claude-skills"
 source_path = ".gemini/skills/competitive-matrix/SKILL.md"
-reason = "unreadable"
-detail = "SKILL.md is not a regular file"
+reason = "symlink-not-followed"
+detail = "SKILL.md is a symbolic link"
 
 [[skipped]]
 source = "alirezarezvani-claude-skills"
@@ -10849,8 +11112,8 @@ detail = "same name as a main-tree skill"
 [[skipped]]
 source = "alirezarezvani-claude-skills"
 source_path = ".gemini/skills/compliance-os-bundle/SKILL.md"
-reason = "unreadable"
-detail = "SKILL.md is not a regular file"
+reason = "symlink-not-followed"
+detail = "SKILL.md is a symbolic link"
 
 [[skipped]]
 source = "alirezarezvani-claude-skills"
@@ -10885,8 +11148,8 @@ detail = "same name as a main-tree skill"
 [[skipped]]
 source = "alirezarezvani-claude-skills"
 source_path = ".gemini/skills/content-strategist/SKILL.md"
-reason = "unreadable"
-detail = "SKILL.md is not a regular file"
+reason = "symlink-not-followed"
+detail = "SKILL.md is a symbolic link"
 
 [[skipped]]
 source = "alirezarezvani-claude-skills"
@@ -10963,104 +11226,104 @@ detail = "same name as a main-tree skill"
 [[skipped]]
 source = "alirezarezvani-claude-skills"
 source_path = ".gemini/skills/cs-aeo/SKILL.md"
-reason = "unreadable"
-detail = "SKILL.md is not a regular file"
+reason = "symlink-not-followed"
+detail = "SKILL.md is a symbolic link"
 
 [[skipped]]
 source = "alirezarezvani-claude-skills"
 source_path = ".gemini/skills/cs-agile-product-owner/SKILL.md"
-reason = "unreadable"
-detail = "SKILL.md is not a regular file"
+reason = "symlink-not-followed"
+detail = "SKILL.md is a symbolic link"
 
 [[skipped]]
 source = "alirezarezvani-claude-skills"
 source_path = ".gemini/skills/cs-backend-engineer/SKILL.md"
-reason = "unreadable"
-detail = "SKILL.md is not a regular file"
+reason = "symlink-not-followed"
+detail = "SKILL.md is a symbolic link"
 
 [[skipped]]
 source = "alirezarezvani-claude-skills"
 source_path = ".gemini/skills/cs-backend-review/SKILL.md"
-reason = "unreadable"
-detail = "SKILL.md is not a regular file"
+reason = "symlink-not-followed"
+detail = "SKILL.md is a symbolic link"
 
 [[skipped]]
 source = "alirezarezvani-claude-skills"
 source_path = ".gemini/skills/cs-ceo-advisor/SKILL.md"
-reason = "unreadable"
-detail = "SKILL.md is not a regular file"
+reason = "symlink-not-followed"
+detail = "SKILL.md is a symbolic link"
 
 [[skipped]]
 source = "alirezarezvani-claude-skills"
 source_path = ".gemini/skills/cs-content-creator/SKILL.md"
-reason = "unreadable"
-detail = "SKILL.md is not a regular file"
+reason = "symlink-not-followed"
+detail = "SKILL.md is a symbolic link"
 
 [[skipped]]
 source = "alirezarezvani-claude-skills"
 source_path = ".gemini/skills/cs-cto-advisor/SKILL.md"
-reason = "unreadable"
-detail = "SKILL.md is not a regular file"
+reason = "symlink-not-followed"
+detail = "SKILL.md is a symbolic link"
 
 [[skipped]]
 source = "alirezarezvani-claude-skills"
 source_path = ".gemini/skills/cs-demand-gen-specialist/SKILL.md"
-reason = "unreadable"
-detail = "SKILL.md is not a regular file"
+reason = "symlink-not-followed"
+detail = "SKILL.md is a symbolic link"
 
 [[skipped]]
 source = "alirezarezvani-claude-skills"
 source_path = ".gemini/skills/cs-engineer-grill/SKILL.md"
-reason = "unreadable"
-detail = "SKILL.md is not a regular file"
+reason = "symlink-not-followed"
+detail = "SKILL.md is a symbolic link"
 
 [[skipped]]
 source = "alirezarezvani-claude-skills"
 source_path = ".gemini/skills/cs-engineering-lead/SKILL.md"
-reason = "unreadable"
-detail = "SKILL.md is not a regular file"
+reason = "symlink-not-followed"
+detail = "SKILL.md is a symbolic link"
 
 [[skipped]]
 source = "alirezarezvani-claude-skills"
 source_path = ".gemini/skills/cs-financial-analyst/SKILL.md"
-reason = "unreadable"
-detail = "SKILL.md is not a regular file"
+reason = "symlink-not-followed"
+detail = "SKILL.md is a symbolic link"
 
 [[skipped]]
 source = "alirezarezvani-claude-skills"
 source_path = ".gemini/skills/cs-frontend-engineer/SKILL.md"
-reason = "unreadable"
-detail = "SKILL.md is not a regular file"
+reason = "symlink-not-followed"
+detail = "SKILL.md is a symbolic link"
 
 [[skipped]]
 source = "alirezarezvani-claude-skills"
 source_path = ".gemini/skills/cs-frontend-review/SKILL.md"
-reason = "unreadable"
-detail = "SKILL.md is not a regular file"
+reason = "symlink-not-followed"
+detail = "SKILL.md is a symbolic link"
 
 [[skipped]]
 source = "alirezarezvani-claude-skills"
 source_path = ".gemini/skills/cs-fullstack-engineer/SKILL.md"
-reason = "unreadable"
-detail = "SKILL.md is not a regular file"
+reason = "symlink-not-followed"
+detail = "SKILL.md is a symbolic link"
 
 [[skipped]]
 source = "alirezarezvani-claude-skills"
 source_path = ".gemini/skills/cs-fullstack-review/SKILL.md"
-reason = "unreadable"
-detail = "SKILL.md is not a regular file"
+reason = "symlink-not-followed"
+detail = "SKILL.md is a symbolic link"
 
 [[skipped]]
 source = "alirezarezvani-claude-skills"
 source_path = ".gemini/skills/cs-growth-strategist/SKILL.md"
-reason = "unreadable"
-detail = "SKILL.md is not a regular file"
+reason = "symlink-not-followed"
+detail = "SKILL.md is a symbolic link"
 
 [[skipped]]
 source = "alirezarezvani-claude-skills"
 source_path = ".gemini/skills/cs-karpathy-reviewer/SKILL.md"
-reason = "unreadable"
-detail = "SKILL.md is not a regular file"
+reason = "symlink-not-followed"
+detail = "SKILL.md is a symbolic link"
 
 [[skipped]]
 source = "alirezarezvani-claude-skills"
@@ -11071,80 +11334,80 @@ detail = "same name as a main-tree skill"
 [[skipped]]
 source = "alirezarezvani-claude-skills"
 source_path = ".gemini/skills/cs-product-analyst/SKILL.md"
-reason = "unreadable"
-detail = "SKILL.md is not a regular file"
+reason = "symlink-not-followed"
+detail = "SKILL.md is a symbolic link"
 
 [[skipped]]
 source = "alirezarezvani-claude-skills"
 source_path = ".gemini/skills/cs-product-manager/SKILL.md"
-reason = "unreadable"
-detail = "SKILL.md is not a regular file"
+reason = "symlink-not-followed"
+detail = "SKILL.md is a symbolic link"
 
 [[skipped]]
 source = "alirezarezvani-claude-skills"
 source_path = ".gemini/skills/cs-product-strategist/SKILL.md"
-reason = "unreadable"
-detail = "SKILL.md is not a regular file"
+reason = "symlink-not-followed"
+detail = "SKILL.md is a symbolic link"
 
 [[skipped]]
 source = "alirezarezvani-claude-skills"
 source_path = ".gemini/skills/cs-project-manager/SKILL.md"
-reason = "unreadable"
-detail = "SKILL.md is not a regular file"
+reason = "symlink-not-followed"
+detail = "SKILL.md is a symbolic link"
 
 [[skipped]]
 source = "alirezarezvani-claude-skills"
 source_path = ".gemini/skills/cs-quality-regulatory/SKILL.md"
-reason = "unreadable"
-detail = "SKILL.md is not a regular file"
+reason = "symlink-not-followed"
+detail = "SKILL.md is a symbolic link"
 
 [[skipped]]
 source = "alirezarezvani-claude-skills"
 source_path = ".gemini/skills/cs-senior-engineer/SKILL.md"
-reason = "unreadable"
-detail = "SKILL.md is not a regular file"
+reason = "symlink-not-followed"
+detail = "SKILL.md is a symbolic link"
 
 [[skipped]]
 source = "alirezarezvani-claude-skills"
 source_path = ".gemini/skills/cs-ux-researcher/SKILL.md"
-reason = "unreadable"
-detail = "SKILL.md is not a regular file"
+reason = "symlink-not-followed"
+detail = "SKILL.md is a symbolic link"
 
 [[skipped]]
 source = "alirezarezvani-claude-skills"
 source_path = ".gemini/skills/cs-webinar-marketer/SKILL.md"
-reason = "unreadable"
-detail = "SKILL.md is not a regular file"
+reason = "symlink-not-followed"
+detail = "SKILL.md is a symbolic link"
 
 [[skipped]]
 source = "alirezarezvani-claude-skills"
 source_path = ".gemini/skills/cs-webinar/SKILL.md"
-reason = "unreadable"
-detail = "SKILL.md is not a regular file"
+reason = "symlink-not-followed"
+detail = "SKILL.md is a symbolic link"
 
 [[skipped]]
 source = "alirezarezvani-claude-skills"
 source_path = ".gemini/skills/cs-wiki-ingestor/SKILL.md"
-reason = "unreadable"
-detail = "SKILL.md is not a regular file"
+reason = "symlink-not-followed"
+detail = "SKILL.md is a symbolic link"
 
 [[skipped]]
 source = "alirezarezvani-claude-skills"
 source_path = ".gemini/skills/cs-wiki-librarian/SKILL.md"
-reason = "unreadable"
-detail = "SKILL.md is not a regular file"
+reason = "symlink-not-followed"
+detail = "SKILL.md is a symbolic link"
 
 [[skipped]]
 source = "alirezarezvani-claude-skills"
 source_path = ".gemini/skills/cs-wiki-linter/SKILL.md"
-reason = "unreadable"
-detail = "SKILL.md is not a regular file"
+reason = "symlink-not-followed"
+detail = "SKILL.md is a symbolic link"
 
 [[skipped]]
 source = "alirezarezvani-claude-skills"
 source_path = ".gemini/skills/cs-workspace-admin/SKILL.md"
-reason = "unreadable"
-detail = "SKILL.md is not a regular file"
+reason = "symlink-not-followed"
+detail = "SKILL.md is a symbolic link"
 
 [[skipped]]
 source = "alirezarezvani-claude-skills"
@@ -11245,8 +11508,8 @@ detail = "same name as a main-tree skill"
 [[skipped]]
 source = "alirezarezvani-claude-skills"
 source_path = ".gemini/skills/devops-engineer/SKILL.md"
-reason = "unreadable"
-detail = "SKILL.md is not a regular file"
+reason = "symlink-not-followed"
+detail = "SKILL.md is a symbolic link"
 
 [[skipped]]
 source = "alirezarezvani-claude-skills"
@@ -11365,8 +11628,8 @@ detail = "same name as a main-tree skill"
 [[skipped]]
 source = "alirezarezvani-claude-skills"
 source_path = ".gemini/skills/finance-lead/SKILL.md"
-reason = "unreadable"
-detail = "SKILL.md is not a regular file"
+reason = "symlink-not-followed"
+detail = "SKILL.md is a symbolic link"
 
 [[skipped]]
 source = "alirezarezvani-claude-skills"
@@ -11383,8 +11646,8 @@ detail = "same name as a main-tree skill"
 [[skipped]]
 source = "alirezarezvani-claude-skills"
 source_path = ".gemini/skills/financial-health/SKILL.md"
-reason = "unreadable"
-detail = "SKILL.md is not a regular file"
+reason = "symlink-not-followed"
+detail = "SKILL.md is a symbolic link"
 
 [[skipped]]
 source = "alirezarezvani-claude-skills"
@@ -11395,8 +11658,8 @@ detail = "same name as a main-tree skill"
 [[skipped]]
 source = "alirezarezvani-claude-skills"
 source_path = ".gemini/skills/flag-cleanup/SKILL.md"
-reason = "unreadable"
-detail = "SKILL.md is not a regular file"
+reason = "symlink-not-followed"
+detail = "SKILL.md is a symbolic link"
 
 [[skipped]]
 source = "alirezarezvani-claude-skills"
@@ -11491,8 +11754,8 @@ detail = "same name as a main-tree skill"
 [[skipped]]
 source = "alirezarezvani-claude-skills"
 source_path = ".gemini/skills/google-workspace/SKILL.md"
-reason = "unreadable"
-detail = "SKILL.md is not a regular file"
+reason = "symlink-not-followed"
+detail = "SKILL.md is a symbolic link"
 
 [[skipped]]
 source = "alirezarezvani-claude-skills"
@@ -11521,8 +11784,8 @@ detail = "same name as a main-tree skill"
 [[skipped]]
 source = "alirezarezvani-claude-skills"
 source_path = ".gemini/skills/growth-marketer/SKILL.md"
-reason = "unreadable"
-detail = "SKILL.md is not a regular file"
+reason = "symlink-not-followed"
+detail = "SKILL.md is a symbolic link"
 
 [[skipped]]
 source = "alirezarezvani-claude-skills"
@@ -11659,8 +11922,8 @@ detail = "same name as a main-tree skill"
 [[skipped]]
 source = "alirezarezvani-claude-skills"
 source_path = ".gemini/skills/karpathy-check/SKILL.md"
-reason = "unreadable"
-detail = "SKILL.md is not a regular file"
+reason = "symlink-not-followed"
+detail = "SKILL.md is a symbolic link"
 
 [[skipped]]
 source = "alirezarezvani-claude-skills"
@@ -11947,8 +12210,8 @@ detail = "same name as a main-tree skill"
 [[skipped]]
 source = "alirezarezvani-claude-skills"
 source_path = ".gemini/skills/okr/SKILL.md"
-reason = "unreadable"
-detail = "SKILL.md is not a regular file"
+reason = "symlink-not-followed"
+detail = "SKILL.md is a symbolic link"
 
 [[skipped]]
 source = "alirezarezvani-claude-skills"
@@ -11965,8 +12228,8 @@ detail = "same name as a main-tree skill"
 [[skipped]]
 source = "alirezarezvani-claude-skills"
 source_path = ".gemini/skills/operator-audit/SKILL.md"
-reason = "unreadable"
-detail = "SKILL.md is not a regular file"
+reason = "symlink-not-followed"
+detail = "SKILL.md is a symbolic link"
 
 [[skipped]]
 source = "alirezarezvani-claude-skills"
@@ -12013,20 +12276,20 @@ detail = "same name as a main-tree skill"
 [[skipped]]
 source = "alirezarezvani-claude-skills"
 source_path = ".gemini/skills/persona/SKILL.md"
-reason = "unreadable"
-detail = "SKILL.md is not a regular file"
+reason = "symlink-not-followed"
+detail = "SKILL.md is a symbolic link"
 
 [[skipped]]
 source = "alirezarezvani-claude-skills"
 source_path = ".gemini/skills/pipeline/SKILL.md"
-reason = "unreadable"
-detail = "SKILL.md is not a regular file"
+reason = "symlink-not-followed"
+detail = "SKILL.md is a symbolic link"
 
 [[skipped]]
 source = "alirezarezvani-claude-skills"
 source_path = ".gemini/skills/plugin-audit/SKILL.md"
-reason = "unreadable"
-detail = "SKILL.md is not a regular file"
+reason = "symlink-not-followed"
+detail = "SKILL.md is a symbolic link"
 
 [[skipped]]
 source = "alirezarezvani-claude-skills"
@@ -12061,8 +12324,8 @@ detail = "same name as a main-tree skill"
 [[skipped]]
 source = "alirezarezvani-claude-skills"
 source_path = ".gemini/skills/prd/SKILL.md"
-reason = "unreadable"
-detail = "SKILL.md is not a regular file"
+reason = "symlink-not-followed"
+detail = "SKILL.md is a symbolic link"
 
 [[skipped]]
 source = "alirezarezvani-claude-skills"
@@ -12109,8 +12372,8 @@ detail = "same name as a main-tree skill"
 [[skipped]]
 source = "alirezarezvani-claude-skills"
 source_path = ".gemini/skills/product-manager/SKILL.md"
-reason = "unreadable"
-detail = "SKILL.md is not a regular file"
+reason = "symlink-not-followed"
+detail = "SKILL.md is a symbolic link"
 
 [[skipped]]
 source = "alirezarezvani-claude-skills"
@@ -12139,8 +12402,8 @@ detail = "same name as a main-tree skill"
 [[skipped]]
 source = "alirezarezvani-claude-skills"
 source_path = ".gemini/skills/project-health/SKILL.md"
-reason = "unreadable"
-detail = "SKILL.md is not a regular file"
+reason = "symlink-not-followed"
+detail = "SKILL.md is a symbolic link"
 
 [[skipped]]
 source = "alirezarezvani-claude-skills"
@@ -12259,8 +12522,8 @@ detail = "same name as a main-tree skill"
 [[skipped]]
 source = "alirezarezvani-claude-skills"
 source_path = ".gemini/skills/research-bundle/SKILL.md"
-reason = "unreadable"
-detail = "SKILL.md is not a regular file"
+reason = "symlink-not-followed"
+detail = "SKILL.md is a symbolic link"
 
 [[skipped]]
 source = "alirezarezvani-claude-skills"
@@ -12283,8 +12546,8 @@ detail = "same name as a main-tree skill"
 [[skipped]]
 source = "alirezarezvani-claude-skills"
 source_path = ".gemini/skills/retro/SKILL.md"
-reason = "unreadable"
-detail = "SKILL.md is not a regular file"
+reason = "symlink-not-followed"
+detail = "SKILL.md is a symbolic link"
 
 [[skipped]]
 source = "alirezarezvani-claude-skills"
@@ -12301,8 +12564,8 @@ detail = "same name as a main-tree skill"
 [[skipped]]
 source = "alirezarezvani-claude-skills"
 source_path = ".gemini/skills/rice/SKILL.md"
-reason = "unreadable"
-detail = "SKILL.md is not a regular file"
+reason = "symlink-not-followed"
+detail = "SKILL.md is a symbolic link"
 
 [[skipped]]
 source = "alirezarezvani-claude-skills"
@@ -12343,8 +12606,8 @@ detail = "same name as a main-tree skill"
 [[skipped]]
 source = "alirezarezvani-claude-skills"
 source_path = ".gemini/skills/saas-health/SKILL.md"
-reason = "unreadable"
-detail = "SKILL.md is not a regular file"
+reason = "symlink-not-followed"
+detail = "SKILL.md is a symbolic link"
 
 [[skipped]]
 source = "alirezarezvani-claude-skills"
@@ -12511,8 +12774,8 @@ detail = "same name as a main-tree skill"
 [[skipped]]
 source = "alirezarezvani-claude-skills"
 source_path = ".gemini/skills/seo-auditor/SKILL.md"
-reason = "unreadable"
-detail = "SKILL.md is not a regular file"
+reason = "symlink-not-followed"
+detail = "SKILL.md is a symbolic link"
 
 [[skipped]]
 source = "alirezarezvani-claude-skills"
@@ -12565,86 +12828,86 @@ detail = "same name as a main-tree skill"
 [[skipped]]
 source = "alirezarezvani-claude-skills"
 source_path = ".gemini/skills/skills-arquiteto-de-empresa/SKILL.md"
-reason = "unreadable"
-detail = "SKILL.md is not a regular file"
+reason = "symlink-not-followed"
+detail = "SKILL.md is a symbolic link"
 
 [[skipped]]
 source = "alirezarezvani-claude-skills"
 source_path = ".gemini/skills/skills-chaos-engineering/SKILL.md"
-reason = "unreadable"
-detail = "SKILL.md is not a regular file"
+reason = "symlink-not-followed"
+detail = "SKILL.md is a symbolic link"
 
 [[skipped]]
 source = "alirezarezvani-claude-skills"
 source_path = ".gemini/skills/skills-chief-ai-officer-advisor/SKILL.md"
-reason = "unreadable"
-detail = "SKILL.md is not a regular file"
+reason = "symlink-not-followed"
+detail = "SKILL.md is a symbolic link"
 
 [[skipped]]
 source = "alirezarezvani-claude-skills"
 source_path = ".gemini/skills/skills-chief-customer-officer-advisor/SKILL.md"
-reason = "unreadable"
-detail = "SKILL.md is not a regular file"
+reason = "symlink-not-followed"
+detail = "SKILL.md is a symbolic link"
 
 [[skipped]]
 source = "alirezarezvani-claude-skills"
 source_path = ".gemini/skills/skills-chief-data-officer-advisor/SKILL.md"
-reason = "unreadable"
-detail = "SKILL.md is not a regular file"
+reason = "symlink-not-followed"
+detail = "SKILL.md is a symbolic link"
 
 [[skipped]]
 source = "alirezarezvani-claude-skills"
 source_path = ".gemini/skills/skills-eu-ai-act-specialist/SKILL.md"
-reason = "unreadable"
-detail = "SKILL.md is not a regular file"
+reason = "symlink-not-followed"
+detail = "SKILL.md is a symbolic link"
 
 [[skipped]]
 source = "alirezarezvani-claude-skills"
 source_path = ".gemini/skills/skills-feature-flags-architect/SKILL.md"
-reason = "unreadable"
-detail = "SKILL.md is not a regular file"
+reason = "symlink-not-followed"
+detail = "SKILL.md is a symbolic link"
 
 [[skipped]]
 source = "alirezarezvani-claude-skills"
 source_path = ".gemini/skills/skills-general-counsel-advisor/SKILL.md"
-reason = "unreadable"
-detail = "SKILL.md is not a regular file"
+reason = "symlink-not-followed"
+detail = "SKILL.md is a symbolic link"
 
 [[skipped]]
 source = "alirezarezvani-claude-skills"
 source_path = ".gemini/skills/skills-handoff/SKILL.md"
-reason = "unreadable"
-detail = "SKILL.md is not a regular file"
+reason = "symlink-not-followed"
+detail = "SKILL.md is a symbolic link"
 
 [[skipped]]
 source = "alirezarezvani-claude-skills"
 source_path = ".gemini/skills/skills-iso42001-specialist/SKILL.md"
-reason = "unreadable"
-detail = "SKILL.md is not a regular file"
+reason = "symlink-not-followed"
+detail = "SKILL.md is a symbolic link"
 
 [[skipped]]
 source = "alirezarezvani-claude-skills"
 source_path = ".gemini/skills/skills-kubernetes-operator/SKILL.md"
-reason = "unreadable"
-detail = "SKILL.md is not a regular file"
+reason = "symlink-not-followed"
+detail = "SKILL.md is a symbolic link"
 
 [[skipped]]
 source = "alirezarezvani-claude-skills"
 source_path = ".gemini/skills/skills-run/SKILL.md"
-reason = "unreadable"
-detail = "SKILL.md is not a regular file"
+reason = "symlink-not-followed"
+detail = "SKILL.md is a symbolic link"
 
 [[skipped]]
 source = "alirezarezvani-claude-skills"
 source_path = ".gemini/skills/skills-slo-architect/SKILL.md"
-reason = "unreadable"
-detail = "SKILL.md is not a regular file"
+reason = "symlink-not-followed"
+detail = "SKILL.md is a symbolic link"
 
 [[skipped]]
 source = "alirezarezvani-claude-skills"
 source_path = ".gemini/skills/skills-vpe-advisor/SKILL.md"
-reason = "unreadable"
-detail = "SKILL.md is not a regular file"
+reason = "symlink-not-followed"
+detail = "SKILL.md is a symbolic link"
 
 [[skipped]]
 source = "alirezarezvani-claude-skills"
@@ -12655,8 +12918,8 @@ detail = "same name as a main-tree skill"
 [[skipped]]
 source = "alirezarezvani-claude-skills"
 source_path = ".gemini/skills/slo-design/SKILL.md"
-reason = "unreadable"
-detail = "SKILL.md is not a regular file"
+reason = "symlink-not-followed"
+detail = "SKILL.md is a symbolic link"
 
 [[skipped]]
 source = "alirezarezvani-claude-skills"
@@ -12697,8 +12960,8 @@ detail = "same name as a main-tree skill"
 [[skipped]]
 source = "alirezarezvani-claude-skills"
 source_path = ".gemini/skills/solo-founder/SKILL.md"
-reason = "unreadable"
-detail = "SKILL.md is not a regular file"
+reason = "symlink-not-followed"
+detail = "SKILL.md is a symbolic link"
 
 [[skipped]]
 source = "alirezarezvani-claude-skills"
@@ -12721,14 +12984,14 @@ detail = "same name as a main-tree skill"
 [[skipped]]
 source = "alirezarezvani-claude-skills"
 source_path = ".gemini/skills/sprint-health/SKILL.md"
-reason = "unreadable"
-detail = "SKILL.md is not a regular file"
+reason = "symlink-not-followed"
+detail = "SKILL.md is a symbolic link"
 
 [[skipped]]
 source = "alirezarezvani-claude-skills"
 source_path = ".gemini/skills/sprint-plan/SKILL.md"
-reason = "unreadable"
-detail = "SKILL.md is not a regular file"
+reason = "symlink-not-followed"
+detail = "SKILL.md is a symbolic link"
 
 [[skipped]]
 source = "alirezarezvani-claude-skills"
@@ -12745,8 +13008,8 @@ detail = "same name as a main-tree skill"
 [[skipped]]
 source = "alirezarezvani-claude-skills"
 source_path = ".gemini/skills/startup-cto/SKILL.md"
-reason = "unreadable"
-detail = "SKILL.md is not a regular file"
+reason = "symlink-not-followed"
+detail = "SKILL.md is a symbolic link"
 
 [[skipped]]
 source = "alirezarezvani-claude-skills"
@@ -12805,8 +13068,8 @@ detail = "same name as a main-tree skill"
 [[skipped]]
 source = "alirezarezvani-claude-skills"
 source_path = ".gemini/skills/tc/SKILL.md"
-reason = "unreadable"
-detail = "SKILL.md is not a regular file"
+reason = "symlink-not-followed"
+detail = "SKILL.md is a symbolic link"
 
 [[skipped]]
 source = "alirezarezvani-claude-skills"
@@ -12817,8 +13080,8 @@ detail = "same name as a main-tree skill"
 [[skipped]]
 source = "alirezarezvani-claude-skills"
 source_path = ".gemini/skills/tdd/SKILL.md"
-reason = "unreadable"
-detail = "SKILL.md is not a regular file"
+reason = "symlink-not-followed"
+detail = "SKILL.md is a symbolic link"
 
 [[skipped]]
 source = "alirezarezvani-claude-skills"
@@ -12835,8 +13098,8 @@ detail = "same name as a main-tree skill"
 [[skipped]]
 source = "alirezarezvani-claude-skills"
 source_path = ".gemini/skills/tech-debt/SKILL.md"
-reason = "unreadable"
-detail = "SKILL.md is not a regular file"
+reason = "symlink-not-followed"
+detail = "SKILL.md is a symbolic link"
 
 [[skipped]]
 source = "alirezarezvani-claude-skills"
@@ -12877,8 +13140,8 @@ detail = "same name as a main-tree skill"
 [[skipped]]
 source = "alirezarezvani-claude-skills"
 source_path = ".gemini/skills/user-story/SKILL.md"
-reason = "unreadable"
-detail = "SKILL.md is not a regular file"
+reason = "symlink-not-followed"
+detail = "SKILL.md is a symbolic link"
 
 [[skipped]]
 source = "alirezarezvani-claude-skills"
@@ -12925,32 +13188,32 @@ detail = "same name as a main-tree skill"
 [[skipped]]
 source = "alirezarezvani-claude-skills"
 source_path = ".gemini/skills/wiki-ingest/SKILL.md"
-reason = "unreadable"
-detail = "SKILL.md is not a regular file"
+reason = "symlink-not-followed"
+detail = "SKILL.md is a symbolic link"
 
 [[skipped]]
 source = "alirezarezvani-claude-skills"
 source_path = ".gemini/skills/wiki-init/SKILL.md"
-reason = "unreadable"
-detail = "SKILL.md is not a regular file"
+reason = "symlink-not-followed"
+detail = "SKILL.md is a symbolic link"
 
 [[skipped]]
 source = "alirezarezvani-claude-skills"
 source_path = ".gemini/skills/wiki-lint/SKILL.md"
-reason = "unreadable"
-detail = "SKILL.md is not a regular file"
+reason = "symlink-not-followed"
+detail = "SKILL.md is a symbolic link"
 
 [[skipped]]
 source = "alirezarezvani-claude-skills"
 source_path = ".gemini/skills/wiki-log/SKILL.md"
-reason = "unreadable"
-detail = "SKILL.md is not a regular file"
+reason = "symlink-not-followed"
+detail = "SKILL.md is a symbolic link"
 
 [[skipped]]
 source = "alirezarezvani-claude-skills"
 source_path = ".gemini/skills/wiki-query/SKILL.md"
-reason = "unreadable"
-detail = "SKILL.md is not a regular file"
+reason = "symlink-not-followed"
+detail = "SKILL.md is a symbolic link"
 
 [[skipped]]
 source = "alirezarezvani-claude-skills"
@@ -13002,135 +13265,9 @@ detail = 'scripts/launch_script_writer.py:52 ENV_ID="$(curl -sS "${{hdr[@]}}" -X
 
 [[skipped]]
 source = "alirezarezvani-claude-skills"
-source_path = "c-level-advisor/skills/agent-protocol/SKILL.md"
-reason = "security:claude-settings-write"
-detail = "SKILL.md:189 **Migration:** earlier versions used `memory/board-meetings/` (decision-logger, board-meeting) and `~/.claude/decision-l"
-
-[[skipped]]
-source = "alirezarezvani-claude-skills"
-source_path = "c-level-advisor/skills/board-meeting/SKILL.md"
-reason = "security:claude-settings-write"
-detail = "SKILL.md:118 - **Layer 1:** Write full transcript → `~/.claude/decisions/raw/YYYY-MM-DD-<slug>.md`"
-
-[[skipped]]
-source = "alirezarezvani-claude-skills"
-source_path = "c-level-advisor/skills/c-level-skills/SKILL.md"
-reason = "security:claude-settings-write"
-detail = "SKILL.md:22 1. **Onboard** — the `cs-onboard` skill runs the founder interview (`/cs:setup`, 7 dimensions, ~45 min) and writes `~/"
-
-[[skipped]]
-source = "alirezarezvani-claude-skills"
-source_path = "c-level-advisor/skills/chief-of-staff/SKILL.md"
-reason = "security:claude-settings-write"
-detail = "SKILL.md:157 Migration: a legacy single-file log at `~/.claude/decision-log.md` may exist from earlier versions; read it for history "
-
-[[skipped]]
-source = "alirezarezvani-claude-skills"
-source_path = "c-level-advisor/skills/context-engine/SKILL.md"
-reason = "security:claude-settings-write"
-detail = 'SKILL.md:3 description: "Loads and manages company context for all C-suite advisor skills. Reads ~/.claude/company-context.md, dete'
-
-[[skipped]]
-source = "alirezarezvani-claude-skills"
-source_path = "c-level-advisor/skills/cs-onboard/SKILL.md"
-reason = "security:claude-settings-write"
-detail = 'SKILL.md:3 description: "Founder onboarding interview that captures company context across 7 dimensions. Invoke with /cs:setup for '
-
-[[skipped]]
-source = "alirezarezvani-claude-skills"
-source_path = "c-level-advisor/skills/decision-logger/SKILL.md"
-reason = "security:claude-settings-write"
-detail = "SKILL.md:52 **Location:** `~/.claude/decisions/raw/YYYY-MM-DD-<slug>.md`"
-
-[[skipped]]
-source = "alirezarezvani-claude-skills"
-source_path = "c-level-agents/skills/boardroom/SKILL.md"
-reason = "security:claude-settings-write"
-detail = "SKILL.md:56 Saved to `~/.claude/boardroom/YYYY-MM-DD-<slug>.md`:"
-
-[[skipped]]
-source = "alirezarezvani-claude-skills"
-source_path = "c-level-agents/skills/brief/SKILL.md"
-reason = "security:claude-settings-write"
-detail = "SKILL.md:27 A single Markdown file under `~/.claude/briefs/YYYY-MM-DD-<slug>.md` with this structure:"
-
-[[skipped]]
-source = "alirezarezvani-claude-skills"
-source_path = "c-level-agents/skills/cross-eval/SKILL.md"
-reason = "security:claude-settings-write"
-detail = "SKILL.md:45 Saved to `~/.claude/cross-eval/YYYY-MM-DD-<slug>.md`:"
-
-[[skipped]]
-source = "alirezarezvani-claude-skills"
-source_path = "c-level-agents/skills/decide/SKILL.md"
-reason = "security:claude-settings-write"
-detail = "SKILL.md:43 4. Append to `~/.claude/decisions/approved/<YYYY-MM-DD>-<slug>.md`"
-
-[[skipped]]
-source = "alirezarezvani-claude-skills"
-source_path = "c-level-agents/skills/execute/SKILL.md"
-reason = "security:claude-settings-write"
-detail = "SKILL.md:25 Saved to `~/.claude/execution/YYYY-MM-DD-<slug>.md`:"
-
-[[skipped]]
-source = "alirezarezvani-claude-skills"
-source_path = "c-level-agents/skills/freeze/SKILL.md"
-reason = "security:claude-settings-write"
-detail = "SKILL.md:41 4. Add to active-freezes index at `~/.claude/freezes/active.md`"
-
-[[skipped]]
-source = "alirezarezvani-claude-skills"
-source_path = "c-level-agents/skills/onboard/SKILL.md"
-reason = "security:claude-settings-write"
-detail = "SKILL.md:43 **Canonical schema:** `~/.claude/company-context.md` is owned by the [`cs-onboard`](../../../c-level-advisor/skills/cs-o"
-
-[[skipped]]
-source = "alirezarezvani-claude-skills"
-source_path = "c-level-agents/skills/post-mortem/SKILL.md"
-reason = "security:claude-settings-write"
-detail = "SKILL.md:34 Saved to `~/.claude/postmortems/YYYY-MM-DD-<slug>.md`:"
-
-[[skipped]]
-source = "alirezarezvani-claude-skills"
 source_path = "engineering-team/playwright-pro/skills/report/SKILL.md"
 reason = "security:exfiltration"
 detail = 'SKILL.md:91 curl -X POST "$SLACK_WEBHOOK_URL" \'
-
-[[skipped]]
-source = "alirezarezvani-claude-skills"
-source_path = "engineering-team/self-improving-agent/skills/extract/SKILL.md"
-reason = "security:claude-settings-write"
-detail = """SKILL.md:38 MEMORY_DIR="$HOME/.claude/projects/$(pwd | sed 's|/|%2F|g; s|%2F|/|; s|^/||')/memory""""
-
-[[skipped]]
-source = "alirezarezvani-claude-skills"
-source_path = "engineering-team/self-improving-agent/skills/memory-review/SKILL.md"
-reason = "security:claude-settings-write"
-detail = """SKILL.md:25 MEMORY_DIR="$HOME/.claude/projects/$(pwd | sed 's|/|%2F|g; s|%2F|/|; s|^/||')/memory""""
-
-[[skipped]]
-source = "alirezarezvani-claude-skills"
-source_path = "engineering-team/self-improving-agent/skills/memory-status/SKILL.md"
-reason = "security:claude-settings-write"
-detail = """SKILL.md:23 MEMORY_DIR="$HOME/.claude/projects/$(pwd | sed 's|/|%2F|g; s|%2F|/|; s|^/||')/memory""""
-
-[[skipped]]
-source = "alirezarezvani-claude-skills"
-source_path = "engineering-team/self-improving-agent/skills/promote/SKILL.md"
-reason = "security:claude-settings-write"
-detail = """SKILL.md:31 MEMORY_DIR="$HOME/.claude/projects/$(pwd | sed 's|/|%2F|g; s|%2F|/|; s|^/||')/memory""""
-
-[[skipped]]
-source = "alirezarezvani-claude-skills"
-source_path = "engineering-team/self-improving-agent/skills/remember/SKILL.md"
-reason = "security:claude-settings-write"
-detail = """SKILL.md:41 MEMORY_DIR="$HOME/.claude/projects/$(pwd | sed 's|/|%2F|g; s|%2F|/|; s|^/||')/memory""""
-
-[[skipped]]
-source = "alirezarezvani-claude-skills"
-source_path = "engineering-team/self-improving-agent/skills/self-improving-agent/SKILL.md"
-reason = "security:claude-settings-write"
-detail = "SKILL.md:69 | `~/.claude/projects/<path>/memory/MEMORY.md` | Claude (auto) | Project learnings | First 200 lines |"
 
 [[skipped]]
 source = "alirezarezvani-claude-skills"
@@ -13152,33 +13289,9 @@ detail = 'references/dataops_best_practices.md:819 curl -X POST ${{ secrets.SLAC
 
 [[skipped]]
 source = "alirezarezvani-claude-skills"
-source_path = "engineering-team/skills/senior-fullstack/SKILL.md"
-reason = "security:credential-read"
-detail = "SKILL.md:218 cp .env.example .env.local"
-
-[[skipped]]
-source = "alirezarezvani-claude-skills"
-source_path = "engineering/docker-development/skills/docker-development/SKILL.md"
-reason = "security:destructive-rm"
-detail = "SKILL.md:337 - **apt-get without cleanup in same layer** → `rm -rf /var/lib/apt/lists/*` in the same RUN."
-
-[[skipped]]
-source = "alirezarezvani-claude-skills"
-source_path = "engineering/hivemind/SKILL.md"
-reason = "security:claude-settings-write"
-detail = "SKILL.md:35 - `assets/commands/*.md` -> `~/.claude/commands/` (the `/hive`, `/oc`, `/swarm`, ... entry points)"
-
-[[skipped]]
-source = "alirezarezvani-claude-skills"
 source_path = "engineering/security-guidance/skills/security-guidance/SKILL.md"
-reason = "security:claude-settings-write"
-detail = "SKILL.md:42 - Save the warning key to `~/.claude/security_warnings_state_<session>.json`"
-
-[[skipped]]
-source = "alirezarezvani-claude-skills"
-source_path = "engineering/skillopt-sleep/skills/skillopt-sleep/SKILL.md"
-reason = "security:claude-settings-write"
-detail = "SKILL.md:35 1. **Harvest** — read `~/.claude/projects/*/<session>.jsonl` + `~/.claude/history.jsonl` (READ-ONLY) → session diges"
+reason = "security:safety-override"
+detail = "SKILL.md:129 Defeats the purpose. If `ENABLE_SECURITY_REMINDER=0` becomes your default, you've trained yourself to ignore the safety "
 
 [[skipped]]
 source = "alirezarezvani-claude-skills"
@@ -13189,20 +13302,14 @@ detail = "references/hotfix-procedures.md:210 curl -X POST api/feature-flags/new
 [[skipped]]
 source = "alirezarezvani-claude-skills"
 source_path = "engineering/skills/codebase-onboarding/SKILL.md"
-reason = "security:credential-read"
-detail = "references/onboarding-template.md:41 cp .env.example .env"
+reason = "security:exfiltration"
+detail = 'references/output-format-templates.md:24 curl -X POST \'
 
 [[skipped]]
 source = "alirezarezvani-claude-skills"
 source_path = "engineering/skills/env-secrets-manager/SKILL.md"
 reason = "security:credential-read"
 detail = "SKILL.md:84 Production applications should never read secrets from `.env` files or environment variables baked into container images"
-
-[[skipped]]
-source = "alirezarezvani-claude-skills"
-source_path = "engineering/skills/git-worktree-manager/SKILL.md"
-reason = "security:credential-read"
-detail = "SKILL.md:140 3. `.env` files copied successfully (if present in source repo)."
 
 [[skipped]]
 source = "alirezarezvani-claude-skills"
@@ -13218,15 +13325,9 @@ detail = 'SKILL.md:60 | **System prompt override** | "Ignore previous instructio
 
 [[skipped]]
 source = "alirezarezvani-claude-skills"
-source_path = "marketing-skill/skills/local-seo-manager/SKILL.md"
-reason = "security:exfiltration"
-detail = "scripts/nap_checker.py:52 'nc': 'north carolina', 'nd': 'north dakota', 'oh': 'ohio', 'ok': 'oklahoma',"
-
-[[skipped]]
-source = "alirezarezvani-claude-skills"
 source_path = "ra-qm-team/skills/capa-officer/SKILL.md"
 reason = "security:exfiltration"
-detail = "SKILL.md:58 | Nonconformance (recurring) | Yes | Same NC type occurring 3+ times |"
+detail = "SKILL.md:414 | 8.5.2 Corrective Action | Eliminate cause of nonconformity | NC review, cause determination, action evaluation, implem"
 
 [[skipped]]
 source = "alirezarezvani-claude-skills"
@@ -13244,13 +13345,7 @@ detail = "SKILL.md:197 | Process | Nonconformance Rate | <1% | (NC count / Total
 source = "alirezarezvani-claude-skills"
 source_path = "ra-qm-team/skills/quality-manager-qms-iso13485/SKILL.md"
 reason = "security:exfiltration"
-detail = "SKILL.md:167 - Major NC: Absence or breakdown of system"
-
-[[skipped]]
-source = "alirezarezvani-claude-skills"
-source_path = "ra-qm-team/skills/ra-qm-skills/SKILL.md"
-reason = "security:exfiltration"
-detail = "SKILL.md:37 | ISO 13485 internal audits, NC classification | qms-audit-expert | `skills/qms-audit-expert/` |"
+detail = "SKILL.md:425 | NC Product Control | 8.3 | Identification, segregation, disposition |"
 
 [[skipped]]
 source = "alirezarezvani-claude-skills"

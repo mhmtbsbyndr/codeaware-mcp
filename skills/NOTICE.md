@@ -6,9 +6,10 @@ The files under `skills/<source>/` are unmodified copies of SKILL.md files and t
 
 - Repository: https://github.com/alirezarezvani/claude-skills
 - Pinned commit: 19392f7a08264ed00486a251f5b2098321771f94
-- Imported skills: 343
-- Skipped entries: 503
-- License MIT: 343 skill(s)
+- Imported skills: 371
+- Skipped entries: 475
+- License Apache-2.0: 1 skill(s)
+- License MIT: 370 skill(s)
 - Default license when no LICENSE file applies: MIT
 - Repository license text: `alirezarezvani-claude-skills/LICENSES/LICENSE.txt` (present only when the repository ships one)
 

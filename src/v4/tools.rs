@@ -6,6 +6,7 @@ use crate::v4::context_items::{ContextItem, ContextItemKind, ExcludedContext};
 use crate::v4::contracts::{TaskContract, TaskIntent, TaskScope};
 use crate::v4::discovery::{CandidateDiscovery, DiscoveryConfig};
 use crate::v4::index_builder::SemanticIndexBuilder;
+use crate::v4::query::normalize_goal;
 use crate::v4::semantic_context::{SemanticContextAssembler, SemanticContextOptions};
 use crate::v4::storage::V4Storage;
 use crate::v4::summaries::{read_capped, SummaryGenerator};
@@ -81,11 +82,13 @@ impl V4Tools {
             ));
         }
 
-        // Summary fallback: used only when no goal-relevant semantic item was found.
+        // Summary fallback: used only when no goal-relevant semantic item was found. The
+        // contract keeps the original goal; only the retrieval query is normalized.
+        let retrieval_query = normalize_goal(&contract.goal).search_query();
         if selected_context.is_empty() {
             let ranked_candidates = CandidateDiscovery::discover_ranked(
                 &repo_root,
-                &contract.goal,
+                &retrieval_query,
                 DiscoveryConfig::default(),
             )
             .unwrap_or_default();
@@ -170,6 +173,7 @@ impl V4Tools {
             warnings: vec![
                 "Semantic-first context assembly active.".to_string(),
                 "Falls back to summary-first file context when no semantic items are found.".to_string(),
+                format!("Retrieval terms from normalized goal: {retrieval_query}"),
             ],
         };
 
