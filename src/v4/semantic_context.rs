@@ -60,7 +60,9 @@ impl Default for SemanticContextOptions {
             ranking: RankingMode::Bm25,
             pack: None,
             source_root: None,
-            normalize_goal: true,
+            // Off by default: on the repo benchmark normalisation lowered recall@5
+            // (German raw 0.146 vs normalised 0.125). Kept as opt-in.
+            normalize_goal: false,
         }
     }
 }

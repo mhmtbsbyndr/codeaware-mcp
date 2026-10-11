@@ -115,13 +115,18 @@ pub fn import(sources: &[SourceSpec], out: &Path) -> Result<Manifest, SkillError
         manifest.skipped.extend(skipped);
     }
 
-    manifest.skills.sort_by(|a, b| (&a.source, &a.id).cmp(&(&b.source, &b.id)));
+    manifest
+        .skills
+        .sort_by(|a, b| (&a.source, &a.id).cmp(&(&b.source, &b.id)));
     manifest
         .skipped
         .sort_by(|a, b| (&a.source, &a.source_path).cmp(&(&b.source, &b.source_path)));
 
-    fs::write(out.join(super::manifest::MANIFEST_FILE), manifest.to_toml()?)
-        .map_err(|source| io_err(out, source))?;
+    fs::write(
+        out.join(super::manifest::MANIFEST_FILE),
+        manifest.to_toml()?,
+    )
+    .map_err(|source| io_err(out, source))?;
     fs::write(out.join("NOTICE.md"), notice(&manifest)).map_err(|source| io_err(out, source))?;
     Ok(manifest)
 }
@@ -154,7 +159,12 @@ fn import_source(
     for cand in &candidates {
         let source_path = format!("{}/SKILL.md", cand.rel_dir);
         if cand.mirror && main_names.contains(cand.basename()) {
-            skipped.push(skip(spec, &source_path, "gemini-mirror-duplicate", "same name as a main-tree skill"));
+            skipped.push(skip(
+                spec,
+                &source_path,
+                "gemini-mirror-duplicate",
+                "same name as a main-tree skill",
+            ));
             continue;
         }
         let id = if name_counts.get(cand.basename()).copied().unwrap_or(0) > 1 && !cand.mirror {
@@ -171,7 +181,8 @@ fn import_source(
                 acc.source_path = source_path;
                 if let Some(rel) = &acc.license_rel {
                     if !license_copies.contains_key(rel) {
-                        let bytes = fs::read(spec.root.join(rel)).map_err(|s| io_err(&spec.root.join(rel), s))?;
+                        let bytes = fs::read(spec.root.join(rel))
+                            .map_err(|s| io_err(&spec.root.join(rel), s))?;
                         license_copies.insert(rel.clone(), bytes);
                     }
                 }
@@ -194,7 +205,9 @@ fn import_source(
     // Root LICENSE is always vendored for attribution, when the repo has one.
     if let Some(root_license) = LICENSE_NAMES.iter().find(|n| spec.root.join(n).is_file()) {
         let bytes = fs::read(spec.root.join(root_license)).map_err(|s| io_err(&spec.root, s))?;
-        license_copies.entry((*root_license).to_string()).or_insert(bytes);
+        license_copies
+            .entry((*root_license).to_string())
+            .or_insert(bytes);
     }
     if !license_copies.is_empty() {
         let dir = source_out.join("LICENSES");
@@ -247,7 +260,9 @@ fn evaluate(spec: &SourceSpec, cand: &Candidate, id: &str) -> Outcome {
             return skip_with("symlink-not-followed", "SKILL.md is a symbolic link".into())
         }
         Ok(meta) if meta.is_file() && meta.len() <= MAX_SKILL_BYTES => {}
-        Ok(meta) if meta.is_file() => return skip_with("too-large", format!("{} bytes", meta.len())),
+        Ok(meta) if meta.is_file() => {
+            return skip_with("too-large", format!("{} bytes", meta.len()))
+        }
         _ => return skip_with("unreadable", "SKILL.md is not a regular file".into()),
     }
     let skill_md = match fs::read(&skill_path) {
@@ -275,14 +290,18 @@ fn evaluate(spec: &SourceSpec, cand: &Candidate, id: &str) -> Outcome {
     }
 
     let mut files = Vec::new();
-    for rel in referenced_files(&frontmatter::split(text).1) {
+    for rel in referenced_files(frontmatter::split(text).1) {
         let path = dir.join(&rel);
-        let Ok(meta) = fs::symlink_metadata(&path) else { continue };
+        let Ok(meta) = fs::symlink_metadata(&path) else {
+            continue;
+        };
         if !meta.is_file() || meta.len() > MAX_REFERENCED_BYTES {
             continue;
         }
         let Ok(bytes) = fs::read(&path) else { continue };
-        let Ok(content) = std::str::from_utf8(&bytes) else { continue };
+        let Ok(content) = std::str::from_utf8(&bytes) else {
+            continue;
+        };
         if let Some(f) = scan_text(content) {
             return skip_with(
                 &format!("security:{}", f.rule.as_str()),
@@ -366,7 +385,13 @@ pub fn referenced_files(body: &str) -> Vec<String> {
     // Markdown link targets: `](target)`.
     for part in body.split("](").skip(1) {
         if let Some(end) = part.find(')') {
-            candidates.push(part[..end].split_whitespace().next().unwrap_or("").to_string());
+            candidates.push(
+                part[..end]
+                    .split_whitespace()
+                    .next()
+                    .unwrap_or("")
+                    .to_string(),
+            );
         }
     }
     // Backtick spans.
@@ -387,7 +412,9 @@ pub fn referenced_files(body: &str) -> Vec<String> {
         {
             continue;
         }
-        let Some((_, ext)) = target.rsplit_once('.') else { continue };
+        let Some((_, ext)) = target.rsplit_once('.') else {
+            continue;
+        };
         if target.ends_with('/') || target.eq_ignore_ascii_case("SKILL.md") {
             continue;
         }
@@ -399,7 +426,12 @@ pub fn referenced_files(body: &str) -> Vec<String> {
     out.into_iter().collect()
 }
 
-fn discover(root: &Path, dir: &Path, depth: usize, out: &mut Vec<Candidate>) -> Result<(), SkillError> {
+fn discover(
+    root: &Path,
+    dir: &Path,
+    depth: usize,
+    out: &mut Vec<Candidate>,
+) -> Result<(), SkillError> {
     if depth > 12 {
         return Ok(());
     }
@@ -411,7 +443,10 @@ fn discover(root: &Path, dir: &Path, depth: usize, out: &mut Vec<Candidate>) -> 
             .replace('\\', "/");
         if !rel.is_empty() {
             let mirror = rel.split('/').any(|seg| seg == MIRROR_DIR);
-            out.push(Candidate { rel_dir: rel, mirror });
+            out.push(Candidate {
+                rel_dir: rel,
+                mirror,
+            });
         }
     }
     let mut children: Vec<PathBuf> = Vec::new();
@@ -423,7 +458,9 @@ fn discover(root: &Path, dir: &Path, depth: usize, out: &mut Vec<Candidate>) -> 
         if SKIP_DIRS.contains(&name.as_ref()) {
             continue;
         }
-        let Ok(meta) = fs::symlink_metadata(&path) else { continue };
+        let Ok(meta) = fs::symlink_metadata(&path) else {
+            continue;
+        };
         if meta.is_dir() {
             children.push(path);
         }
@@ -487,8 +524,16 @@ pub fn notice(manifest: &Manifest) -> String {
         out.push_str(&format!("## {}\n\n", src.id));
         out.push_str(&format!("- Repository: {}\n", src.repo));
         out.push_str(&format!("- Pinned commit: {}\n", src.commit));
-        let imported: Vec<&SkillEntry> = manifest.skills.iter().filter(|s| s.source == src.id).collect();
-        let skipped = manifest.skipped.iter().filter(|s| s.source == src.id).count();
+        let imported: Vec<&SkillEntry> = manifest
+            .skills
+            .iter()
+            .filter(|s| s.source == src.id)
+            .collect();
+        let skipped = manifest
+            .skipped
+            .iter()
+            .filter(|s| s.source == src.id)
+            .count();
         out.push_str(&format!("- Imported skills: {}\n", imported.len()));
         out.push_str(&format!("- Skipped entries: {skipped}\n"));
         let mut by_license: BTreeMap<&str, usize> = BTreeMap::new();
@@ -503,10 +548,9 @@ pub fn notice(manifest: &Manifest) -> String {
                 "- Default license when no LICENSE file applies: {default}\n"
             ));
         }
-        let root_license = format!("{}/LICENSES/LICENSE.txt", src.id);
         out.push_str(&format!(
-            "- Repository license text: `{}` (present only when the repository ships one)\n\n",
-            root_license
+            "- License texts: `{}/LICENSES/` (copies of the LICENSE files that apply; see `license_file` in MANIFEST.toml)\n\n",
+            src.id
         ));
     }
     out

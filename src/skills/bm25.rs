@@ -87,7 +87,9 @@ impl Bm25 {
         let postings: usize = self
             .postings
             .iter()
-            .map(|(k, v)| k.len() + v.len() * size_of::<(u32, u32)>() + size_of::<Vec<(u32, u32)>>())
+            .map(|(k, v)| {
+                k.len() + v.len() * size_of::<(u32, u32)>() + size_of::<Vec<(u32, u32)>>()
+            })
             .sum();
         postings + self.doc_len.len() * size_of::<u32>()
     }

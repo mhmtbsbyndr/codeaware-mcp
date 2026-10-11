@@ -607,6 +607,16 @@ sha256 = "c2a7431cbe7e92b08802597f6c02bbd0f173aebe508a1fc7b067f082764c67c1"
 files = ["assets/sample_campaign_data.json", "references/attribution-models-guide.md", "references/campaign-metrics-benchmarks.md", "references/funnel-optimization-framework.md"]
 
 [[skills]]
+id = "capa-officer"
+source = "alirezarezvani-claude-skills"
+source_path = "ra-qm-team/skills/capa-officer/SKILL.md"
+path = "alirezarezvani-claude-skills/capa-officer/SKILL.md"
+license = "MIT"
+license_file = "alirezarezvani-claude-skills/LICENSES/license.txt"
+sha256 = "6c6ca18e86128fcfbffbe5b216b500984f94ef156c8183d518afab606c7eb74e"
+files = ["references/effectiveness-verification-guide.md", "references/rca-methodologies.md"]
+
+[[skills]]
 id = "capacity-planner"
 source = "alirezarezvani-claude-skills"
 source_path = "business-operations/skills/capacity-planner/SKILL.md"
@@ -2695,6 +2705,16 @@ sha256 = "442833f0bcde3221a7afaef58c19f87e345a8dbb247bc4357537aa458bbdb69a"
 files = ["anti-patterns.md"]
 
 [[skills]]
+id = "qms-audit-expert"
+source = "alirezarezvani-claude-skills"
+source_path = "ra-qm-team/skills/qms-audit-expert/SKILL.md"
+path = "alirezarezvani-claude-skills/qms-audit-expert/SKILL.md"
+license = "MIT"
+license_file = "alirezarezvani-claude-skills/LICENSES/license.txt"
+sha256 = "118f50d21ef29b6945fd3b6a5e1edbe5b3c7966fa6c995b94b2a3b97e00bbd92"
+files = ["references/iso13485-audit-guide.md", "references/nonconformity-classification.md"]
+
+[[skills]]
 id = "quality-documentation-manager"
 source = "alirezarezvani-claude-skills"
 source_path = "ra-qm-team/skills/quality-documentation-manager/SKILL.md"
@@ -2703,6 +2723,26 @@ license = "MIT"
 license_file = "alirezarezvani-claude-skills/LICENSES/license.txt"
 sha256 = "8b677b83f5f9ad0c1f4a1dbe0691a1193c41a531fb20381872a8be5f5f0fd355"
 files = ["references/21cfr11-compliance-guide.md", "references/document-control-procedures.md"]
+
+[[skills]]
+id = "quality-manager-qmr"
+source = "alirezarezvani-claude-skills"
+source_path = "ra-qm-team/skills/quality-manager-qmr/SKILL.md"
+path = "alirezarezvani-claude-skills/quality-manager-qmr/SKILL.md"
+license = "MIT"
+license_file = "alirezarezvani-claude-skills/LICENSES/license.txt"
+sha256 = "8ff6dfdfdbe2361c5a1f4a37a9d1a635cc42c010693dcad4ffd697845bb4afe1"
+files = ["references/management-review-guide.md", "references/quality-kpi-framework.md", "scripts/management_review_tracker.py"]
+
+[[skills]]
+id = "quality-manager-qms-iso13485"
+source = "alirezarezvani-claude-skills"
+source_path = "ra-qm-team/skills/quality-manager-qms-iso13485/SKILL.md"
+path = "alirezarezvani-claude-skills/quality-manager-qms-iso13485/SKILL.md"
+license = "MIT"
+license_file = "alirezarezvani-claude-skills/LICENSES/license.txt"
+sha256 = "be426a7fa7c7b64988e836dcb388adcc8399beba86769aad71b4103c034f8833"
+files = ["references/iso13485-clause-requirements.md", "references/qms-process-templates.md", "scripts/qms_audit_checklist.py"]
 
 [[skills]]
 id = "ra-qm-skills"
@@ -13322,30 +13362,6 @@ source = "alirezarezvani-claude-skills"
 source_path = "engineering/skills/skill-security-auditor/SKILL.md"
 reason = "security:safety-override"
 detail = 'SKILL.md:60 | **System prompt override** | "Ignore previous instructions", "You are now..." | 🔴 CRITICAL | <!-- noqa: SEC-AUDITOR'
-
-[[skipped]]
-source = "alirezarezvani-claude-skills"
-source_path = "ra-qm-team/skills/capa-officer/SKILL.md"
-reason = "security:exfiltration"
-detail = "SKILL.md:414 | 8.5.2 Corrective Action | Eliminate cause of nonconformity | NC review, cause determination, action evaluation, implem"
-
-[[skipped]]
-source = "alirezarezvani-claude-skills"
-source_path = "ra-qm-team/skills/qms-audit-expert/SKILL.md"
-reason = "security:exfiltration"
-detail = "SKILL.md:67 | 8.3 | NC Product | Identification, segregation, disposition |"
-
-[[skipped]]
-source = "alirezarezvani-claude-skills"
-source_path = "ra-qm-team/skills/quality-manager-qmr/SKILL.md"
-reason = "security:exfiltration"
-detail = "SKILL.md:197 | Process | Nonconformance Rate | <1% | (NC count / Total units) × 100 |"
-
-[[skipped]]
-source = "alirezarezvani-claude-skills"
-source_path = "ra-qm-team/skills/quality-manager-qms-iso13485/SKILL.md"
-reason = "security:exfiltration"
-detail = "SKILL.md:425 | NC Product Control | 8.3 | Identification, segregation, disposition |"
 
 [[skipped]]
 source = "alirezarezvani-claude-skills"

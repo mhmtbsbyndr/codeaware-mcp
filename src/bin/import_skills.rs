@@ -108,8 +108,16 @@ fn run() -> Result<(), String> {
     let manifest = import::import(&specs, &args.out).map_err(|e| e.to_string())?;
 
     for src in &manifest.sources {
-        let imported = manifest.skills.iter().filter(|s| s.source == src.id).count();
-        let skipped: Vec<_> = manifest.skipped.iter().filter(|s| s.source == src.id).collect();
+        let imported = manifest
+            .skills
+            .iter()
+            .filter(|s| s.source == src.id)
+            .count();
+        let skipped: Vec<_> = manifest
+            .skipped
+            .iter()
+            .filter(|s| s.source == src.id)
+            .collect();
         println!("{}: imported {imported}, skipped {}", src.id, skipped.len());
         let mut reasons = std::collections::BTreeMap::new();
         for s in &skipped {

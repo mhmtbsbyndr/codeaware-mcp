@@ -6,12 +6,12 @@ The files under `skills/<source>/` are unmodified copies of SKILL.md files and t
 
 - Repository: https://github.com/alirezarezvani/claude-skills
 - Pinned commit: 19392f7a08264ed00486a251f5b2098321771f94
-- Imported skills: 371
-- Skipped entries: 475
+- Imported skills: 375
+- Skipped entries: 471
 - License Apache-2.0: 1 skill(s)
-- License MIT: 370 skill(s)
+- License MIT: 374 skill(s)
 - Default license when no LICENSE file applies: MIT
-- Repository license text: `alirezarezvani-claude-skills/LICENSES/LICENSE.txt` (present only when the repository ships one)
+- License texts: `alirezarezvani-claude-skills/LICENSES/` (copies of the LICENSE files that apply; see `license_file` in MANIFEST.toml)
 
 ## composiohq-awesome-claude-skills
 
@@ -21,7 +21,7 @@ The files under `skills/<source>/` are unmodified copies of SKILL.md files and t
 - Skipped entries: 4
 - License Apache-2.0: 860 skill(s)
 - Default license when no LICENSE file applies: Apache-2.0
-- Repository license text: `composiohq-awesome-claude-skills/LICENSES/LICENSE.txt` (present only when the repository ships one)
+- License texts: `composiohq-awesome-claude-skills/LICENSES/` (copies of the LICENSE files that apply; see `license_file` in MANIFEST.toml)
 
 ## multica-karpathy-skills
 
@@ -31,5 +31,5 @@ The files under `skills/<source>/` are unmodified copies of SKILL.md files and t
 - Skipped entries: 0
 - License MIT: 1 skill(s)
 - Default license when no LICENSE file applies: MIT
-- Repository license text: `multica-karpathy-skills/LICENSES/LICENSE.txt` (present only when the repository ships one)
+- License texts: `multica-karpathy-skills/LICENSES/` (copies of the LICENSE files that apply; see `license_file` in MANIFEST.toml)
 

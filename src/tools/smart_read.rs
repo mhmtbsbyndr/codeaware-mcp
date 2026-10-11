@@ -9,6 +9,23 @@ use crate::v4::pack::Representation;
 
 /// Largest file smart_read will load into memory (8 MiB).
 pub const MAX_READ_BYTES: u64 = 8 * 1024 * 1024;
+/// Skeleton text budget (about 4k tokens). Larger skeletons are cut and flagged.
+pub const MAX_SKELETON_BYTES: usize = 16 * 1024;
+/// Symbol entries returned per response.
+pub const MAX_SYMBOLS: usize = 200;
+
+/// Cut `s` to at most `max` bytes without splitting a UTF-8 character.
+/// Returns the text and whether it was cut.
+fn cap_at_char_boundary(s: String, max: usize) -> (String, bool) {
+    if s.len() <= max {
+        return (s, false);
+    }
+    let mut end = max;
+    while !s.is_char_boundary(end) {
+        end -= 1;
+    }
+    (s[..end].to_string(), true)
+}
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Default)]
 #[serde(rename_all = "lowercase")]
@@ -180,7 +197,10 @@ pub fn smart_read(input: &SmartReadInput, project_root: &Path) -> Result<SmartRe
                 build_skeleton(&content_str)
             };
             let trunc = skeleton.lines().count() < loc;
-            ("skeleton".to_string(), Some(skeleton), trunc)
+            let (skeleton, cut) = cap_at_char_boundary(skeleton, MAX_SKELETON_BYTES);
+            let note = "\n... [skeleton truncated; use focus or lines for more]";
+            let skeleton = if cut { format!("{skeleton}{note}") } else { skeleton };
+            ("skeleton".to_string(), Some(skeleton), trunc || cut)
         }
         ReadMode::Focused => {
             let focused = build_focused_with_symbols(&content_str, input.focus.as_deref(), input.lines.as_deref(), &ts_symbols)?;
@@ -198,13 +218,19 @@ pub fn smart_read(input: &SmartReadInput, project_root: &Path) -> Result<SmartRe
     // Build suggested_next: related files the caller might want to read next
     let suggested_next = suggest_next_files(&input.path, project_root);
 
+    // Keep the symbol list bounded too: a file with thousands of items must not
+    // cost more tokens than the file itself.
+    let mut ts_symbols = ts_symbols;
+    let symbols_cut = ts_symbols.len() > MAX_SYMBOLS;
+    ts_symbols.truncate(MAX_SYMBOLS);
+
     Ok(SmartReadResult {
         path: input.path.clone(),
         mode_used,
         file_hash,
         loc,
         stale: false,
-        truncated,
+        truncated: truncated || symbols_cut,
         intelligence_level,
         summary: None,
         symbols: ts_symbols,
