@@ -156,3 +156,58 @@ fn eval_v4_variants() {
     std::fs::write(format!("{scratch}/eval_per_task.tsv"), per_task.join("\n")).unwrap();
     eprintln!("{out}");
 }
+
+#[test]
+fn eval_delta_rereads() {
+    use codeaware_mcp::v4::context::ServedMap;
+    use codeaware_mcp::v4::Representation;
+    let scratch = std::env::var("V4_EVAL_SCRATCH").unwrap();
+    let repo = "/home/user/codeaware-mcp";
+    let git = |args: &[&str]| -> String {
+        let out = std::process::Command::new("git").args(args).current_dir(repo).output().unwrap();
+        String::from_utf8_lossy(&out.stdout).to_string()
+    };
+    let changed = git(&["log", "--format=", "--name-only", "-n", "80", "--", "*.rs"]);
+    let mut counts: HashMap<String, usize> = HashMap::new();
+    for line in changed.lines().filter(|l| !l.is_empty()) {
+        *counts.entry(line.to_string()).or_default() += 1;
+    }
+    let mut files: Vec<(String, usize)> = counts.into_iter().collect();
+    files.sort_by(|a, b| b.1.cmp(&a.1).then(a.0.cmp(&b.0)));
+    files.truncate(8);
+
+    let (mut full_tok, mut delta_tok) = (0usize, 0usize);
+    let (mut n_full, mut n_diff, mut n_unch) = (0usize, 0usize, 0usize);
+    let mut report = String::new();
+    for (file, _) in &files {
+        let shas: Vec<String> = git(&["log", "--format=%H", "-n", "40", "--reverse", "--", file])
+            .lines().map(|s| s.to_string()).collect();
+        let mut served = ServedMap::default();
+        let (mut f_t, mut d_t) = (0usize, 0usize);
+        for sha in &shas {
+            let content = git(&["show", &format!("{sha}:{file}")]);
+            // Model: each version is read twice (e.g. before and after an edit elsewhere).
+            for _ in 0..2 {
+                let rep = served.serve(file, &content);
+                let full = bench_tokens(&content) as usize;
+                f_t += full;
+                d_t += bench_tokens(rep.text()) as usize;
+                match rep {
+                    Representation::Full(_) => n_full += 1,
+                    Representation::Diff(_) => n_diff += 1,
+                    Representation::Unchanged(_) => n_unch += 1,
+                    _ => {}
+                }
+            }
+        }
+        report.push_str(&format!("{file}\tversions={}\tfull_tokens={f_t}\tdelta_tokens={d_t}\n", shas.len()));
+        full_tok += f_t;
+        delta_tok += d_t;
+    }
+    report.push_str(&format!(
+        "TOTAL\tfull_tokens={full_tok}\tdelta_tokens={delta_tok}\tsaved={:.1}%\treps: full={n_full} diff={n_diff} unchanged={n_unch}\n",
+        100.0 * (1.0 - delta_tok as f64 / full_tok as f64)
+    ));
+    std::fs::write(format!("{scratch}/eval_delta.tsv"), &report).unwrap();
+    eprintln!("{report}");
+}
