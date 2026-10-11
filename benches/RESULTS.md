@@ -115,3 +115,46 @@ Reading of the result:
 - Token effect is as expected: the normalized German query is about 21% smaller than the raw German goal (304 vs 384 tokens) and about 3% smaller than the English goal (314 tokens).
 - Existing quirk, not changed here: `split_identifiers` splits the acronym `IDs` into `i` and `ds`, so `Session-IDs` loses its meaning. English `ids` is unaffected.
 - Not measured: `get_task_context`'s summary fallback (`CandidateDiscovery`, legacy substring ranking) and the Legacy ranking mode. Legacy is kept raw as a reference. The measurement covers only the BM25 symbol path.
+
+<!-- candidate-section:start -->
+## Candidate list and co-change signal (parent snapshots)
+
+- Estimator: token_stats::estimate_tokens: max(ceil(chars/4), ceil(words*4/3)); heuristic, not a tokenizer
+- Tasks: 20, k: 5 and 10, co-change depth: 500 commits (`git log <parent>`)
+
+| Variant | Mean tokens | Total tokens | Recall@5 | Recall@10 | Tasks with Recall@5 > 0 | Mean history commits |
+|---|---:|---:|---:|---:|---:|---:|
+| current_get_task_context | 2979 | 59582 | 0.181 | 0.329 | 7/20 | 0.0 |
+| candidate_list | 228 | 4562 | 0.181 | 0.366 | 7/20 | 0.0 |
+| candidate_list_cochange | 231 | 4616 | 0.178 | 0.363 | 7/20 | 31.4 |
+
+| Task | (a) tok | (a) R@5 | (a) R@10 | (b) tok | (b) R@5 | (b) R@10 | (c) tok | (c) R@5 | (c) R@10 | Relevant | History commits |
+|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|
+| T01 | 3303 | 1.00 | 1.00 | 316 | 1.00 | 1.00 | 316 | 1.00 | 1.00 | 1 | 22 |
+| T02 | 3316 | 1.00 | 1.00 | 279 | 1.00 | 1.00 | 278 | 1.00 | 1.00 | 1 | 3 |
+| T03 | 3321 | 0.00 | 0.67 | 253 | 0.00 | 0.33 | 253 | 0.00 | 0.33 | 3 | 46 |
+| T04 | 3268 | 1.00 | 1.00 | 283 | 1.00 | 1.00 | 283 | 1.00 | 1.00 | 1 | 38 |
+| T05 | 1609 | 0.00 | 0.00 | 2 | 0.00 | 0.00 | 2 | 0.00 | 0.00 | 1 | 37 |
+| T06 | 1192 | 0.00 | 0.00 | 2 | 0.00 | 0.00 | 2 | 0.00 | 0.00 | 1 | 43 |
+| T07 | 3294 | 0.00 | 0.00 | 267 | 0.00 | 1.00 | 267 | 0.00 | 1.00 | 1 | 29 |
+| T08 | 3219 | 0.00 | 0.00 | 239 | 0.00 | 1.00 | 240 | 0.00 | 1.00 | 1 | 25 |
+| T09 | 3270 | 0.00 | 1.00 | 257 | 0.00 | 1.00 | 257 | 0.00 | 1.00 | 1 | 21 |
+| T10 | 3131 | 0.00 | 0.00 | 234 | 0.00 | 0.00 | 234 | 0.00 | 0.00 | 1 | 17 |
+| T11 | 3132 | 0.00 | 1.00 | 230 | 0.00 | 0.00 | 229 | 0.00 | 0.00 | 1 | 14 |
+| T12 | 2892 | 0.00 | 0.00 | 207 | 0.00 | 0.00 | 208 | 0.00 | 0.00 | 1 | 11 |
+| T13 | 3096 | 0.00 | 0.00 | 237 | 0.00 | 0.00 | 237 | 0.00 | 0.00 | 1 | 5 |
+| T14 | 1544 | 0.00 | 0.00 | 28 | 0.00 | 0.00 | 28 | 0.00 | 0.00 | 1 | 1 |
+| T15 | 3293 | 0.08 | 0.08 | 272 | 0.08 | 0.08 | 298 | 0.08 | 0.08 | 13 | 55 |
+| T16 | 3396 | 0.00 | 0.00 | 290 | 0.00 | 0.00 | 325 | 0.00 | 0.00 | 1 | 54 |
+| T17 | 3323 | 0.00 | 0.13 | 301 | 0.00 | 0.07 | 320 | 0.00 | 0.00 | 15 | 53 |
+| T18 | 3333 | 0.29 | 0.29 | 279 | 0.29 | 0.43 | 279 | 0.29 | 0.43 | 7 | 52 |
+| T19 | 3264 | 0.17 | 0.22 | 288 | 0.17 | 0.22 | 262 | 0.11 | 0.22 | 18 | 51 |
+| T20 | 3386 | 0.10 | 0.19 | 298 | 0.10 | 0.19 | 298 | 0.10 | 0.19 | 21 | 50 |
+
+Caveats:
+
+- Each task indexes its parent snapshot; co-change history is `git log <parent>`, so the task commit and later commits are never read.
+- Recall@k is over the first k unique paths of each variant's output. Ground truth: modified .rs files of the commit.
+- The candidate list is the BM25 symbol ranking (raw goal) reduced to one row per file; co-change partners are restricted to files with symbols.
+- Tokens are heuristic estimates. Variant (a) counts the whole serialized response; (b) and (c) count only the candidate list.
+<!-- candidate-section:end -->

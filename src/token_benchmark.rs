@@ -267,13 +267,16 @@ pub fn variant_naive_full_topk(root: &Path, task: &BenchTask, k: usize) -> Varia
 
 /// (b) Current v4 `get_task_context`. The payload is the whole serialized response.
 pub fn variant_v4_task_context(root: &Path, task: &BenchTask) -> VariantRun {
-    let response = V4Tools::get_task_context(
+    // Pinned to the full output so this variant stays comparable with earlier results.
+    let response = V4Tools::get_task_context_with(
         GetTaskContextRequest {
             task_id: None,
             goal: task.goal.clone(),
             intent: TaskIntent::ImplementFeature,
         },
         root.to_string_lossy().into_owned(),
+        ContextOutput::Full,
+        None,
     );
     let paths = unique_in_order(
         response
@@ -518,7 +521,11 @@ pub fn write_report(report: &SuiteReport, dir: &Path) -> Result<(PathBuf, PathBu
     fs::create_dir_all(dir).map_err(|e| format!("create {}: {e}", dir.display()))?;
     let md_path = dir.join("RESULTS.md");
     let json_path = dir.join("RESULTS.json");
-    fs::write(&md_path, render_markdown(report)).map_err(|e| format!("write {}: {e}", md_path.display()))?;
+    let mut markdown = render_markdown(report);
+    if let Some(block) = fs::read_to_string(&md_path).ok().as_deref().and_then(existing_candidate_block) {
+        markdown = format!("{}\n\n{block}", markdown.trim_end());
+    }
+    fs::write(&md_path, markdown).map_err(|e| format!("write {}: {e}", md_path.display()))?;
     let json = serde_json::to_string_pretty(report).map_err(|e| format!("serialize: {e}"))?;
     fs::write(&json_path, json + "\n").map_err(|e| format!("write {}: {e}", json_path.display()))?;
     Ok((md_path, json_path))
@@ -820,11 +827,33 @@ pub fn render_candidate_markdown(report: &CandidateReport) -> String {
         ));
     }
 
+    if let [current, candidates, cochange] = report.summaries.as_slice() {
+        md.push_str(&format!(
+            "\nDecision inputs: candidate list vs current: Recall@5 {:+.3}, Recall@10 {:+.3}, tokens {:.1}x fewer. Co-change vs candidate list: Recall@5 {:+.3}, Recall@10 {:+.3}, tokens {:+.0}.\n",
+            candidates.mean_recall_at_5 - current.mean_recall_at_5,
+            candidates.mean_recall_at_10 - current.mean_recall_at_10,
+            current.mean_tokens / candidates.mean_tokens.max(1.0),
+            cochange.mean_recall_at_5 - candidates.mean_recall_at_5,
+            cochange.mean_recall_at_10 - candidates.mean_recall_at_10,
+            cochange.mean_tokens - candidates.mean_tokens,
+        ));
+    }
     md.push_str("\nCaveats:\n\n");
     for caveat in &report.caveats {
         md.push_str(&format!("- {caveat}\n"));
     }
     md
+}
+
+/// The candidate block between the section markers (markers included, trailing newline kept).
+pub fn existing_candidate_block(text: &str) -> Option<&str> {
+    let start = text.find(CANDIDATE_SECTION_START)?;
+    let end = text.find(CANDIDATE_SECTION_END)? + CANDIDATE_SECTION_END.len();
+    if end < start {
+        return None;
+    }
+    let end = text[end..].find('\n').map_or(text.len(), |n| end + n + 1);
+    Some(&text[start..end])
 }
 
 /// Writes the candidate section into `results` between the section markers. Replaces an earlier
@@ -835,13 +864,9 @@ pub fn write_candidate_section(report: &CandidateReport, results: &Path) -> Resu
         "{CANDIDATE_SECTION_START}\n{}{CANDIDATE_SECTION_END}\n",
         render_candidate_markdown(report)
     );
-    let updated = match (existing.find(CANDIDATE_SECTION_START), existing.find(CANDIDATE_SECTION_END)) {
-        (Some(start), Some(end)) if start < end => {
-            let end = end + CANDIDATE_SECTION_END.len();
-            let end = existing[end..].find('\n').map_or(existing.len(), |n| end + n + 1);
-            format!("{}{}{}", &existing[..start], block, &existing[end..])
-        }
-        _ => format!("{}\n{}", existing.trim_end(), format!("\n{block}")),
+    let updated = match existing_candidate_block(&existing) {
+        Some(old) => existing.replacen(old, &block, 1),
+        None => format!("{}\n\n{block}", existing.trim_end()),
     };
     fs::write(results, updated).map_err(|e| format!("write {}: {e}", results.display()))
 }
