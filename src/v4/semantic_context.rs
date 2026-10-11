@@ -46,7 +46,9 @@ impl Default for SemanticContextOptions {
             max_imports: 12,
             max_calls: 12,
             max_tests: 12,
-            ranking: RankingMode::Legacy,
+            // BM25 with identifier splitting: same token budget, roughly 2x recall@5
+            // on the repo benchmark (0.168 -> 0.343). See benches/RESULTS.md.
+            ranking: RankingMode::Bm25,
             pack: None,
             source_root: None,
         }
