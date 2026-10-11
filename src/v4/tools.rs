@@ -1,13 +1,16 @@
 use serde::{Deserialize, Serialize};
 
 use crate::v4::budget::BudgetState;
+use crate::v4::cochange::CoChangeHistory;
 use crate::v4::context::ContextPackage;
 use crate::v4::context_items::{ContextItem, ContextItemKind, ExcludedContext};
 use crate::v4::contracts::{TaskContract, TaskIntent, TaskScope};
 use crate::v4::discovery::{CandidateDiscovery, DiscoveryConfig};
 use crate::v4::index_builder::SemanticIndexBuilder;
 use crate::v4::query::normalize_goal;
-use crate::v4::semantic_context::{SemanticContextAssembler, SemanticContextOptions};
+use crate::v4::semantic_context::{
+    rank_candidates, FileCandidate, SemanticContextAssembler, SemanticContextOptions, CANDIDATE_LIMIT,
+};
 use crate::v4::storage::V4Storage;
 use crate::v4::summaries::{read_capped, SummaryGenerator};
 use crate::v4::tokens::estimate_tokens;
@@ -41,6 +44,33 @@ pub struct GetTaskContextResponse {
     pub agent_instructions: Vec<String>,
 }
 
+/// Shape of the file selection returned by `get_task_context`.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub enum ContextOutput {
+    /// Symbols, imports, calls and tests from the semantic assembler (one line each).
+    #[default]
+    Full,
+    /// Ranked file candidates: path, score and a reason of at most 8 words. No bodies.
+    Candidates,
+}
+
+/// Output used by `get_task_context`. See benches/RESULTS.md for the measurement behind the choice.
+pub const DEFAULT_CONTEXT_OUTPUT: ContextOutput = ContextOutput::Full;
+
+/// Candidate items become context items with the file path, the reason as content and the
+/// score in the reason field, so the response envelope stays the same for both outputs.
+fn candidate_item(candidate: FileCandidate) -> ContextItem {
+    let content = candidate.reason.clone();
+    ContextItem {
+        kind: ContextItemKind::FileExcerpt,
+        path: Some(candidate.path),
+        symbol: None,
+        estimated_tokens: estimate_tokens(&content),
+        content,
+        reason: format!("Ranked candidate, score {:.3}.", candidate.score),
+    }
+}
+
 pub struct V4Tools;
 
 impl V4Tools {
@@ -66,6 +96,17 @@ impl V4Tools {
     }
 
     pub fn get_task_context(req: GetTaskContextRequest, repo_root: String) -> GetTaskContextResponse {
+        Self::get_task_context_with(req, repo_root, DEFAULT_CONTEXT_OUTPUT, None)
+    }
+
+    /// `get_task_context` with an explicit output shape. `history` is only used by
+    /// `ContextOutput::Candidates`: `Some` fuses the BM25 list with co-change partners.
+    pub fn get_task_context_with(
+        req: GetTaskContextRequest,
+        repo_root: String,
+        output: ContextOutput,
+        history: Option<&CoChangeHistory>,
+    ) -> GetTaskContextResponse {
         let mut contract = Self::default_contract(req.goal.clone(), req.intent);
         if let Some(task_id) = req.task_id {
             contract.task_id = task_id;
@@ -75,11 +116,18 @@ impl V4Tools {
         let mut files_read = 0usize;
 
         if let Ok(index) = SemanticIndexBuilder::build(&repo_root) {
-            selected_context.extend(SemanticContextAssembler::assemble(
-                &contract.goal,
-                &index,
-                SemanticContextOptions::default(),
-            ));
+            match output {
+                ContextOutput::Full => selected_context.extend(SemanticContextAssembler::assemble(
+                    &contract.goal,
+                    &index,
+                    SemanticContextOptions::default(),
+                )),
+                ContextOutput::Candidates => selected_context.extend(
+                    rank_candidates(&contract.goal, &index, history, CANDIDATE_LIMIT)
+                        .into_iter()
+                        .map(candidate_item),
+                ),
+            }
         }
 
         // Summary fallback: used only when no goal-relevant semantic item was found. The

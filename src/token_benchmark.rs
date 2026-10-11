@@ -18,8 +18,9 @@ use crate::compressor::compress_output;
 use crate::tools::smart_read::{smart_read, ReadMode, SmartReadInput};
 use crate::v4::contracts::TaskIntent;
 use crate::v4::index_builder::SemanticIndexBuilder;
-use crate::v4::semantic_context::{SemanticContextAssembler, SemanticContextOptions};
-use crate::v4::tools::{GetTaskContextRequest, V4Tools};
+use crate::v4::cochange::{CoChangeHistory, COCHANGE_DEPTH};
+use crate::v4::semantic_context::{rank_candidates, SemanticContextAssembler, SemanticContextOptions, CANDIDATE_LIMIT};
+use crate::v4::tools::{ContextOutput, GetTaskContextRequest, V4Tools};
 use serde::{Deserialize, Serialize};
 use std::collections::BTreeSet;
 use std::fs;
@@ -615,6 +616,234 @@ pub fn summarize_results(results: Vec<TokenBenchmarkResult>) -> TokenBenchmarkSu
         average_savings_ratio,
         results,
     }
+}
+
+// ---------------------------------------------------------------------------
+// Candidate list and co-change (parent snapshots, recall@5 and recall@10)
+// ---------------------------------------------------------------------------
+
+/// Candidate-list length used for recall@10.
+pub const CANDIDATE_SUITE_K: usize = 10;
+
+pub const CANDIDATE_SECTION_START: &str = "<!-- candidate-section:start -->";
+pub const CANDIDATE_SECTION_END: &str = "<!-- candidate-section:end -->";
+
+/// One variant on one task.
+#[derive(Debug, Clone, Serialize, PartialEq)]
+pub struct CandidateRow {
+    pub task_id: String,
+    pub variant: String,
+    pub tokens: u64,
+    pub returned_files: usize,
+    pub relevant_files: usize,
+    pub recall_at_5: f64,
+    pub recall_at_10: f64,
+    /// Commits of history the co-change signal could read (0 when it is not used).
+    pub history_commits: usize,
+}
+
+#[derive(Debug, Clone, Serialize, PartialEq)]
+pub struct CandidateSummary {
+    pub variant: String,
+    pub tasks: usize,
+    pub mean_tokens: f64,
+    pub total_tokens: u64,
+    pub mean_recall_at_5: f64,
+    pub mean_recall_at_10: f64,
+    pub tasks_with_recall_at_5: usize,
+    pub mean_history_commits: f64,
+}
+
+#[derive(Debug, Clone, Serialize, PartialEq)]
+pub struct CandidateReport {
+    pub schema_version: u32,
+    pub estimator: String,
+    pub cochange_depth: usize,
+    pub task_count: usize,
+    pub summaries: Vec<CandidateSummary>,
+    pub rows: Vec<CandidateRow>,
+    pub caveats: Vec<String>,
+}
+
+/// Names of the three variants, in report order.
+pub const CANDIDATE_VARIANTS: [&str; 3] = ["current_get_task_context", "candidate_list", "candidate_list_cochange"];
+
+/// Fraction of `relevant` found among the first `k` unique paths.
+pub fn recall_at_k(paths: &[String], relevant: &BTreeSet<&str>, k: usize) -> f64 {
+    if relevant.is_empty() {
+        return 0.0;
+    }
+    let top: BTreeSet<&str> = paths.iter().take(k).map(String::as_str).collect();
+    top.intersection(relevant).count() as f64 / relevant.len() as f64
+}
+
+/// Runs the three context variants on every task, each on the task's parent snapshot:
+/// (a) the current `get_task_context` (full output), (b) the candidate list with BM25 only,
+/// (c) the candidate list fused with co-change history read from `task.parent`.
+///
+/// History is read with `git log <parent>`, which contains only commits before the task
+/// commit. A guard returns an error if the task commit is found in that history.
+pub fn run_candidate_suite(config: &SuiteConfig, tasks: &[BenchTask]) -> Result<CandidateReport, String> {
+    let mut rows = Vec::new();
+    for task in tasks {
+        let snapshot = config.work_dir.join(format!("cand-{}", task.id));
+        materialize_snapshot(&config.repo, &task.parent, &snapshot)?;
+        let root = snapshot.to_string_lossy().into_owned();
+        let relevant: BTreeSet<&str> = task.relevant_files.iter().map(String::as_str).collect();
+        let index = SemanticIndexBuilder::build(&snapshot)
+            .map_err(|e| format!("index {}: {e:?}", task.id))?;
+
+        let history = CoChangeHistory::from_git(&config.repo, &task.parent, COCHANGE_DEPTH);
+        if history.contains_commit(&task.commit) {
+            return Err(format!("{}: history read from parent contains the task commit", task.id));
+        }
+
+        // (a) current output, full shape.
+        let response = V4Tools::get_task_context_with(
+            GetTaskContextRequest {
+                task_id: None,
+                goal: task.goal.clone(),
+                intent: TaskIntent::ImplementFeature,
+            },
+            root,
+            ContextOutput::Full,
+            None,
+        );
+        let current_paths = unique_in_order(
+            response
+                .context_package
+                .selected_context
+                .iter()
+                .filter_map(|item| item.path.clone()),
+        );
+        let current_payload = serde_json::to_string(&response).unwrap_or_default();
+
+        // (b) and (c): the candidate list only, as the model would receive it.
+        let bm25_list = rank_candidates(&task.goal, &index, None, CANDIDATE_SUITE_K);
+        let fused_list = rank_candidates(&task.goal, &index, Some(&history), CANDIDATE_SUITE_K);
+
+        let variants: [(&str, String, Vec<String>, usize); 3] = [
+            (CANDIDATE_VARIANTS[0], current_payload, current_paths, 0),
+            (
+                CANDIDATE_VARIANTS[1],
+                serde_json::to_string(&bm25_list).unwrap_or_default(),
+                bm25_list.iter().map(|c| c.path.clone()).collect(),
+                0,
+            ),
+            (
+                CANDIDATE_VARIANTS[2],
+                serde_json::to_string(&fused_list).unwrap_or_default(),
+                fused_list.iter().map(|c| c.path.clone()).collect(),
+                history.commit_count(),
+            ),
+        ];
+        for (variant, payload, paths, history_commits) in variants {
+            rows.push(CandidateRow {
+                task_id: task.id.clone(),
+                variant: variant.to_string(),
+                tokens: (config.counter)(&payload),
+                returned_files: paths.len(),
+                relevant_files: relevant.len(),
+                recall_at_5: recall_at_k(&paths, &relevant, 5),
+                recall_at_10: recall_at_k(&paths, &relevant, CANDIDATE_SUITE_K),
+                history_commits,
+            });
+        }
+    }
+
+    Ok(CandidateReport {
+        schema_version: 1,
+        estimator: "token_stats::estimate_tokens: max(ceil(chars/4), ceil(words*4/3)); heuristic, not a tokenizer".to_string(),
+        cochange_depth: COCHANGE_DEPTH,
+        task_count: tasks.len(),
+        summaries: summarize_candidates(&rows),
+        rows,
+        caveats: vec![
+            "Each task indexes its parent snapshot; co-change history is `git log <parent>`, so the task commit and later commits are never read.".to_string(),
+            "Recall@k is over the first k unique paths of each variant's output. Ground truth: modified .rs files of the commit.".to_string(),
+            "The candidate list is the BM25 symbol ranking (raw goal) reduced to one row per file; co-change partners are restricted to files with symbols.".to_string(),
+            "Tokens are heuristic estimates. Variant (a) counts the whole serialized response; (b) and (c) count only the candidate list.".to_string(),
+        ],
+    })
+}
+
+fn summarize_candidates(rows: &[CandidateRow]) -> Vec<CandidateSummary> {
+    CANDIDATE_VARIANTS
+        .iter()
+        .map(|variant| {
+            let group: Vec<&CandidateRow> = rows.iter().filter(|r| r.variant == *variant).collect();
+            let n = group.len().max(1) as f64;
+            let total_tokens: u64 = group.iter().map(|r| r.tokens).sum();
+            CandidateSummary {
+                variant: variant.to_string(),
+                tasks: group.len(),
+                mean_tokens: total_tokens as f64 / n,
+                total_tokens,
+                mean_recall_at_5: group.iter().map(|r| r.recall_at_5).sum::<f64>() / n,
+                mean_recall_at_10: group.iter().map(|r| r.recall_at_10).sum::<f64>() / n,
+                tasks_with_recall_at_5: group.iter().filter(|r| r.recall_at_5 > 0.0).count(),
+                mean_history_commits: group.iter().map(|r| r.history_commits as f64).sum::<f64>() / n,
+            }
+        })
+        .collect()
+}
+
+/// Markdown for the candidate section, without the surrounding markers.
+pub fn render_candidate_markdown(report: &CandidateReport) -> String {
+    let mut md = String::new();
+    md.push_str("## Candidate list and co-change signal (parent snapshots)\n\n");
+    md.push_str(&format!(
+        "- Estimator: {}\n- Tasks: {}, k: 5 and 10, co-change depth: {} commits (`git log <parent>`)\n\n",
+        report.estimator, report.task_count, report.cochange_depth
+    ));
+    md.push_str("| Variant | Mean tokens | Total tokens | Recall@5 | Recall@10 | Tasks with Recall@5 > 0 | Mean history commits |\n");
+    md.push_str("|---|---:|---:|---:|---:|---:|---:|\n");
+    for s in &report.summaries {
+        md.push_str(&format!(
+            "| {} | {:.0} | {} | {:.3} | {:.3} | {}/{} | {:.1} |\n",
+            s.variant, s.mean_tokens, s.total_tokens, s.mean_recall_at_5, s.mean_recall_at_10,
+            s.tasks_with_recall_at_5, s.tasks, s.mean_history_commits
+        ));
+    }
+
+    md.push_str("\n| Task | (a) tok | (a) R@5 | (a) R@10 | (b) tok | (b) R@5 | (b) R@10 | (c) tok | (c) R@5 | (c) R@10 | Relevant | History commits |\n");
+    md.push_str("|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|\n");
+    let ids: BTreeSet<&str> = report.rows.iter().map(|r| r.task_id.as_str()).collect();
+    for id in ids {
+        let cell = |variant: &str| report.rows.iter().find(|r| r.task_id == id && r.variant == variant);
+        let (a, b, c) = (cell(CANDIDATE_VARIANTS[0]), cell(CANDIDATE_VARIANTS[1]), cell(CANDIDATE_VARIANTS[2]));
+        let (Some(a), Some(b), Some(c)) = (a, b, c) else { continue };
+        md.push_str(&format!(
+            "| {} | {} | {:.2} | {:.2} | {} | {:.2} | {:.2} | {} | {:.2} | {:.2} | {} | {} |\n",
+            id, a.tokens, a.recall_at_5, a.recall_at_10, b.tokens, b.recall_at_5, b.recall_at_10,
+            c.tokens, c.recall_at_5, c.recall_at_10, a.relevant_files, c.history_commits
+        ));
+    }
+
+    md.push_str("\nCaveats:\n\n");
+    for caveat in &report.caveats {
+        md.push_str(&format!("- {caveat}\n"));
+    }
+    md
+}
+
+/// Writes the candidate section into `results` between the section markers. Replaces an earlier
+/// candidate section if present, otherwise appends. Every other section is left unchanged.
+pub fn write_candidate_section(report: &CandidateReport, results: &Path) -> Result<(), String> {
+    let existing = fs::read_to_string(results).map_err(|e| format!("read {}: {e}", results.display()))?;
+    let block = format!(
+        "{CANDIDATE_SECTION_START}\n{}{CANDIDATE_SECTION_END}\n",
+        render_candidate_markdown(report)
+    );
+    let updated = match (existing.find(CANDIDATE_SECTION_START), existing.find(CANDIDATE_SECTION_END)) {
+        (Some(start), Some(end)) if start < end => {
+            let end = end + CANDIDATE_SECTION_END.len();
+            let end = existing[end..].find('\n').map_or(existing.len(), |n| end + n + 1);
+            format!("{}{}{}", &existing[..start], block, &existing[end..])
+        }
+        _ => format!("{}\n{}", existing.trim_end(), format!("\n{block}")),
+    };
+    fs::write(results, updated).map_err(|e| format!("write {}: {e}", results.display()))
 }
 
 #[cfg(test)]

@@ -260,6 +260,24 @@ pub fn reciprocal_rank_fusion(n: usize, rankings: &[Vec<usize>], k: f64) -> Vec<
     fused
 }
 
+/// Reciprocal rank fusion over path lists (best first). Returns each path with its fused score,
+/// best first, ties by path. Paths missing from a list receive nothing from it.
+pub fn rrf_paths(rankings: &[Vec<String>], k: f64) -> Vec<(String, f64)> {
+    let mut fused: BTreeMap<&str, f64> = BTreeMap::new();
+    for ranking in rankings {
+        let mut seen: BTreeSet<&str> = BTreeSet::new();
+        for path in ranking {
+            // Rank is 1-based over first occurrences, so duplicates do not push others down.
+            if seen.insert(path.as_str()) {
+                *fused.entry(path.as_str()).or_insert(0.0) += 1.0 / (k + seen.len() as f64);
+            }
+        }
+    }
+    let mut out: Vec<(String, f64)> = fused.into_iter().map(|(p, s)| (p.to_string(), s)).collect();
+    out.sort_by(|a, b| b.1.total_cmp(&a.1).then_with(|| a.0.cmp(&b.0)));
+    out
+}
+
 /// Indices with a score above `threshold`, best first, ties by lower index.
 fn order_positive(scores: &[f64], threshold: f64) -> Vec<usize> {
     let mut order: Vec<usize> = (0..scores.len()).filter(|&i| scores[i] > threshold).collect();

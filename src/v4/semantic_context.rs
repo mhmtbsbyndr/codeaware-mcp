@@ -1,9 +1,12 @@
+use std::collections::{BTreeMap, BTreeSet};
 use std::path::{Path, PathBuf};
 
 use serde::{Deserialize, Serialize};
 
 use crate::v4::bm25::Bm25Index;
+use crate::v4::cochange::{CoChangeHistory, Partner};
 use crate::v4::context_items::{ContextItem, ContextItemKind};
+use crate::v4::ranking::{rrf_paths, RRF_K};
 use crate::v4::pack::{pack, PackCandidate, PackConfig, PackedItem};
 use crate::v4::query::normalize_goal;
 use crate::v4::ranking::RankingMode;
@@ -273,4 +276,137 @@ fn symbol_body(root: &Path, symbol: &CodeSymbol) -> Option<String> {
     let start = symbol.line_start.max(1) - 1;
     let end = symbol.line_end.min(lines.len());
     (start < end).then(|| lines[start..end].join("\n"))
+}
+
+/// Length of the candidate list returned to the model.
+pub const CANDIDATE_LIMIT: usize = 10;
+/// Reasons are capped at this many whitespace-separated words.
+pub const CANDIDATE_REASON_MAX_WORDS: usize = 8;
+/// Matched symbol names shown per candidate.
+pub const CANDIDATE_MATCHED_SYMBOLS: usize = 3;
+/// Top BM25 files whose co-change partners are looked up.
+pub const COCHANGE_SEEDS: usize = 3;
+
+/// One line of the ranked candidate list: a file, its relevance and why it was picked.
+/// No file bodies. `score` is in (0, 1] with the top candidate at 1.0.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct FileCandidate {
+    pub path: String,
+    pub score: f64,
+    pub reason: String,
+}
+
+/// Keeps the first `max_words` whitespace-separated words of `text`.
+pub fn cap_words(text: &str, max_words: usize) -> String {
+    text.split_whitespace().take(max_words).collect::<Vec<_>>().join(" ")
+}
+
+fn round3(value: f64) -> f64 {
+    (value * 1000.0).round() / 1000.0
+}
+
+/// File ranking from the symbol BM25 (or Legacy) scores: each file takes its best symbol's score.
+/// Files are ordered by that score, then by number of matching symbols, then by path. The reason
+/// lists up to `CANDIDATE_MATCHED_SYMBOLS` matching symbol names, best first.
+pub fn rank_file_candidates(goal: &str, index: &SemanticIndex, options: &SemanticContextOptions) -> Vec<FileCandidate> {
+    let (query, terms) = retrieval_query(goal, options);
+    if terms.is_empty() && options.ranking == RankingMode::Legacy {
+        return Vec::new();
+    }
+
+    struct Acc {
+        best: f64,
+        hits: usize,
+        names: Vec<String>,
+    }
+    let mut by_path: BTreeMap<String, Acc> = BTreeMap::new();
+    for (symbol, relevance) in select_symbols(&query, index, options.ranking) {
+        let acc = by_path.entry(symbol.path.clone()).or_insert(Acc {
+            best: 0.0,
+            hits: 0,
+            names: Vec::new(),
+        });
+        acc.best = acc.best.max(relevance);
+        acc.hits += 1;
+        if acc.names.len() < CANDIDATE_MATCHED_SYMBOLS && !acc.names.contains(&symbol.name) {
+            acc.names.push(symbol.name.clone());
+        }
+    }
+
+    let mut rows: Vec<(String, Acc)> = by_path.into_iter().collect();
+    rows.sort_by(|a, b| {
+        b.1.best
+            .total_cmp(&a.1.best)
+            .then(b.1.hits.cmp(&a.1.hits))
+            .then(a.0.cmp(&b.0))
+    });
+    rows.into_iter()
+        .map(|(path, acc)| FileCandidate {
+            path,
+            score: round3(acc.best),
+            reason: cap_words(
+                &format!("symbols: {}", acc.names.join(", ")),
+                CANDIDATE_REASON_MAX_WORDS,
+            ),
+        })
+        .collect()
+}
+
+/// Files of the index (those with at least one symbol) are the only co-change partners offered.
+fn indexed_files(index: &SemanticIndex) -> BTreeSet<String> {
+    index.symbols.symbols.iter().map(|symbol| symbol.path.clone()).collect()
+}
+
+/// Fuses the BM25 candidate list with co-change partners of its top `COCHANGE_SEEDS` files by
+/// reciprocal rank fusion (k = `RRF_K`). A file in both lists keeps its BM25 reason, marked
+/// "co-change"; a partner-only file says which seed it co-changed with.
+pub fn fuse_with_cochange(
+    bm25: &[FileCandidate],
+    index: &SemanticIndex,
+    history: &CoChangeHistory,
+    limit: usize,
+) -> Vec<FileCandidate> {
+    let bm25_order: Vec<String> = bm25.iter().map(|candidate| candidate.path.clone()).collect();
+    let seeds: Vec<&str> = bm25_order.iter().take(COCHANGE_SEEDS).map(String::as_str).collect();
+    let partners: Vec<Partner> = history.partners(&seeds, &indexed_files(index));
+    let partner_order: Vec<String> = partners.iter().map(|p| p.path.clone()).collect();
+
+    let fused = rrf_paths(&[bm25_order, partner_order], RRF_K);
+    let top = fused.first().map_or(1.0, |(_, score)| *score);
+    let bm25_by_path: BTreeMap<&str, &FileCandidate> =
+        bm25.iter().map(|candidate| (candidate.path.as_str(), candidate)).collect();
+    let partner_by_path: BTreeMap<&str, &Partner> = partners.iter().map(|p| (p.path.as_str(), p)).collect();
+
+    fused
+        .into_iter()
+        .take(limit)
+        .map(|(path, score)| {
+            let reason = match (bm25_by_path.get(path.as_str()), partner_by_path.get(path.as_str())) {
+                (Some(candidate), Some(_)) => cap_words(&format!("{} + co-change", candidate.reason), CANDIDATE_REASON_MAX_WORDS),
+                (Some(candidate), None) => candidate.reason.clone(),
+                (None, Some(partner)) => cap_words(&format!("co-changed with {}", partner.seed), CANDIDATE_REASON_MAX_WORDS),
+                (None, None) => String::from("ranked"),
+            };
+            FileCandidate {
+                path,
+                score: round3(score / top),
+                reason,
+            }
+        })
+        .collect()
+}
+
+/// The candidate list for a goal: BM25 file ranking, optionally fused with co-change history.
+/// `history: None` is the BM25-only list. Truncated to `limit`.
+pub fn rank_candidates(
+    goal: &str,
+    index: &SemanticIndex,
+    history: Option<&CoChangeHistory>,
+    limit: usize,
+) -> Vec<FileCandidate> {
+    let bm25 = rank_file_candidates(goal, index, &SemanticContextOptions::default());
+    match history {
+        Some(history) => fuse_with_cochange(&bm25, index, history, limit),
+        None => bm25.into_iter().take(limit).collect(),
+    }
 }

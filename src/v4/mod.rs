@@ -7,6 +7,7 @@ pub mod query;
 pub mod cache;
 pub mod cache_invalidation;
 pub mod call_graph;
+pub mod cochange;
 pub mod context;
 pub mod context_items;
 pub mod contracts;
