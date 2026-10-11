@@ -85,7 +85,8 @@ fn test_tools_list_returns_all_tools() {
     // session_status was removed: it has no handler (only a result struct exists).
     assert!(!tool_names.contains(&"session_status"));
     assert!(!tool_names.contains(&"codeaware__workspace_context"));
-    assert_eq!(tools.len(), 16);
+    assert!(tool_names.contains(&"skill_lookup"));
+    assert_eq!(tools.len(), 17);
 }
 
 #[test]

@@ -3,7 +3,10 @@ use codeaware_mcp::v4::tokens::estimate_tokens;
 use serde_json::{json, Value};
 
 /// Baseline before schema compaction was 8241 bytes; budget is a 40% cut.
-const TOOLS_LIST_BYTE_BUDGET: usize = 4946;
+// 16 tools were 4946 bytes. skill_lookup (17th tool) adds about 215 bytes, roughly
+// 60 tokens per session; it returns at most two excerpts of 1.5 KB when a skill
+// matches, which saves far more than it costs. Keep this budget tight.
+const TOOLS_LIST_BYTE_BUDGET: usize = 5200;
 
 /// Measures the serialized tools/list payload that every session pays for.
 #[test]

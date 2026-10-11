@@ -92,6 +92,7 @@ pub fn dispatch_tool(
         "smart_edit" => dispatch_smart_edit(tool_input, &project_root(state)),
         "smart_run" => dispatch_smart_run(tool_input),
         "validate_config" => dispatch_validate_config(tool_input, &project_root(state)),
+        "skill_lookup" => dispatch_skill_lookup(tool_input),
 
         _ => tool_error(&format!("Unknown tool: '{tool_name}' is not registered")),
     }
@@ -290,6 +291,39 @@ fn dispatch_smart_run(tool_input: &Value) -> Value {
         })),
         Err(e) => tool_error(&e.to_string()),
     }
+}
+
+/// Skill excerpts are third-party text: each hit is returned inside an
+/// `untrusted-skill` block (see `skills::untrusted_block`), never as plain instructions.
+fn dispatch_skill_lookup(tool_input: &Value) -> Value {
+    let Some(goal) = tool_input.get("goal").and_then(|g| g.as_str()) else {
+        return tool_error("skill_lookup: 'goal' is required");
+    };
+    let max_results = tool_input
+        .get("max_results")
+        .and_then(|v| v.as_u64())
+        .unwrap_or(2)
+        .clamp(1, 5) as usize;
+    let max_bytes = tool_input
+        .get("max_bytes")
+        .and_then(|v| v.as_u64())
+        .unwrap_or(1536)
+        .clamp(256, 8192) as usize;
+
+    let hits: Vec<Value> = crate::skills::lookup(goal, max_results, max_bytes)
+        .iter()
+        .map(|hit| {
+            json!({
+                "id": hit.id,
+                "source": hit.source,
+                "license": hit.license,
+                "score": hit.score,
+                "block": crate::skills::untrusted_block(hit),
+            })
+        })
+        .collect();
+
+    text_response(&json!({ "hits": hits }))
 }
 
 fn dispatch_validate_config(tool_input: &Value, project_root: &Path) -> Value {

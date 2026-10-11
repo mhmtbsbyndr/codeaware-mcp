@@ -138,8 +138,9 @@ fn dictionary_entries_translate_to_their_english_values() {
 }
 
 #[test]
-fn default_options_normalize_the_goal() {
-    assert!(SemanticContextOptions::default().normalize_goal);
+fn default_options_keep_goal_normalisation_opt_in() {
+    // Off by default: on the repo benchmark it lowered recall@5 (see benches/RESULTS.md).
+    assert!(!SemanticContextOptions::default().normalize_goal);
 }
 
 #[derive(Deserialize)]

@@ -280,6 +280,19 @@ impl McpServer {
                     }
                 },
                 {
+                    "name": "skill_lookup",
+                    "description": "Best matching skill excerpt for a goal.",
+                    "inputSchema": {
+                        "type": "object",
+                        "required": ["goal"],
+                        "properties": {
+                            "goal": { "type": "string" },
+                            "max_results": { "type": "integer" },
+                            "max_bytes": { "type": "integer" }
+                        }
+                    }
+                },
+                {
                     "name": "validate_config",
                     "description": "Validate CodeAware configuration files.",
                     "inputSchema": {
